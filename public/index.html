@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwpkywwl">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwplfeyq">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -281,6 +281,11 @@ body.maquina{font-family:ui-monospace,Consolas,monospace}body.maquina .m.a{font-
  .mbs{grid-template-columns:repeat(2,1fr)}
  #sp{left:8px;right:8px;width:auto;bottom:8px}
 }
+.cb{margin:8px 0;border:1px solid var(--glb);border-radius:14px;overflow:hidden;background:rgba(0,0,0,.28);text-align:left;white-space:normal}
+.cbh{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 8px 4px 12px;font:12px ui-monospace,Consolas,monospace;color:var(--mut);border-bottom:1px solid var(--glb)}
+.cba{display:flex;gap:6px;flex-wrap:wrap}.cba button{padding:2px 10px;font-size:12px;border-radius:999px}
+.cb pre{margin:0;padding:10px 12px;overflow:auto;max-height:420px;font:12.5px/1.5 ui-monospace,Consolas,monospace;white-space:pre;tab-size:2;color:var(--txt)}.cb code{background:none;padding:0;font-size:inherit}
+#pvw{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.62);display:flex;flex-direction:column;padding:12px;gap:8px}#pvw iframe{flex:1;border:0;border-radius:14px;background:#fff}#pvw .pvb{align-self:flex-end}
 </style></head><body>
 <aside id="side">
   <div class="sh"><button class="pri" id="bn">+ Nueva charla</button></div>
@@ -390,7 +395,18 @@ body.maquina{font-family:ui-monospace,Consolas,monospace}body.maquina .m.a{font-
 <script>
 const $=id=>document.getElementById(id);let chatId=null,busy=false,CFG=null;
 const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const md=s=>esc(s).replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>').replace(/(https?:\/\/[^\s<)\]]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+const md1=s=>esc(s).replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>').replace(/(https?:\/\/[^\s<)\]]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+/* bloques de código (```lang … ```): caja con Copiar y, si es HTML/SVG, Vista previa y Descargar */
+const cbHTML=(lang,code)=>`<div class="cb"><div class="cbh"><span>${esc(lang||'código')}</span><span class="cba"><button type="button" data-cb="cp">Copiar</button>${/^(html?|svg)$/.test(lang)?'<button type="button" data-cb="pv">Vista previa</button><button type="button" data-cb="dl">Descargar</button>':''}</span></div><pre><code>${esc(code)}</code></pre></div>`;
+const md=s=>{s=String(s);let out='',last=0,m;const re=/```([\w+-]*)[^\S\n]*\n?([\s\S]*?)(?:```|$)/g;
+  while((m=re.exec(s))){if(m[0]===''){re.lastIndex++;continue}out+=md1(s.slice(last,m.index))+cbHTML((m[1]||'').toLowerCase(),m[2].replace(/\n$/,''));last=re.lastIndex}
+  return out+md1(s.slice(last))};
+function previewCode(code,lang){const old=$('pvw');if(old)old.remove();const d=document.createElement('div');d.id='pvw';d.innerHTML='<button type="button" class="pvb pri">Cerrar vista previa</button><iframe sandbox="allow-scripts allow-forms allow-modals" title="Vista previa"></iframe>';document.body.append(d);
+  d.querySelector('iframe').srcdoc=lang==='svg'?'<body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#fff">'+code:code;d.querySelector('.pvb').onclick=()=>d.remove()}
+function downloadCode(code,lang){const a=document.createElement('a'),n=lang==='svg'?'dibujo.svg':'pagina.html';a.href=URL.createObjectURL(new Blob([code],{type:lang==='svg'?'image/svg+xml':'text/html'}));a.download=n;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-cb]');if(!b)return;const cb=b.closest('.cb'),code=cb.querySelector('code').textContent,lang=cb.querySelector('.cbh span').textContent.toLowerCase(),k=b.dataset.cb;
+  if(k==='cp')navigator.clipboard.writeText(code).then(()=>{b.textContent='Copiado';setTimeout(()=>b.textContent='Copiar',1200)}).catch(()=>{});else if(k==='pv')previewCode(code,lang);else if(k==='dl')downloadCode(code,lang)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('pvw'))$('pvw').remove()});
 const log=$('log');const scroll=()=>log.scrollTop=log.scrollHeight;
 const add=(c,t)=>{const d=document.createElement('div');d.className='m '+c;d.dataset.raw=t;if(c==='a')d.innerHTML=md(t);else d.textContent=t;log.append(d);scroll();return d};
 const note=(c,t)=>{const d=document.createElement('div');d.className=c;d.textContent=t;log.append(d);scroll();return d};
