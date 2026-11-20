@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwplwml1">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwpmjx5p">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -286,6 +286,53 @@ body.maquina{font-family:ui-monospace,Consolas,monospace}body.maquina .m.a{font-
 .cba{display:flex;gap:6px;flex-wrap:wrap}.cba button{padding:2px 10px;font-size:12px;border-radius:999px}
 .cb pre{margin:0;padding:10px 12px;overflow:auto;max-height:420px;font:12.5px/1.5 ui-monospace,Consolas,monospace;white-space:pre;tab-size:2;color:var(--txt)}.cb code{background:none;padding:0;font-size:inherit}
 #pvw{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.62);display:flex;flex-direction:column;padding:12px;gap:8px}#pvw iframe{flex:1;border:0;border-radius:14px;background:#fff}#pvw .pvb{align-self:flex-end}
+/* ===== Modo TV (Google TV / Android TV y navegadores de tele o consola): diseño propio para verlo a 3 metros y manejarlo con el mando ===== */
+body.tv{font-size:clamp(18px,2.35vw,56px);line-height:1.4;padding:0!important;gap:0!important;--safe:3.4vw}
+body.tv *{min-width:0;overflow-wrap:break-word;hyphens:auto}
+body.tv::before{inset:-10%!important;animation:tvglow 38s ease-in-out infinite alternate!important;background:radial-gradient(52% 46% at 24% 18%,color-mix(in srgb,var(--acc) 24%,transparent),transparent 72%),radial-gradient(46% 42% at 86% 88%,color-mix(in srgb,var(--acc) 12%,transparent),transparent 72%)!important}
+@keyframes tvglow{to{transform:translate3d(3%,2%,0) scale(1.06)}}
+body.tv #main{height:100vh;padding:0 var(--safe);overflow:hidden}
+body.tv #side{position:fixed!important;left:0;top:0;bottom:0;height:100vh;width:min(46vw,34em)!important;margin:0!important;border-radius:0 1.4em 1.4em 0!important;z-index:60;transition:transform .22s;padding-top:1vh}
+body.tv #side.hide{transform:translateX(-110%);margin-left:0!important;box-shadow:none}
+body.tv header{border-radius:0!important;margin:0 calc(var(--safe) * -1)!important;padding:1.6vh var(--safe)!important;flex-wrap:nowrap;gap:.8em!important;border-width:0 0 1px 0!important;background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+body.tv header svg{width:1.7em;height:1.7em}
+body.tv header .tag{display:none}body.tv .name{font-size:1.15em;letter-spacing:.2em}
+body.tv header>#sm,body.tv header>#sd,body.tv header>#eb,body.tv header>#exp,body.tv header>#wake{display:none}
+body.tv header.open{flex-wrap:wrap}body.tv header.open>#exp{display:none}
+body.tv header.open>#sm,body.tv header.open>#sd,body.tv header.open>#eb,body.tv header.open>#exp,body.tv header.open>#wake{display:inline-block;flex:1 1 40%}
+body.tv #hm{display:grid}
+body.tv #tvclock{font:600 1.5em Georgia,"Iowan Old Style",serif;letter-spacing:.06em;color:var(--txt);margin:0 .4em;white-space:nowrap}
+body.tv button,body.tv select{min-height:2.7em;font-size:1em;padding:.5em 1.5em;line-height:1.2;white-space:normal;text-align:center;border-radius:1.4em}
+body.tv select{max-width:100%;text-overflow:ellipsis}
+body.tv #bt,body.tv #hm,body.tv #exp{width:2.7em;padding:0;font-size:.9em}
+body.tv #hav{width:2.7em;height:2.7em;padding:0}
+body.tv #log{padding:2vh .4vw!important;font-size:1.02em;line-height:1.55;max-width:none}
+body.tv .m{max-width:94%!important;border-radius:1.1em}body.tv .m.a{font-size:1.02em}
+body.tv #comp{padding:0 0 .6vh!important;max-width:none}
+body.tv #row{border-radius:2em;padding:.5em .6em}
+body.tv #q{font-size:1em;min-height:2.3em;line-height:1.35}
+body.tv #row #liv,body.tv #row #att{display:none}
+body.tv #row #mic{width:auto;padding:0 2.4vw;height:3.5vw;min-height:3.5vw;border-radius:999px;font-size:0}body.tv #row #mic::after{content:"🎤  Hablar";font-size:clamp(15px,1.95vw,46px)}
+body.tv #row #go{font-size:1em}
+body.tv #bar{display:none}
+body.tv #tvhint{display:flex;justify-content:center;flex-wrap:wrap;gap:.4em 1.6em;padding:.7vh 0 1.6vh;font-size:.5em;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+body.tv #tvhint b{color:var(--acc);font-weight:600;margin-right:.4em}
+body.tv .empty{width:100%;margin:auto 0;padding:0}
+body.tv .empty .gav{transform:scale(.8);margin-bottom:0}
+body.tv .empty b{font-size:2.1em;line-height:1.15;text-wrap:balance}
+body.tv .empty .ttl{font-size:.55em}
+body.tv .empty>small{display:none}
+body.tv .sugs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.4vh 1.4vw;max-width:none;width:100%;margin-top:2.4vh}
+body.tv .sg{display:flex;align-items:center;text-align:left;justify-content:flex-start;font-size:.92em;line-height:1.25;min-height:3.6em;padding:.7em 1.1em;border-radius:1.1em}
+body.tv #hist .h{padding:.8em 1em;font-size:.95em;border-radius:1em}body.tv #hist .h span{white-space:normal}
+body.tv .cb pre{font-size:.62em;max-height:42vh}body.tv .cba button{min-height:0;font-size:.55em;padding:.3em 1em}
+body.tv #ob,body.tv #lg,body.tv #ov,body.tv #pm,body.tv #wb{padding:var(--safe)!important}
+body.tv #obc,body.tv #lgc{width:min(34em,100%);padding:1.4em!important}body.tv .mbs{grid-template-columns:repeat(3,minmax(0,1fr))}
+body.tv .oa,body.tv .or{display:none}
+body.tv #set{width:min(38em,100%)}
+body.tv :focus,body.tv :focus-visible{outline:none!important;box-shadow:0 0 0 .2em var(--acc),0 0 1.6em .3em color-mix(in srgb,var(--acc) 55%,transparent)!important}
+body.tv button:focus,body.tv .sg:focus,body.tv .mb:focus,body.tv .card:focus,body.tv #hist .h:focus{transform:scale(1.045)}
+body.tv #log:focus{box-shadow:inset 0 0 0 .14em color-mix(in srgb,var(--acc) 55%,transparent)!important}
 </style></head><body>
 <aside id="side">
   <div class="sh"><button class="pri" id="bn">+ Nueva charla</button></div>
@@ -659,7 +706,7 @@ $('mic').onclick=async()=>{if(dict){dict.stop();return}
   if(!await needPerm('mic','Acceso al micrófono','Se usa solo mientras dictas. El dictado usa el reconocimiento de voz de tu navegador: en Edge y Chrome el audio puede enviarse a Microsoft o Google para transcribirlo.'))return;
   const r=dict=new SR();r.lang='es-ES';r.interimResults=true;r.continuous=false;const base=$('q').value;$('mic').classList.add('on');
   r.onresult=e=>{let t='';for(const x of e.results)t+=x[0].transcript;$('q').value=(base?base+' ':'')+t;$('q').oninput({target:$('q')})};
-  r.onend=r.onerror=()=>{$('mic').classList.remove('on');dict=null};r.start()};
+  r.onerror=()=>{$('mic').classList.remove('on');dict=null};r.onend=()=>{$('mic').classList.remove('on');dict=null;if(document.body.classList.contains('tv')&&$('q').value.trim()&&!busy)$('go').click()};r.start()};
 /* Modo Live: cámara + voz continua. Cada frase que dices se envía con un fotograma de la cámara y la respuesta se va hablando mientras se genera. */
 let LV=null,liveChat=null;
 const lvSay=t=>{$('lvs').textContent=t};
@@ -922,9 +969,20 @@ async function checkUpdate(manual){const st=$('updt'),bt=$('updb'),say=t=>{if(st
   try{const t=await(await fetch('/?_='+Date.now(),{cache:'no-store'})).text();const m=t.match(/<meta name="build" content="([^"]*)"/),nb=m?m[1]:'';
     if(nb&&BUILD_NOW&&nb!==BUILD_NOW){UPD=nb;state='new';say('Hay una versión nueva de la interfaz.');if(bt)bt.textContent='Actualizar ahora';showUpd()}}catch{state='err'}
   const ua=/CalexApp\/([\d.]+)/.exec(navigator.userAgent);
-  if(ua){try{const j=await(await fetch('https://api.github.com/repos/federico3470/NixelTheAgent/releases/latest')).json();if(j&&j.tag_name&&verNewer(j.tag_name,ua[1])){const l=$('updl');if(l){l.href=j.html_url;l.textContent='Hay una versión nueva de la app ('+j.tag_name+'): descargar';l.hidden=false}state='new'}}catch{}}
+  if(ua){try{const j=await(await fetch('https://api.github.com/repos/federico3470/CalexTheAgent/releases/latest')).json();if(j&&j.tag_name&&verNewer(j.tag_name,ua[1])){const l=$('updl');if(l){l.href=j.html_url;l.textContent='Hay una versión nueva de la app ('+j.tag_name+'): descargar';l.hidden=false}state='new'}}catch{}}
   if(manual&&state==='ok')say('Estás al día.');if(manual&&state==='err')say('No se pudo comprobar. Revisa tu conexión.')}
-$('updb').onclick=()=>UPD?applyUpdate():checkUpdate(true);(()=>{const q=$('q');if(q&&innerWidth<=760)q.placeholder=q.placeholder.split('  (')[0]})();
+$('updb').onclick=()=>UPD?applyUpdate():checkUpdate(true);
+/* ---------- modo TV: Google TV / Android TV (app «CalexTV»), ?tv=1 en cualquier navegador de tele o consola (también PS5) ---------- */
+(()=>{const q=new URLSearchParams(location.search);let on=/CalexTV/.test(navigator.userAgent)||q.get('tv')==='1';
+  try{if(q.get('tv')==='1')localStorage.setItem('calex-tv','1');if(q.get('tv')==='0'){localStorage.removeItem('calex-tv');on=false}else if(!on&&localStorage.getItem('calex-tv')==='1')on=true}catch{}
+  if(!on)return;document.body.classList.add('tv');$('side').classList.add('hide');$('log').tabIndex=0;$('q').placeholder='Habla o escribe…';const hd=document.querySelector('header'),clk=document.createElement('span');clk.id='tvclock';hd.insertBefore(clk,$('hm'));const tick=()=>{clk.textContent=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})};tick();setInterval(tick,20000);
+  const hint=document.createElement('div');hint.id='tvhint';hint.innerHTML='<span><b>OK</b>seleccionar</span><span><b>◀ ▲ ▼ ▶</b>mover</span><span><b>Mic</b>hablar</span><span><b>Atrás</b>cerrar</span>';$('bar').after(hint);
+  window.tvMic=()=>{const m=$('mic');if(m&&!m.classList.contains('on'))m.click()};
+  addEventListener('keydown',e=>{if(e.key==='MediaPlayPause'||e.key==='ContextMenu'||e.key==='F2'){e.preventDefault();window.tvMic()}});
+  [...document.querySelectorAll('#side .h,.sg')].forEach(x=>{if(!x.tabIndex||x.tabIndex<0)x.tabIndex=0});
+  setTimeout(()=>{const m=$('mic');if(m)m.focus()},700);
+  new MutationObserver(()=>{document.querySelectorAll('.sg,#hist .h,.mb,.card').forEach(x=>{if(x.tabIndex<0)x.tabIndex=0});document.querySelectorAll('.sg,#hist .h,.mb,.card').forEach(x=>{if(!x._k){x._k=1;x.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();x.click()}})}})}).observe(document.body,{childList:true,subtree:true})})();
+(()=>{const q=$('q');if(q&&innerWidth<=760)q.placeholder=q.placeholder.split('  (')[0]})();
 setTimeout(()=>checkUpdate(false),6000);setInterval(()=>checkUpdate(false),20*60*1000);
 /* ---------- detalles de la casa ---------- */
 function tip(t){const e=document.createElement('div');e.className='tip';e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),3800)}

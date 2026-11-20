@@ -14,6 +14,10 @@
 - Los bloques de código se dibujan con **Copiar**, **Vista previa** y **Descargar** (HTML y SVG).
 - Modo **Programador** con más espacio de respuesta y una plantilla probada de scrollytelling.
 
+**TV**
+- **Calex 1.1v GTV** para Google TV y Android TV: interfaz de TV propia (letra grande que se ajusta, reloj, ayuda del mando, foco dorado), manejo con el mando, dictado por voz y teclado en pantalla.
+- PS5: sin app (Sony no lo permite); se abre `/?tv=1` en su navegador.
+
 **Cuentas**
 - Inicio de sesión con **Google** y **Apple**. Se quitan Facebook y Huawei.
 - En la app Android, el inicio de sesión se hace en el navegador y vuelve a la app.
