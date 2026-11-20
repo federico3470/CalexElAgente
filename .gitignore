@@ -8,3 +8,5 @@ node_modules/
 scratch-*
 test/out/
 apps/dist/
+apps/android/build/
+*.jks
