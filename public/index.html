@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwplfeyq">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwplwml1">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -723,7 +723,12 @@ function actions(el){if(!el||el.querySelector('.acts'))return;const raw=()=>el.d
   const mk=(t,title,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.title=title;b.setAttribute('aria-label',title);b.onclick=fn;a.append(b)};
   mk('Copiar','Copiar',async e=>{try{await navigator.clipboard.writeText(raw());e.target.textContent='Copiado';setTimeout(()=>e.target.textContent='Copiar',1200)}catch{}});
   mk('Escuchar','Leer en voz alta',()=>{if(speechSynthesis.speaking){speechSynthesis.cancel();return}const u=new SpeechSynthesisUtterance(raw().replace(/[*`#]/g,''));u.lang='es-ES';speechSynthesis.speak(u)});
-  mk('Repetir','Repetir la pregunta',()=>{if(busy)return;const us=[...log.querySelectorAll('.m.u')].pop();if(us)send(us.dataset.raw||us.innerText)});el.append(a)}
+  mk('Repetir','Repetir la pregunta',()=>{if(busy)return;const us=[...log.querySelectorAll('.m.u')].pop();if(us)send(us.dataset.raw||us.innerText)});
+  if(((el.dataset.raw||'').match(/```/g)||[]).length%2===1)mk('Continuar','La respuesta se cortó: seguir donde se quedó',()=>{if(!busy)send('Continúa exactamente donde te quedaste: sigue desde la siguiente línea, en un nuevo bloque ```html, sin repetir nada ni explicar.')});
+  {const jp=joinedPage();if(jp.length>1){mk('Unir y descargar','Une los bloques de la página y la descarga completa',()=>downloadCode(jp.join('\n'),'html'));mk('Vista previa unida','Vista previa de la página completa',()=>previewCode(jp.join('\n'),'html'))}}
+  el.append(a)}
+/* páginas largas: une los bloques html de varias respuestas seguidas (desde el último «<!doctype html>») */
+function joinedPage(){const bl=[...log.querySelectorAll('.m.a .cb')].filter(b=>/^html?$/.test(b.querySelector('.cbh span').textContent.toLowerCase())).map(b=>b.querySelector('code').textContent);let st=0;bl.forEach((c,i)=>{if(/<!doctype html|<html[\s>]/i.test(c))st=i});return bl.slice(st)}
 const WB_VER='2026-11-formal';
 function whatsNew(force){if(!force&&lsGet('dot-seen','')===WB_VER)return;const nm=P&&P.name?', '+esc(P.name):'';
   const T=[['','Autorización en cada acción','Calex actúa sobre su dispositivo solo cuando usted lo autoriza.'],['','Agente de trabajo','Diseña sitios web, programa, edita archivos y busca información en la web.'],['','Técnico','Diagnostica y repara problemas del equipo con su permiso.'],['','Creación de imágenes','Describa lo que desea ver y Calex lo crea.'],['','Tareas con fotografía','Envíe una foto de ejercicios y obtenga la resolución paso a paso.'],['','Conversación por voz','Respuesta inmediata con cámara y micrófono.'],['','Memoria editable','Consulte y borre lo que Calex recuerda.'],['','Más control','Detener respuestas, exportar conversaciones y atajos de teclado.']];
