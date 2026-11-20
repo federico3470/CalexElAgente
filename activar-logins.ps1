@@ -1,4 +1,4 @@
-﻿# Activa el inicio de sesion de Nixel (Google y Apple) guardando TUS claves como secretos de Cloudflare.
+﻿# Activa el inicio de sesion de Calex (Google y Apple) guardando TUS claves como secretos de Cloudflare.
 # Uso:  powershell -ExecutionPolicy Bypass -File .\activar-logins.ps1
 # Las claves las escribes tu cuando wrangler las pide: no se guardan en ningun archivo ni se muestran en pantalla.
 $ErrorActionPreference = "Stop"
@@ -13,7 +13,7 @@ Write-Host "== Apple ==" -ForegroundColor Cyan
 Write-Host @"
 Antes necesitas una cuenta de Apple Developer (de pago) y crear en developer.apple.com > Certificates, Identifiers & Profiles:
   1. Identifiers > App IDs: crea uno y activa 'Sign in with Apple'.
-  2. Identifiers > Services IDs: crea uno (por ejemplo com.tufamilia.nixel). Ese es el APPLE_CLIENT_ID.
+  2. Identifiers > Services IDs: crea uno (por ejemplo com.tufamilia.calex). Ese es el APPLE_CLIENT_ID.
      Entra en el Services ID > 'Sign in with Apple' > Configure:
        Dominio:            $host_
        URL de retorno:     $url/auth/callback/apple

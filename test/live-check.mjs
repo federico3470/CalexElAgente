@@ -6,7 +6,7 @@ const H = () => ({ "Content-Type": "application/json", Origin: BASE, Cookie: coo
 const ok = (n, c, x = "") => console.log((c ? "OK  " : "FALLA ") + n + (x ? "  " + x : ""));
 
 let r = await fetch(BASE + "/"); const html = await r.text();
-ok("página principal", r.status === 200 && /Nixel/.test(html), `${r.status}, ${html.length} bytes`);
+ok("página principal", r.status === 200 && /Calex/.test(html), `${r.status}, ${html.length} bytes`);
 r = await fetch(BASE + "/models"); const mj = await r.json();
 ok("/models", r.ok && mj.models?.length >= 3, mj.models?.length + " modelos");
 r = await fetch(BASE + "/auth/guest", { method: "POST", headers: { "Content-Type": "application/json", Origin: BASE }, body: "{}" });

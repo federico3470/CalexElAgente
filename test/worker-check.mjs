@@ -111,6 +111,18 @@ try {
       t("google: segundo login reutiliza la misma cuenta", id1 === id2);
     }
   }
+  { // app Android: inicio de sesión en el navegador y vuelta con un código de un solo uso (calex://login?code=…)
+    const s1 = await call("/auth/start/google?app=1"), u1 = new URL(s1.headers.get("location")), st1 = u1.searchParams.get("state"); chal.set("google", u1.searchParams.get("code_challenge"));
+    t("app: el state lleva la marca «a.»", st1.startsWith("a."), st1);
+    const cb1 = await call(`/auth/callback/google?code=C-google&state=${st1}`), html1 = await cb1.text(), code1 = (/calex:\/\/login\?code=([\w-]+)/.exec(html1) || [])[1];
+    t("app: el callback devuelve la página con calex://login?code=… y no crea cookie en el navegador", cb1.status === 200 && !!code1 && !sess(cb1), html1.slice(0, 120));
+    const ex1 = await call("/auth/app?code=" + code1), ck1 = sess(ex1);
+    t("app: canjear el código crea la sesión dentro de la app", ex1.headers.get("location") === "/" && ck1.startsWith("dot_session=") && (await (await call("/auth/status", {}, ck1)).json()).user?.provider === "google");
+    const ex2 = await call("/auth/app?code=" + code1);
+    t("app: el código es de un solo uso", (ex2.headers.get("location") || "").includes("auth_error") && !sess(ex2));
+    const ex3 = await call("/auth/app?code=inventado");
+    t("app: un código inventado se rechaza", (ex3.headers.get("location") || "").includes("auth_error") && !sess(ex3));
+  }
   t("callback con state falso se rechaza", ((await call("/auth/callback/google?code=C-google&state=nada")).headers.get("location") || "").includes("auth_error"));
   t("callback con error del proveedor no crea sesión", !sess(await call("/auth/callback/google?error=access_denied&state=x")));
   t("Facebook y Huawei ya no existen", ["facebook", "huawei"].every(async () => true) && ((await call("/auth/start/facebook")).headers.get("location") || "").includes("auth_error") && ((await call("/auth/start/huawei")).headers.get("location") || "").includes("auth_error"));

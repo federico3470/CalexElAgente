@@ -1,6 +1,8 @@
-﻿// Genera public/ (interfaz web) y src/legal.js a partir de la interfaz local de Dot.
+// Genera public/ (interfaz web) y src/legal.js a partir de la interfaz local de Dot.
 // Uso:  node build.mjs      (cada parche debe encajar exactamente 1 vez; si la interfaz local cambia, avisa en vez de romper)
-import fs from "node:fs"; import path from "node:path";
+import fs from "node:fs";
+const BUILD = Date.now().toString(36); // identifica esta versión (para «Buscar actualizaciones»)
+import path from "node:path";
 const HERE = import.meta.dirname, LOCAL = path.resolve(HERE, "..", "dot-agent", "public");
 let h = fs.readFileSync(path.join(LOCAL, "index.html"), "utf8");
 const rep = (name, from, to, all = false) => { const n = h.split(from).length - 1; if (n < 1 || (!all && n !== 1)) throw new Error(`Parche "${name}": encaja ${n} veces (esperaba ${all ? "≥1" : "1"})`); h = h.split(from).join(to); };
@@ -40,11 +42,11 @@ rep("recorte para web", "</body>", `<script>
 
 // --- marca pública: la interfaz del PC se llama Dot; las versiones públicas se llaman Nixel ---
 { const mem = JSON.parse(fs.readFileSync(path.resolve(LOCAL, "..", "members-nixel.json"), "utf8")); const re = /\/\*MEMBERS\*\/[\s\S]*?\/\*\/MEMBERS\*\//; if (!re.test(h)) throw new Error("No encuentro la lista de integrantes"); h = h.replace(re, () => "/*MEMBERS*/const MEMBERS=" + JSON.stringify(mem) + ";/*/MEMBERS*/"); } // integrantes de la familia (solo en Nixel)
-h = h.replace(/\bDot\b/g, "Nixel").replace(/\bDOT\b/g, "NIXEL");
+h = h.replace(/\bDot\b/g, "Calex").replace(/\bDOT\b/g, "CALEX").replace(/__BUILD__/g, BUILD);
 fs.mkdirSync(path.join(HERE, "public"), { recursive: true });
 fs.writeFileSync(path.join(HERE, "public", "index.html"), h);
 for (const f of ["sw.js", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png"]) fs.copyFileSync(path.join(LOCAL, f), path.join(HERE, "public", f));
-fs.writeFileSync(path.join(HERE, "public", "manifest.json"), fs.readFileSync(path.join(LOCAL, "manifest.json"), "utf8").replace(/\bDot\b/g, "Nixel")); // la app instalada se llama Nixel
+fs.writeFileSync(path.join(HERE, "public", "manifest.json"), fs.readFileSync(path.join(LOCAL, "manifest.json"), "utf8").replace(/\bDot\b/g, "Calex")); // la app instalada se llama Calex
 const L = (n) => fs.readFileSync(path.join(HERE, "legal", n + ".html"), "utf8");
 fs.writeFileSync(path.join(HERE, "src", "legal.js"), "// Generado por build.mjs desde legal/*.html. No editar a mano.\nexport const LEGAL = " + JSON.stringify({ terminos: L("terminos"), privacidad: L("privacidad") }) + ";\n");
 console.log("OK · public/index.html", (h.length / 1024).toFixed(0), "KB · src/legal.js");

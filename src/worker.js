@@ -1,5 +1,5 @@
-// Nixel Cloud · Cloudflare Worker (plan gratis): API + inicio de sesión (Google, Facebook, Huawei) + IA (Workers AI) + datos (D1).
-// Mantiene la MISMA API que el Nixel local, para reutilizar la misma interfaz.
+// Calex Cloud · Cloudflare Worker (plan gratis): API + inicio de sesión (Google y Apple) + IA (Workers AI) + datos (D1).
+// Mantiene la MISMA API que el Calex local, para reutilizar la misma interfaz.
 import { LEGAL } from "./legal.js";
 
 const LEGAL_VERSION = "2026-11";
@@ -93,13 +93,18 @@ async function authRoutes(req, env, url, user) {
   let m = /^\/auth\/start\/(\w+)$/.exec(P);
   if (m && req.method === "GET") {
     const p = m[1]; if (!PROV[p] || !provReady(p, env)) return redirect("/?auth_error=" + encodeURIComponent("Ese inicio de sesión aún no está disponible"));
-    const o = provCfg(p, env), state = rnd(16);
+    const o = provCfg(p, env), state = (url.searchParams.get("app") === "1" ? "a." : "") + rnd(16); // «a.» = viene de la app: al terminar se vuelve a ella
     const qs = new URLSearchParams({ client_id: env[o.idv], redirect_uri: `${baseUrl(req, env)}/auth/callback/${p}`, response_type: "code", scope: o.scope, state });
     if (o.formPost) qs.set("response_mode", "form_post");
     let verifier = null; if (o.pkce) { verifier = rnd(32); qs.set("code_challenge", b64u(await crypto.subtle.digest("SHA-256", enc.encode(verifier)))); qs.set("code_challenge_method", "S256"); }
     await q(env, "DELETE FROM oauth_states WHERE exp<?", Date.now()).run();
     await q(env, "INSERT INTO oauth_states(state,provider,verifier,exp) VALUES(?,?,?,?)", state, p, verifier, Date.now() + 600000).run();
     return redirect(o.auth + "?" + qs);
+  }
+  if (req.method === "GET" && P === "/auth/app") { // la app canjea el código por una sesión dentro de su WebView
+    const code = url.searchParams.get("code") || "", row = await q(env, "SELECT * FROM oauth_states WHERE state=? AND provider='appcode'", "c." + code).first(); await q(env, "DELETE FROM oauth_states WHERE state=?", "c." + code).run();
+    if (!row || row.exp < Date.now()) return redirect("/?auth_error=" + encodeURIComponent("El inicio de sesión caducó. Inténtalo de nuevo."));
+    return redirect("/", { "Set-Cookie": await newSession(env, row.verifier) });
   }
   m = /^\/auth\/callback\/(\w+)$/.exec(P);
   if (m && (req.method === "GET" || req.method === "POST")) {
@@ -123,6 +128,10 @@ async function authRoutes(req, env, url, user) {
       if (!info.sub) throw new Error("el proveedor no devolvió tu identificador");
       let u = await q(env, "SELECT * FROM users WHERE provider=? AND sub=?", p, String(info.sub)).first();
       if (!u) { const id = crypto.randomUUID(); await q(env, "INSERT INTO users(id,provider,sub,email,name,profile,facts,created) VALUES(?,?,?,?,?,?,?,?)", id, p, String(info.sub), info.email || "", String(info.name || "").slice(0, 30), null, "[]", Date.now()).run(); u = { id }; }
+      if (String(params.get("state") || "").startsWith("a.")) { // app Android: se entrega un código de un solo uso por el esquema calex://
+        const code = rnd(24); await q(env, "INSERT INTO oauth_states(state,provider,verifier,exp) VALUES(?,?,?,?)", "c." + code, "appcode", u.id, Date.now() + 120000).run();
+        return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Volver a Calex</title><body style="font:18px system-ui;background:#15140f;color:#ece7db;display:grid;place-items:center;height:100vh;margin:0;text-align:center"><div><p>Listo. Vuelve a Calex.</p><p><a href="calex://login?code=${code}" style="color:#15140f;background:#d4a35f;padding:12px 22px;border-radius:999px;text-decoration:none">Abrir Calex</a></p></div><script>location.href="calex://login?code=${code}"</script>`, { headers: { "Content-Type": "text/html; charset=utf-8", ...SEC } });
+      }
       return redirect("/", { "Set-Cookie": await newSession(env, u.id) });
     } catch (e) { return fail(`No se pudo iniciar sesión con ${PROV[p].label}: ${e.message}`); }
   }
@@ -157,7 +166,7 @@ async function chatRoute(req, env, user) {
   const docs = (Array.isArray(b.docs) ? b.docs : []).slice(0, 3).map((d) => ({ name: String(d?.name || "documento").replace(/[\r\n]/g, " ").slice(0, 80), text: String(d?.text || "").slice(0, 14000) })).filter((d) => d.text.trim());
   msgs.push({ role: "user", content: message, ...(docs.length && { docs: docs.map((d) => ({ name: d.name, text: d.text.slice(0, 9000) })) }) });
   const model = images.length ? PM.vis.id : picked.id;
-  const sys = `Eres Nixel, un asistente personal. Responde SIEMPRE en el idioma del usuario (normalmente español), breve y directo, sin relleno. Estilo: registro formal y profesional, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes hacerlo tú y entrega de inmediato los pasos numerados y cortos para que los haga él, sin preguntarle si los quiere. ${persona(profile)}${MODES[b.mode]?.[2] ? " " + MODES[b.mode][2] : ""}${b.live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`.trim();
+  const sys = `Eres Calex, un asistente personal. Responde SIEMPRE en el idioma del usuario (normalmente español), breve y directo, sin relleno. Estilo: registro formal y profesional, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes hacerlo tú y entrega de inmediato los pasos numerados y cortos para que los haga él, sin preguntarle si los quiere. ${persona(profile)}${MODES[b.mode]?.[2] ? " " + MODES[b.mode][2] : ""}${b.live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`.trim();
   const hist = msgs.filter((m) => m.content).slice(-20).map((m) => ({ role: m.role, content: m.docs?.length ? m.docs.map((d) => `[Documento adjunto: ${d.name}]\n${d.text}`).join("\n\n") + "\n\n" + m.content : m.content }));
   if (images.length) hist[hist.length - 1].content = [{ type: "text", text: message }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))];
   const stream = new ReadableStream({ async start(ctrl) {
@@ -206,7 +215,7 @@ async function api(req, env, url, user) {
   let m = /^\/chats\/([\w-]+)(\/export)?$/.exec(P);
   if (m) { const c = await q(env, "SELECT * FROM chats WHERE id=? AND user_id=?", m[1], user.id).first(); if (!c) return json({}, 404);
     const ms = JSON.parse(c.messages).filter((x) => x.content);
-    if (m[2] && M === "GET") return new Response(`# ${c.title}\n\n` + ms.map((x) => `**${x.role === "user" ? "Tú" : "Nixel"}:** ${x.content}`).join("\n\n"), { headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `attachment; filename="${c.title.replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 40) || "charla"}.md"` } });
+    if (m[2] && M === "GET") return new Response(`# ${c.title}\n\n` + ms.map((x) => `**${x.role === "user" ? "Tú" : "Calex"}:** ${x.content}`).join("\n\n"), { headers: { "Content-Type": "text/markdown; charset=utf-8", "Content-Disposition": `attachment; filename="${c.title.replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 40) || "charla"}.md"` } });
     if (M === "GET") return json({ id: c.id, title: c.title, messages: ms });
     if (M === "DELETE") { await q(env, "DELETE FROM chats WHERE id=?", c.id).run(); return json("ok"); }
     if (M === "PATCH") { const b = await req.json().catch(() => ({})); await q(env, "UPDATE chats SET title=?, pinned=? WHERE id=?", typeof b.title === "string" && b.title.trim() ? b.title.trim().slice(0, 60) : c.title, typeof b.pinned === "boolean" ? +b.pinned : c.pinned, c.id).run(); return json("ok"); } }

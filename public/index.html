@@ -1,11 +1,20 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nixel</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Nixel"><meta name="theme-color" content="#0f1115">
+<title>Calex</title>
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwpkywwl">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
+/* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
+(function(){if(window.webkitSpeechRecognition||!window.CalexNative)return;function R(){this.lang='es-ES';this.continuous=false;this.interimResults=false}
+ R.prototype.start=function(){window.__ns=this;try{window.CalexNative.start(this.lang||'es-ES')}catch(e){window.__nsEnd('error')}if(this.onstart)this.onstart()};
+ R.prototype.stop=R.prototype.abort=function(){try{window.CalexNative.stop()}catch(e){}};
+ window.__nsResult=function(t){var s=window.__ns;if(s&&s.onresult)s.onresult({resultIndex:0,results:[[{transcript:t,confidence:1}]]})};
+ window.__nsEnd=function(err){var s=window.__ns;if(!s)return;if(err&&s.onerror)s.onerror({error:err});if(s.onend)s.onend()};
+ window.SpeechRecognition=window.webkitSpeechRecognition=R})();
 const T=(id,n,bg,side,panel,line,txt,mut,acc,accd,onacc,bgimg)=>({id,n,bg,side,panel,line,txt,mut,acc,accd,onacc,bgimg});
 const THEMES=[
+ T('calma','Calma','#15140f','#1a1915','#201e19','#34312a','#ece7db','#9c9687','#d4a35f','#a9792f','#17110a','linear-gradient(160deg,#16150f 0%,#1c1a14 100%)'),
+ T('papel','Papel','#f3efe6','#ebe5d7','#fbf8f1','#dcd3c0','#27231c','#7a7466','#a8631f','#8f5114','#ffffff','linear-gradient(160deg,#f6f2e9 0%,#ece5d6 100%)'),
  T('dark','Oscuro','#0f1115','#13161c','#181b22','#262b36','#e6e8ee','#8b93a5','#4fc3f7','#1b739e','#ffffff',''),
  T('bw','Blanco y negro','#ffffff','#f1f1f1','#ffffff','#d9d9d9','#111111','#666666','#111111','#111111','#ffffff',''),
  T('wb','Negro y blanco','#000000','#0a0a0a','#111111','#2a2a2a','#f5f5f5','#9a9a9a','#ffffff','#e6e6e6','#000000',''),
@@ -22,7 +31,8 @@ function applyTheme(id,save){const t=THEMES.find(x=>x.id===id)||THEMES[0],s=docu
  for(const [k,v] of [['bg',t.bg],['side',t.side],['panel',t.panel],['line',t.line],['txt',t.txt],['mut',t.mut],['acc',t.acc],['accd',t.accd],['onacc',t.onacc],['bgimg',t.bgimg||t.bg]])s.setProperty('--'+k,v);
  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t.bg;
  if(save){try{localStorage.setItem('dot-theme',t.id)}catch{}}const hx=t.bg.replace('#',''),lum=(parseInt(hx.slice(0,2),16)*.299+parseInt(hx.slice(2,4),16)*.587+parseInt(hx.slice(4,6),16)*.114)/255;document.documentElement.dataset.mode=lum>.6?'light':'dark';window.curTheme=t.id}
-try{applyTheme(localStorage.getItem('dot-theme')||'dark')}catch{applyTheme('dark')}
+const THEME0=()=>(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'papel':'calma';
+try{applyTheme(localStorage.getItem('dot-theme')||THEME0())}catch{applyTheme(THEME0())}
 </script>
 <style>
 :root{--bg:#0f1115;--side:#13161c;--panel:#181b22;--line:#262b36;--txt:#e6e8ee;--mut:#8b93a5;--acc:#4fc3f7;--accd:#2b8fbf;--ok:#5ad19a;--bad:#ef6b6b}
@@ -220,18 +230,71 @@ input[type=range]{accent-color:var(--acc);padding:0;border:0;background:transpar
 button.mb:hover{transform:translateY(-2px)}div.mb{cursor:default}.mb.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,var(--panel))}
 .mb b{font-size:15px;font-weight:600}.mb small{color:var(--mut);font-size:12px;line-height:1.25}
 .mba{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accd),var(--acc));color:#fff;font-weight:700;font-size:20px;margin-bottom:4px}
+/* ===== Calma: el cristal se queda, pero con menos color; y pensado para móvil ===== */
+:root{--blur:24px}
+html,body{height:100%;max-width:100vw}body{overflow-x:hidden}
+/* los fondos de colores se reducen a un brillo suave de un solo tono (y no se salen de la pantalla: en el móvil ensanchaban la página) */
+body::before{inset:0!important;filter:none!important;animation:none!important;background:radial-gradient(62% 52% at 16% 10%,color-mix(in srgb,var(--acc) 15%,transparent),transparent 72%),radial-gradient(52% 46% at 90% 94%,color-mix(in srgb,var(--txt) 6%,transparent),transparent 72%)!important}
+body::after{display:none!important}
+#ob::before,#lg::before{inset:0!important;filter:none!important;animation:none!important;background:radial-gradient(62% 52% at 20% 16%,color-mix(in srgb,var(--acc) 13%,transparent),transparent 72%)!important}
+/* cristal menos saturado */
+#side,header,#row,.pmb,#set,#obc,#lgc,.card,.legal,.m.a,.t,details.think,#lvs,#lvb button,#oas details,.sug,.stepcard,#ep,#gdb,#sp,.tile,#wbc,#gdm{-webkit-backdrop-filter:blur(var(--blur)) saturate(118%)!important;backdrop-filter:blur(var(--blur)) saturate(118%)!important}
+:root[data-mode=dark]{--gl:rgba(255,255,255,.055);--gl2:rgba(255,255,255,.09);--glb:rgba(255,255,255,.13)}
+/* marca y color */
+.name{background:none!important;-webkit-text-fill-color:currentColor;color:var(--txt);font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;font-weight:600;letter-spacing:.16em}
+header svg rect,#obc svg rect,#lgc svg rect{fill:var(--acc)!important}
+.m.u{background:color-mix(in srgb,var(--acc) 52%,var(--panel))!important;background-image:none!important;color:var(--txt)!important;border:1px solid var(--glb)!important;box-shadow:var(--spec),0 6px 18px rgba(0,0,0,.16)!important}
+button.pri{background-image:none!important;background-color:var(--accd)!important;color:var(--onacc,#fff)!important;border-color:color-mix(in srgb,var(--accd) 70%,#fff)!important;box-shadow:var(--spec)!important}
+.mba{background:var(--accd)!important;color:var(--onacc,#fff)!important}
+.empty .gav{animation:none!important;box-shadow:var(--spec),0 10px 30px rgba(0,0,0,.22)!important}
+.empty b,#obc h2,#lgc h2{font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;font-weight:600}
+.empty .ttl{display:block;margin-top:-2px;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.dog{position:fixed;bottom:10px;left:-60px;font-size:34px;z-index:99;pointer-events:none;animation:trot 5s linear forwards}
+@keyframes trot{from{left:-60px}to{left:100vw}}
+.tip{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);padding:8px 16px;border-radius:999px;background:var(--gl2);border:1px solid var(--glb);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);z-index:99;font-size:14px;max-width:90vw;text-align:center}
+body.maquina{font-family:ui-monospace,Consolas,monospace}body.maquina .m.a{font-family:ui-monospace,Consolas,monospace}
+#credit{margin:2px 0 10px;text-align:center;font-size:11px;color:var(--mut);letter-spacing:.08em;user-select:none}
+#updbn{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:90;display:none;gap:10px;align-items:center;padding:8px 8px 8px 16px;border-radius:999px;background:var(--gl2);border:1px solid var(--glb);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);font-size:14px}#updbn.on{display:flex}#updbn button{padding:5px 14px}
+#hm{display:none;width:40px;height:40px;padding:0;place-items:center}
+/* móvil: una sola columna, el historial es un cajón y los controles van en el menú «⋯» */
+@media(max-width:760px){
+ html,body{height:100dvh}
+ body{padding:0!important;gap:0!important}
+ #side{position:fixed!important;left:0;top:0;bottom:0;height:100dvh;width:min(84vw,330px)!important;margin:0!important;border-radius:0 28px 28px 0!important;z-index:60;transition:transform .22s}
+ #side.hide{transform:translateX(-110%);margin-left:0!important;box-shadow:none}
+ body:has(#side:not(.hide))::after{content:""!important;display:block!important;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:50;pointer-events:none}
+ #main{height:100dvh}
+ header{border-radius:0!important;margin:0!important;flex-wrap:wrap;padding:8px 10px!important;gap:6px!important}
+ header .tag{display:none}
+ header>#sm,header>#sd,header>#eb,header>#exp,header>#wake{display:none}
+ header.open>#sm,header.open>#sd,header.open>#eb,header.open>#exp,header.open>#wake{display:inline-block;flex:1 1 44%;min-width:0;height:40px}
+ #hm{display:grid}
+ #log{padding:12px 10px!important}.m{max-width:94%!important}
+ #comp{padding:0 6px calc(4px + env(safe-area-inset-bottom))!important}
+ #row #liv{display:none}#row #go{padding:0 14px}
+ #bar{display:none}
+ input,select,textarea,#q{font-size:16px!important}
+ #ov,#pm,#wb,#ob,#lg{padding:10px!important}
+ #obc,#lgc{padding:22px 16px!important;border-radius:28px!important}
+ .cards{grid-template-columns:1fr!important}
+ #set{padding:16px!important;border-radius:26px!important}
+ .mbs{grid-template-columns:repeat(2,1fr)}
+ #sp{left:8px;right:8px;width:auto;bottom:8px}
+}
 </style></head><body>
 <aside id="side">
   <div class="sh"><button class="pri" id="bn">+ Nueva charla</button></div>
   <div class="hl">Historial</div><div style="padding:0 14px 6px"><input type="search" id="hs" placeholder="Buscar charlas…" aria-label="Buscar en el historial" style="width:100%;padding:8px 14px"></div><div id="hist"></div>
   <div class="sh"><button id="bs">⚙ Configuración</button></div>
+  <div id="credit">hecho en casa</div>
 </aside>
 <div id="main">
 <header>
   <button id="bt" title="Mostrar/ocultar historial" aria-label="Historial">☰</button>
   <svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><defs><linearGradient id="brandg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#brandg)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg>
-  <div class="brand"><span class="name">NIXEL</span><span class="tag">Powered by Intelligence &nbsp;·&nbsp; Driven by an Engineer</span></div>
+  <div class="brand"><span class="name">CALEX</span><span class="tag">Powered by Intelligence &nbsp;·&nbsp; Driven by an Engineer</span></div>
   <span class="sp"></span>
+  <button type="button" id="hm" aria-label="Más opciones" aria-expanded="false">⋯</button>
   <button id="hav" class="avb" title="Tu perfil y avatar" aria-label="Tu perfil"></button>
   <select id="sm" title="Modelo" aria-label="Modelo"></select>
   <select id="sd" title="Modo de conversación" aria-label="Modo"></select>
@@ -241,7 +304,7 @@ button.mb:hover{transform:translateY(-2px)}div.mb{cursor:default}.mb.on{border-c
   <button type="button" id="wake" title="Llamar por voz: diga el nombre y la petición" aria-pressed="false" style="height:40px">Llamar</button>
 </header>
 <div id="log"></div>
-<div id="comp"><div id="prev"></div><form id="row"><button type="button" class="tb" id="att" title="Adjuntar imagen, PDF o archivo de texto" aria-label="Adjuntar imagen, PDF o archivo de texto">📎</button><button type="button" class="tb" id="mic" title="Dictar con el micrófono" aria-label="Dictar">🎤</button><textarea id="q" rows="1" placeholder="Escribe a Nixel…  (Enter envía · Shift+Enter nueva línea)" autofocus></textarea><button type="button" class="tb" id="liv" title="Modo Live: cámara y voz" aria-label="Modo Live">⚡ Live</button><button class="pri" id="go">Enviar</button></form><input type="file" id="fi" accept="image/*,.pdf,application/pdf,.txt,.md,.csv,.json,.html,.xml,.log,.js,.py,.css,.ts" multiple hidden></div>
+<div id="comp"><div id="prev"></div><form id="row"><button type="button" class="tb" id="att" title="Adjuntar imagen, PDF o archivo de texto" aria-label="Adjuntar imagen, PDF o archivo de texto">📎</button><button type="button" class="tb" id="mic" title="Dictar con el micrófono" aria-label="Dictar">🎤</button><textarea id="q" rows="1" placeholder="Escribe a Calex…  (Enter envía · Shift+Enter nueva línea)" autofocus></textarea><button type="button" class="tb" id="liv" title="Modo Live: cámara y voz" aria-label="Modo Live">⚡ Live</button><button class="pri" id="go">Enviar</button></form><input type="file" id="fi" accept="image/*,.pdf,application/pdf,.txt,.md,.csv,.json,.html,.xml,.log,.js,.py,.css,.ts" multiple hidden></div>
 <div id="bar"><span class="dot" id="dt"></span><span>⏱ <b id="tm">0.0 s</b></span><span>1.er token <b id="tf">–</b></span><span><b id="tp">–</b> tok/s</span><span id="tmod"></span><span class="chip" id="gpuc" title="Uso de la tarjeta gráfica"></span></div>
 </div>
 
@@ -261,6 +324,8 @@ button.mb:hover{transform:translateY(-2px)}div.mb{cursor:default}.mb.on{border-c
   <div class="r"><label>Tamaño del texto</label><select id="fsz"><option value="14">Pequeño</option><option value="15">Normal</option><option value="17">Grande</option><option value="19">Muy grande</option></select></div>
   <div class="r"><label><input type="checkbox" id="anm"> Animaciones y fondo en movimiento</label></div>
   <div class="r"><label>Novedades<small>Atajos: Ctrl+K nueva charla · Ctrl+/ escribir · Ctrl+, configuración</small></label><button id="wbn">Ver novedades</button></div>
+  <h4>Actualizaciones</h4>
+  <div class="r"><label>Versión<small id="updt">Busca si hay una versión nueva.</small><a id="updl" hidden target="_blank" rel="noopener" style="color:var(--acc);font-size:13px"></a></label><button type="button" id="updb">Buscar actualizaciones</button></div>
   <h4>Integrantes</h4>
   <div id="mbl"></div>
   <h4>Perfil</h4>
@@ -268,16 +333,16 @@ button.mb:hover{transform:translateY(-2px)}div.mb{cursor:default}.mb.on{border-c
   <h4>Modelo</h4>
   <div class="r"><label>Modelo por defecto<small>Los 4B van rápido en tu GPU; el 8B es más listo pero más lento.</small></label><select id="cm"></select></div>
   <div class="r"><label>Esfuerzo por defecto<small>Rápido = respuestas cortas · Profundo = razona más.</small></label><select id="ce"></select></div>
-  <div class="r"><label>Webs a leer en investigación profunda<small>Hasta cuántas páginas lee Nixel.</small></label><input type="number" id="cr" min="5" max="60" style="width:80px"></div>
+  <div class="r"><label>Webs a leer en investigación profunda<small>Hasta cuántas páginas lee Calex.</small></label><input type="number" id="cr" min="5" max="60" style="width:80px"></div>
   <h4>Seguridad</h4>
-  <div class="r"><label>Nivel de seguridad<small>Qué hace Nixel solo y qué te pregunta. Los límites (borrar, apagar, carpetas del sistema…) siempre aplican.</small></label><select id="sl"><option value="careful">Cuidadoso</option><option value="balanced">Equilibrado</option><option value="trusting">Confiado</option><option value="custom" disabled>Personalizado</option></select></div>
+  <div class="r"><label>Nivel de seguridad<small>Qué hace Calex solo y qué te pregunta. Los límites (borrar, apagar, carpetas del sistema…) siempre aplican.</small></label><select id="sl"><option value="careful">Cuidadoso</option><option value="balanced">Equilibrado</option><option value="trusting">Confiado</option><option value="custom" disabled>Personalizado</option></select></div>
   <h4>Permisos de herramientas</h4>
   <div class="perm" id="perms"></div>
   <small style="color:var(--mut)">Automático = lo hace solo · Preguntar = te pide permiso antes · Bloqueado = no puede usarla. Lo peligroso para Windows siempre pregunta.</small>
   <h4>Memoria</h4>
   <div class="r"><label id="mem">…</label><button id="cmem">Borrar toda la memoria</button></div>
   <div id="memlist"></div>
-  <div class="r"><label>Instrucciones extra<small>Tono, reglas o datos que Nixel siempre debe tener en cuenta.</small></label></div>
+  <div class="r"><label>Instrucciones extra<small>Tono, reglas o datos que Calex siempre debe tener en cuenta.</small></label></div>
   <textarea id="cx" rows="3" style="width:100%"></textarea>
   <h4>Acceso desde otros dispositivos</h4>
   <div class="r"><label><input type="checkbox" id="lo"> Permitir acceso desde el móvil u otros PCs de tu red</label></div>
@@ -290,14 +355,14 @@ button.mb:hover{transform:translateY(-2px)}div.mb{cursor:default}.mb.on{border-c
   <div class="r"><label>Borrar mis datos y cuenta<small>Elimina perfil, chats, memoria y cuenta. No se puede deshacer.</small></label><button id="dld" style="border-color:var(--bad);color:var(--bad)">Borrar todo…</button></div>
   <details style="margin:6px 0"><summary style="cursor:pointer">Datos del responsable (para los textos legales)</summary>
     <div class="r"><label>Nombre o empresa</label><input type="text" id="lgo" style="width:100%"></div><div class="r"><label>Correo de contacto</label><input type="text" id="lgm" style="width:100%"></div><div class="r"><label>País o jurisdicción</label><input type="text" id="lgc2" style="width:100%"></div>
-    <small style="color:var(--mut)">Aparecen en los Términos y la Política. Si compartes Nixel con otras personas, complétalos y haz revisar los textos por un abogado.</small></details>
+    <small style="color:var(--mut)">Aparecen en los Términos y la Política. Si compartes Calex con otras personas, complétalos y haz revisar los textos por un abogado.</small></details>
   <h4>Cuentas (avanzado)</h4>
-  <details><summary style="cursor:pointer">Activar Google, Facebook, Huawei y Apple — solo para quien instala o publica Nixel</summary>
+  <details><summary style="cursor:pointer">Activar Google, Facebook, Huawei y Apple — solo para quien instala o publica Calex</summary>
   <small style="color:var(--mut)">Tus usuarios <b>no ven nada de esto</b>: solo pulsan «Continuar con…» y aceptan. Tú registras una vez la app en el panel de cada empresa y pegas aquí su ID y secreto. Los secretos se guardan solo en este PC.</small>
   <div id="oas"></div></details>
-  <div class="r"><label>Dirección pública (opcional)<small>Solo si Nixel es accesible por una dirección https propia. Apple la exige.</small></label><input type="text" id="opu" placeholder="https://dot.midominio.com" style="width:100%"></div>
+  <div class="r"><label>Dirección pública (opcional)<small>Solo si Calex es accesible por una dirección https propia. Apple la exige.</small></label><input type="text" id="opu" placeholder="https://dot.midominio.com" style="width:100%"></div>
   <h4>Nube opcional · imágenes y Live más rápidos</h4>
-  <small style="color:var(--mut)">Apagada por defecto. Usa un servicio externo con plan gratis para responder imágenes y Live en 1 o 2 s. <b>Lo que envías sale de tu equipo</b>: el mensaje y las imágenes de esa petición (no tu nombre, edad ni memoria). Si falla o se agota el límite, Nixel vuelve solo al modelo local.</small>
+  <small style="color:var(--mut)">Apagada por defecto. Usa un servicio externo con plan gratis para responder imágenes y Live en 1 o 2 s. <b>Lo que envías sale de tu equipo</b>: el mensaje y las imágenes de esa petición (no tu nombre, edad ni memoria). Si falla o se agota el límite, Calex vuelve solo al modelo local.</small>
   <div class="r"><label>Proveedor</label><select id="cp"></select></div>
   <div class="r"><small id="cpl"></small></div>
   <div class="r"><label>Dirección de la API<small>En Cloudflare cambia TU_ACCOUNT_ID por el ID de tu cuenta.</small></label><input type="text" id="cu" style="width:100%"></div>
@@ -307,13 +372,13 @@ button.mb:hover{transform:translateY(-2px)}div.mb{cursor:default}.mb.on{border-c
   <div class="r"><label class="ck"><input type="checkbox" id="cco"> Entiendo que los mensajes e imágenes de esas peticiones se envían a este proveedor, con sus propias condiciones y política de privacidad.</label></div>
   <div class="r"><label><input type="checkbox" id="cen"> Activar la nube</label><button type="button" id="ctb">Probar conexión</button><label id="ctr" style="font-size:13px;white-space:pre-wrap"></label></div>
   <h4>Pasarela pública · modelos de este PC</h4>
-  <small style="color:var(--mut)">Permite que los usuarios de Nixel (la versión web pública) usen los modelos de este PC. Abre un servidor aparte, solo local (127.0.0.1:3001), que únicamente atiende conversaciones: sin herramientas, sin su memoria y sin acceso a su equipo. Hay que publicarlo con un túnel (Tailscale Funnel o Cloudflare Tunnel) apuntando al puerto 3001, nunca al 3000.</small>
+  <small style="color:var(--mut)">Permite que los usuarios de Calex (la versión web pública) usen los modelos de este PC. Abre un servidor aparte, solo local (127.0.0.1:3001), que únicamente atiende conversaciones: sin herramientas, sin su memoria y sin acceso a su equipo. Hay que publicarlo con un túnel (Tailscale Funnel o Cloudflare Tunnel) apuntando al puerto 3001, nunca al 3000.</small>
   <div class="r"><label><input type="checkbox" id="gwe"> Activar la pasarela</label><small id="gws" style="color:var(--mut)"></small></div>
   <div class="r"><label>Páginas autorizadas<small>Direcciones https desde las que se permite usarla, separadas por comas.</small></label><input type="text" id="gwo" style="width:100%"></div>
   <div class="r"><label>Mensajes por hora y persona</label><input type="number" id="gwh" min="3" max="600" style="width:90px"></div>
   <div class="r"><label>Modelos que se comparten<small>Si no marca ninguno, se comparten todos los instalados.</small></label><div id="gwm"></div></div>
-  <h4>PC remota de Nixel (nube)</h4>
-  <small style="color:var(--mut)">Un servidor Linux alquilado donde Nixel instala, programa y ejecuta cosas sin tocar tu PC. Guía: <code>D:\dot-agent\remote\LEEME.md</code></small>
+  <h4>PC remota de Calex (nube)</h4>
+  <small style="color:var(--mut)">Un servidor Linux alquilado donde Calex instala, programa y ejecuta cosas sin tocar tu PC. Guía: <code>D:\dot-agent\remote\LEEME.md</code></small>
   <div class="r"><label>Dirección (IP o dominio)</label><input type="text" id="rh" placeholder="203.0.113.10" style="width:200px"></div>
   <div class="r"><label>Usuario</label><input type="text" id="ru" style="width:200px"></div>
   <div class="r"><label>Puerto SSH</label><input type="number" id="rp" style="width:90px"></div>
@@ -382,13 +447,13 @@ function avatar(a,m='normal',size=48){a={...DEF,...a};const K=AVK.includes(a.kin
     `<path d="M19 54Q19 13 50 13Q81 13 81 54" fill="none" stroke="#2b2f3a" stroke-width="5"/><rect x="12" y="47" width="12" height="22" rx="6" fill="#2b2f3a"/><rect x="76" y="47" width="12" height="22" rx="6" fill="#2b2f3a"/>`][a.acc|0]||'';
   const bl=blush?`<circle cx="31" cy="64" r="4.5" fill="#ff8a8a" opacity=".28"/><circle cx="69" cy="64" r="4.5" fill="#ff8a8a" opacity=".28"/>`:'';
   return `<svg class="av m-${m}" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true"><defs><clipPath id="${id}"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#${id})"><rect width="100" height="100" fill="#cfe8f7"/>${back}${torso}${head}${front}${bl}${eyeBg}${brows}${eyes}${mouthG}${extra}${acc}${sweat}</g></svg>`}
-const greet=()=>{const h=new Date().getHours();return h>=21||h<8?'Buenas noches':h>=14?'Buenas tardes':'Buenos días'};
+const greet=()=>{const h=new Date().getHours();return h<5?'Qué tarde':h>=21||h<8?'Buenas noches':h>=14?'Buenas tardes':'Buenos días'};
 const clock=()=>new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
 function paintAv(){const a=P?P.avatar:DEF;$('hav').innerHTML=avatar(a,mood,36);const g=document.querySelector('.gav');if(g)g.innerHTML=avatar(a,mood,96)}
 function setMood(m,ms){mood=m;paintAv();clearTimeout(moodT);if(ms)moodT=setTimeout(()=>setMood('normal'),ms)}
 const empty=()=>{const nm=P&&P.name?', '+esc(P.name):'';
   const SUG=['Explíqueme qué es una VPN en dos frases','Proponga una cena con pollo y arroz','Traduzca «buenos días» a cinco idiomas','Ayúdeme a redactar un correo formal','Resuma las ventajas de ahorrar a diario','Explique la fotosíntesis de forma sencilla'];
-  log.innerHTML=`<div class="empty"><div class="gav"></div><b>${greet()}${nm}</b>Son las ${clock()} · ¿En qué puedo ayudarle?<small>Puedo redactar, traducir, explicar y analizar imágenes que usted adjunte, y conversar por voz.</small>
+  log.innerHTML=`<div class="empty"><div class="gav"></div><b>${greet()}${nm}</b>${P&&P.title&&!ONE?`<small class="ttl">${esc(P.title)}</small>`:''}Son las ${clock()} · ¿En qué puedo ayudarle?<small>Puedo redactar, traducir, explicar y analizar imágenes que usted adjunte, y conversar por voz.</small>
     <div class="sugs">${SUG.map(s=>`<button type="button" class="sg">${esc(s)}</button>`).join('')}</div></div>`;paintAv();
   log.querySelectorAll('.sg').forEach(b=>b.onclick=()=>{if(!busy)send(b.textContent)})};
 const fmt=ms=>(ms/1000).toFixed(1)+' s';
@@ -396,13 +461,13 @@ const fmt=ms=>(ms/1000).toFixed(1)+' s';
 /* ---------- asistente de bienvenida / editar perfil ---------- */
 const ob={step:0,d:null,mood:'normal',tones:{},host:{},legalVersion:'',note:'',detected:''};
 /*MEMBERS*/const MEMBERS=[{"id":"lorenzo","name":"Lorenzo","title":"Hermano mayor"},{"id":"benja","name":"Benja","title":"Hermano del medio"},{"id":"fede","name":"Fede","title":"Creador y programador"},{"id":"jose","name":"José","title":"Padre"},{"id":"nora","name":"Nora","title":"Madre"},{"id":"perro","name":"El perro","title":"Guardián del hogar","icon":"🐕"}];/*/MEMBERS*/
-const ONE=MEMBERS.length===1; // un solo integrante (Nixel en el PC): no se pregunta el nombre
+const ONE=MEMBERS.length===1; // un solo integrante (Calex en el PC): no se pregunta el nombre
 const seq=()=>['welcome','legal',...(ONE?[]:['name']),'tone','avatar','theme','done'];
 function paintMembers(){const el=$('mbl');if(!el)return;el.innerHTML='<div class="mbs">'+MEMBERS.map(m=>`<div class="mb ${P&&P.name===m.name?'on':''}"><span class="mba">${esc(m.icon||m.name[0])}</span><b>${esc(m.name)}</b><small>${esc(m.title)}</small></div>`).join('')+'</div>'}
 const themeHTML=()=>'<div class="thg">'+THEMES.map(t=>`<button type="button" class="th ${curTheme===t.id?'on':''}" data-th="${t.id}" title="${t.n}" aria-label="${t.n}" style="background:${t.bgimg||t.bg}"><b style="background:${t.panel};box-shadow:0 0 0 1px ${t.line}"></b><i style="background:${t.acc}"></i></button>`).join('')+'</div>';
 const bindThemes=root=>root.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th,true);root.querySelectorAll('.th').forEach(x=>x.classList.toggle('on',x===b))});
 const TONEDESC={friendly:'Cercano y cálido',formal:'Profesional y respetuoso',funny:'Con humor y bromas ligeras',direct:'Solo lo esencial, sin rodeos',custom:'Lo describes tú'};
-const SAFE={careful:['Con su autorización en cada acción (recomendado)','Nixel solo actúa sobre su dispositivo después de que usted lo autorice, cada vez que se lo pide. Las búsquedas y los cálculos se hacen sin preguntar.'],balanced:['Equilibrado · recomendado','Abre programas, busca y crea documentos solo. Te pregunta para escribir archivos y ejecutar comandos.'],trusting:['Confiado','Hace casi todo solo. Aun así te pregunta siempre lo que borra, formatea, apaga o toca el sistema.']};
+const SAFE={careful:['Con su autorización en cada acción (recomendado)','Calex solo actúa sobre su dispositivo después de que usted lo autorice, cada vez que se lo pide. Las búsquedas y los cálculos se hacen sin preguntar.'],balanced:['Equilibrado · recomendado','Abre programas, busca y crea documentos solo. Te pregunta para escribir archivos y ejecutar comandos.'],trusting:['Confiado','Hace casi todo solo. Aun así te pregunta siempre lo que borra, formatea, apaga o toca el sistema.']};
 const OSL=['Windows','macOS','Linux','FreeBSD','Android','iOS','HarmonyOS','Otro'];
 function detectOS(){const u=navigator.userAgent,p=(navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'';
   if(/HarmonyOS|OpenHarmony/i.test(u))return 'HarmonyOS';if(/Android/i.test(u))return 'Android';if(/iPhone|iPad|iPod/i.test(u))return 'iOS';
@@ -424,31 +489,31 @@ function drawOb(){const d=ob.d,A=d.avatar,S=seq(),s=ob.step,st=S[s],c=$('obc'),i
   const sw=(k,list)=>list.map(v=>`<button type="button" class="sw ${A[k]===v?'on':''}" style="background:${v}" data-k="${k}" data-v="${v}" aria-label="${k} ${v}"></button>`).join('');
   const ch=(k,names)=>names.map((n,i)=>`<button type="button" class="ch ${(A[k]|0)===i?'on':''}" data-k="${k}" data-v="${i}">${n}</button>`).join('');
   let h='<div class="steps">'+S.map((_,i)=>`<i class="${i<=s?'on':''}"></i>`).join('')+'</div>';
-  if(st==='welcome')h+=`<svg viewBox="0 0 48 48" width="72" height="72" aria-hidden="true"><defs><linearGradient id="og" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#og)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg><h2>Bienvenido a Nixel</h2><p>Vamos a dejarlo a tu medida en un minuto: los términos, su personalidad y tu personaje.<br>Tu perfil y tus charlas se guardan en tu cuenta y las ves desde cualquier dispositivo.</p>${ob.note?`<p style="color:var(--bad)" role="alert">${esc(ob.note)}</p>`:''}`;
-  if(st==='legal')h+=`<h2>Términos y privacidad</h2><p>Antes de empezar, revisa cómo funciona Nixel.</p><div class="legal">
-    <ul><li><b>Nixel es una IA</b> y puede equivocarse. No sustituye a un profesional.</li><li>Tus chats y tu perfil <b>se guardan en tu cuenta</b>, en servidores de Cloudflare. No se venden ni se usan para publicidad.</li><li>Tus mensajes los procesa una IA de Cloudflare (Workers AI).</li><li>La cámara, el micrófono y tus archivos solo se usan <b>cuando tú lo permites</b>.</li><li>El dictado de voz del navegador puede enviar el audio a Google o Microsoft.</li><li>Puedes <b>descargar o borrar tus datos</b> cuando quieras.</li></ul>
+  if(st==='welcome')h+=`<svg viewBox="0 0 48 48" width="72" height="72" aria-hidden="true"><defs><linearGradient id="og" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#og)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg><h2>Bienvenido a Calex</h2><p>Vamos a dejarlo a tu medida en un minuto: los términos, su personalidad y tu personaje.<br>Tu perfil y tus charlas se guardan en tu cuenta y las ves desde cualquier dispositivo.</p>${ob.note?`<p style="color:var(--bad)" role="alert">${esc(ob.note)}</p>`:''}`;
+  if(st==='legal')h+=`<h2>Términos y privacidad</h2><p>Antes de empezar, revisa cómo funciona Calex.</p><div class="legal">
+    <ul><li><b>Calex es una IA</b> y puede equivocarse. No sustituye a un profesional.</li><li>Tus chats y tu perfil <b>se guardan en tu cuenta</b>, en servidores de Cloudflare. No se venden ni se usan para publicidad.</li><li>Tus mensajes los procesa una IA de Cloudflare (Workers AI).</li><li>La cámara, el micrófono y tus archivos solo se usan <b>cuando tú lo permites</b>.</li><li>El dictado de voz del navegador puede enviar el audio a Google o Microsoft.</li><li>Puedes <b>descargar o borrar tus datos</b> cuando quieras.</li></ul>
     <p><a href="/legal/terminos" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a></p></div>
     <label class="ck"><input type="checkbox" id="obterms" ${legalOK()?'checked':''}> He leído y acepto los Términos y la Política de privacidad.</label>
     <label class="ck"><input type="checkbox" id="obage13" ${d.consent&&d.consent.over13?'checked':''}> Confirmo que tengo 13 años o más, o que cuento con la autorización de mi padre, madre o tutor.</label><div class="lge" id="oberr" role="alert"></div>`;
   if(st==='name'&&!ONE)h+=`<h2>¿Quién eres?</h2><p>Elige tu nombre entre los integrantes.</p><div class="mbs">${MEMBERS.map(m=>`<button type="button" class="mb ${d.member===m.id?'on':''}" data-mb="${m.id}"><span class="mba">${esc(m.icon||m.name[0])}</span><b>${esc(m.name)}</b><small>${esc(m.title)}</small></button>`).join('')}</div><div class="lge" id="oberr" role="alert"></div>`;
-  if(st==='name'&&ONE)h+=`<h2>¿Cómo te llamas?</h2><p>Así te saludará Nixel cada vez que empieces una charla.</p><input type="text" id="obn1" maxlength="30" placeholder="Tu nombre" value="${esc(d.name)}" ${d.anonymous?'disabled':''}><div class="cards" style="grid-template-columns:1fr;margin-top:14px"><div class="card ${d.anonymous?'on':''}" id="obanon" role="button" tabindex="0"><b>Prefiero ser anónimo</b><small>Nixel no te pedirá tu nombre y se adaptará según cómo le hables.</small></div></div>`;
-  if(st==='device'){const g=guessOS(d.device.brand||'');h+=`<h2>¿Qué dispositivo usas?</h2><p>Nixel adapta los comandos y los pasos a tu sistema operativo.</p>
+  if(st==='name'&&ONE)h+=`<h2>¿Cómo te llamas?</h2><p>Así te saludará Calex cada vez que empieces una charla.</p><input type="text" id="obn1" maxlength="30" placeholder="Tu nombre" value="${esc(d.name)}" ${d.anonymous?'disabled':''}><div class="cards" style="grid-template-columns:1fr;margin-top:14px"><div class="card ${d.anonymous?'on':''}" id="obanon" role="button" tabindex="0"><b>Prefiero ser anónimo</b><small>Calex no te pedirá tu nombre y se adaptará según cómo le hables.</small></div></div>`;
+  if(st==='device'){const g=guessOS(d.device.brand||'');h+=`<h2>¿Qué dispositivo usas?</h2><p>Calex adapta los comandos y los pasos a tu sistema operativo.</p>
     <div class="chips">${OSL.map(o=>`<button type="button" class="ch ${d.device.os===o?'on':''}" data-os="${o}">${o}</button>`).join('')}</div>
     ${ob.detected?`<p><small>Detectado automáticamente en este equipo: <b>${ob.detected}</b></small></p>`:''}
     <input type="text" id="obbrand" maxlength="40" placeholder="¿No sabes cuál es? Escribe la marca o el modelo (Samsung, iPhone, Huawei…)" value="${esc(d.device.brand||'')}" style="font-size:15px">
     <div id="obsug" class="sug" aria-live="polite">${g?`${esc(d.device.brand)} → <b>${g.os}</b>${g.note?`<br><small>${g.note}</small>`:''}`:''}</div>
-    <p><small>Nixel se está ejecutando en: <b>${esc(ob.host.name||'este equipo')}</b>. Sus herramientas de PC actúan allí.</small></p><div class="lge" id="oberr" role="alert"></div>`}
-  if(st==='safety')h+=`<h2>¿Cuánto puede hacer Nixel solo?</h2><p>Tú decides. Puedes cambiarlo después en Configuración.</p><div class="cards" style="grid-template-columns:1fr">${Object.entries(SAFE).map(([k,[n,t]])=>`<div class="card ${d.safe===k?'on':''}" data-safe="${k}" role="button" tabindex="0"><b>${n}</b><small>${t}</small></div>`).join('')}</div>
+    <p><small>Calex se está ejecutando en: <b>${esc(ob.host.name||'este equipo')}</b>. Sus herramientas de PC actúan allí.</small></p><div class="lge" id="oberr" role="alert"></div>`}
+  if(st==='safety')h+=`<h2>¿Cuánto puede hacer Calex solo?</h2><p>Tú decides. Puedes cambiarlo después en Configuración.</p><div class="cards" style="grid-template-columns:1fr">${Object.entries(SAFE).map(([k,[n,t]])=>`<div class="card ${d.safe===k?'on':''}" data-safe="${k}" role="button" tabindex="0"><b>${n}</b><small>${t}</small></div>`).join('')}</div>
     <div class="legal" style="margin-top:12px"><b>Límites que siempre se aplican</b><ul><li>Nunca toca Windows, Archivos de programa ni el registro sin que lo confirmes.</li><li>Borrar, formatear, apagar o cambiar la seguridad: <b>siempre pregunta</b>.</li><li>Escribe archivos sin preguntar solo en Documentos, Escritorio y Descargas.</li><li>Todo queda anotado en un registro local.</li></ul></div>`;
-  if(st==='tone')h+=`<h2>¿Cómo quieres que sea Nixel?</h2><p>Elige su forma de hablarte. Puedes cambiarlo cuando quieras.</p><div class="cards">${[...Object.keys(ob.tones),'custom'].map(k=>`<div class="card ${d.tone===k?'on':''}" data-tone="${k}"><b>${k==='custom'?'Personalizado':ob.tones[k]}</b><small>${TONEDESC[k]}</small></div>`).join('')}</div>${d.tone==='custom'?`<textarea id="obct" rows="3" maxlength="200" placeholder="Ej: háblame como un entrenador motivador, con frases cortas" style="margin-top:10px;font-size:15px">${esc(d.customTone)}</textarea>`:''}`;
+  if(st==='tone')h+=`<h2>¿Cómo quieres que sea Calex?</h2><p>Elige su forma de hablarte. Puedes cambiarlo cuando quieras.</p><div class="cards">${[...Object.keys(ob.tones),'custom'].map(k=>`<div class="card ${d.tone===k?'on':''}" data-tone="${k}"><b>${k==='custom'?'Personalizado':ob.tones[k]}</b><small>${TONEDESC[k]}</small></div>`).join('')}</div>${d.tone==='custom'?`<textarea id="obct" rows="3" maxlength="200" placeholder="Ej: háblame como un entrenador motivador, con frases cortas" style="margin-top:10px;font-size:15px">${esc(d.customTone)}</textarea>`:''}`;
   if(st==='avatar')h+=`<h2>Elige tu personaje</h2><p>Mira cómo reacciona:</p><div class="big">${avatar(A,ob.mood,132)}</div>
     <div style="display:flex;gap:6px;justify-content:center">${[['normal','Normal'],['effort','Esfuerzo'],['funny','Gracia']].map(([m,n])=>`<button type="button" class="ch ${ob.mood===m?'on':''}" data-mood="${m}">${n}</button>`).join('')}</div>
     <div class="kinds">${AVK.map(k=>`<button type="button" class="kd ${A.kind===k?'on':''}" data-k="kind" data-v="${k}" title="${AVN[k]}" aria-label="${AVN[k]}">${avatar({...A,kind:k},'normal',58)}</button>`).join('')}</div>
     <div class="bld"><div class="o"><label>Color</label>${sw('color',COLORS)}</div><div class="o"><label>Extra</label>${ch('acc',['Ninguno','Gafas','Gorro','Corbatín','Audífonos'])}</div></div><button type="button" id="obr" style="margin-top:12px">🎲 Aleatorio</button>`;
   if(st==='theme')h+=`<h2>Elige tus colores</h2><p>Toca uno y mira cómo queda tu chat. Puedes cambiarlo cuando quieras.</p>${themeHTML()}`;
-  if(st==='done')h+=`<div class="big">${avatar(A,'funny',132)}</div><h2>${d.anonymous?'¡Listo!':'¡Listo, '+esc(d.name)+'!'}</h2><p>${d.anonymous?'Modo anónimo: Nixel se irá adaptando a ti según lo que le respondas y te hablará':'Nixel te hablará'} con tono <b>${d.tone==='custom'?'personalizado':ob.tones[d.tone].toLowerCase()}</b>.<br>Tu personaje reaccionará cuando Nixel trabaje a fondo o algo tenga gracia.</p>`;
+  if(st==='done')h+=`<div class="big">${avatar(A,'funny',132)}</div><h2>${d.anonymous?'¡Listo!':'¡Listo, '+esc(d.name)+'!'}</h2><p>${d.anonymous?'Modo anónimo: Calex se irá adaptando a ti según lo que le respondas y te hablará':'Calex te hablará'} con tono <b>${d.tone==='custom'?'personalizado':ob.tones[d.tone].toLowerCase()}</b>.<br>Tu personaje reaccionará cuando Calex trabaje a fondo o algo tenga gracia.</p>`;
   const first=st==='welcome'||(st==='name'&&!isNew);
-  h+=`<div id="obnav"><button type="button" id="obb" ${st==='welcome'?'style="visibility:hidden"':''}>${first?'Cancelar':st==='legal'?'Rechazar':'Atrás'}</button><button type="button" class="pri" id="obx">${st==='welcome'?'Empezar':st==='legal'?'Aceptar':st==='done'?'Empezar a usar Nixel':'Siguiente'}</button></div>`;
+  h+=`<div id="obnav"><button type="button" id="obb" ${st==='welcome'?'style="visibility:hidden"':''}>${first?'Cancelar':st==='legal'?'Rechazar':'Atrás'}</button><button type="button" class="pri" id="obx">${st==='welcome'?'Empezar':st==='legal'?'Aceptar':st==='done'?'Empezar a usar Calex':'Siguiente'}</button></div>`;
   c.innerHTML=h;bindThemes(c);
   c.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;A[k]=k==='acc'?+b.dataset.v:b.dataset.v;drawOb()});
   c.querySelectorAll('[data-mood]').forEach(b=>b.onclick=()=>{ob.mood=b.dataset.mood;drawOb()});
@@ -463,7 +528,7 @@ function drawOb(){const d=ob.d,A=d.avatar,S=seq(),s=ob.step,st=S[s],c=$('obc'),i
   const bd=$('obbrand');if(bd)bd.oninput=()=>{d.device.brand=bd.value;const g=guessOS(bd.value);if(g)d.device.os=g.os;$('obsug').innerHTML=g?`${esc(bd.value)} → <b>${g.os}</b>${g.note?`<br><small>${g.note}</small>`:''}`:'';
     c.querySelectorAll('[data-os]').forEach(x=>x.classList.toggle('on',x.dataset.os===d.device.os))};
   $('obb').onclick=()=>{if(first){if(!isNew)$('ob').classList.remove('on');return}
-    if(st==='legal'){d.consent=null;ob.step=0;ob.note='Sin aceptar los términos y la política de privacidad no se puede usar Nixel.';drawOb();return}go(-1)};
+    if(st==='legal'){d.consent=null;ob.step=0;ob.note='Sin aceptar los términos y la política de privacidad no se puede usar Calex.';drawOb();return}go(-1)};
   $('obx').onclick=async()=>{const bad=(id,m)=>{const e=$(id);if(e){e.focus();e.style.borderColor='var(--bad)'}if(m&&$('oberr'))$('oberr').textContent=m};
     if(st==='legal'){if(!$('obterms').checked){$('oberr').textContent='Marca la casilla para aceptar y continuar.';return}
       if(!$('obage13').checked){$('oberr').textContent='Confirma que tienes 13 años o más, o la autorización de un tutor.';return}
@@ -479,7 +544,7 @@ function drawOb(){const d=ob.d,A=d.avatar,S=seq(),s=ob.step,st=S[s],c=$('obc'),i
 $('hav').onclick=()=>openOb(ONE?'avatar':'name');
 let SAFEDONE=true;
 function nextMissing(){if(!P)return 'welcome';if(!P.anonymous&&!P.name)return 'name';if(!P.consent||P.consent.terms!==ob.legalVersion)return 'legal';return null}
-async function init(){try{if(!sessionStorage.getItem('dot-s')){localStorage.removeItem('dot-guest');sessionStorage.setItem('dot-s','1')}}catch{} // "invitado" dura una visita: el inicio de sesión sale al abrir Nixel
+async function init(){try{if(!sessionStorage.getItem('dot-s')){localStorage.removeItem('dot-guest');sessionStorage.setItem('dot-s','1')}}catch{} // "invitado" dura una visita: el inicio de sesión sale al abrir Calex
   try{await loadAuth()}catch{}
   const err=new URLSearchParams(location.search).get('auth_error');if(err)history.replaceState(null,'','/');
   try{const j=await(await fetch('/profile')).json();P=j.profile;ob.tones=j.tones;ob.legalVersion=j.legalVersion;ob.host=j.host||{}}catch{}
@@ -509,7 +574,7 @@ const OAB=[['google','Google','#ffffff','#3c4043','G'],['apple','Apple','#000000
 const afterLogin=()=>{const s=nextMissing();if(s)openOb(s);else{}};
 function showLogin(err){const c=$('lgc');let first=false;try{first=!localStorage.getItem('dot-welcomed');localStorage.setItem('dot-welcomed','1')}catch{} // primera vez en este dispositivo: bienvenida con el vínculo de cuenta desde el principio
   c.innerHTML=`<svg viewBox="0 0 48 48" width="${first?76:56}" height="${first?76:56}" aria-hidden="true"><defs><linearGradient id="lgg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#lgg2)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg>
-  ${first?`<h2>Bienvenido a Nixel</h2><p>Su asistente personal: conversa, redacta, explica y analiza imágenes, también por voz.<br>Vincule su cuenta para guardar su perfil y sus conversaciones, o continúe como invitado.</p>
+  ${first?`<h2>Bienvenido a Calex</h2><p>Su asistente personal: conversa, redacta, explica y analiza imágenes, también por voz.<br>Vincule su cuenta para guardar su perfil y sus conversaciones, o continúe como invitado.</p>
   <ul class="wl"><li>Respuestas claras y sobrias, en su idioma</li><li>Usted decide qué puede hacer con sus datos</li><li>Se adapta a su forma de hablar</li></ul>`:`<h2>Inicia sesión</h2><p>Tus chats, perfil y memoria se guardan en tu cuenta.</p>`}
   <div class="oa">${OAB.map(([k,n,bg,fg,g])=>`<button type="button" class="ob ${AUTH.providers[k]?.configured?'':'off'}" data-oa="${k}"><i style="background:${bg};color:${fg}">${g}</i>${first?'Vincular con':'Continuar con'} ${n}</button>`).join('')}</div>
   <div class="lgh" id="lgh" role="status"></div>
@@ -520,8 +585,8 @@ function showLogin(err){const c=$('lgc');let first=false;try{first=!localStorage
   $('lgerr').textContent=err||'';
   c.querySelectorAll('[data-oa]').forEach(b=>b.onclick=()=>{const k=b.dataset.oa,n=OAB.find(x=>x[0]===k)[1];
     if(AUTH.providers[k]?.configured){ // pantalla de consentimiento (como al vincular una cuenta en un juego): Aceptar / Rechazar
-      c.innerHTML=`<div class="big">${avatar(P?P.avatar:DEF,'normal',96)}</div><h2>Vincular con ${n}</h2><p>Nixel recibirá tu <b>nombre y correo</b> de ${n} para crear o abrir tu cuenta. No recibe tu contraseña.</p>
-      <div class="legal"><ul><li>Tus chats y tu perfil se guardan en tu cuenta de Nixel (Cloudflare).</li><li>Puedes desvincular y borrar tus datos cuando quieras.</li></ul><p><a href="/legal/terminos" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a></p></div>
+      c.innerHTML=`<div class="big">${avatar(P?P.avatar:DEF,'normal',96)}</div><h2>Vincular con ${n}</h2><p>Calex recibirá tu <b>nombre y correo</b> de ${n} para crear o abrir tu cuenta. No recibe tu contraseña.</p>
+      <div class="legal"><ul><li>Tus chats y tu perfil se guardan en tu cuenta de Calex (Cloudflare).</li><li>Puedes desvincular y borrar tus datos cuando quieras.</li></ul><p><a href="/legal/terminos" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a></p></div>
       <label class="ck"><input type="checkbox" id="lck"> Acepto los términos y la política de privacidad.</label><div class="lge" id="lce" role="alert"></div>
       <div class="r2"><button type="button" id="lcr">Rechazar</button><button type="button" class="pri" id="lca">Aceptar</button></div>`;
       $('lcr').onclick=()=>showLogin();$('lca').onclick=()=>{if(!$('lck').checked){$('lce').textContent='Marca la casilla para continuar.';return}location.href='/auth/start/'+k};return}
@@ -552,7 +617,7 @@ const renderPrev=()=>{const p=$('prev');p.innerHTML='';DOCS.forEach((d,i)=>{cons
 async function addImage(f){if(!f||!/^image\//.test(f.type)||IMGS.length>=4)return;const bm=await createImageBitmap(f),k=Math.min(1,1024/Math.max(bm.width,bm.height)),cv=document.createElement('canvas');
   cv.width=Math.round(bm.width*k);cv.height=Math.round(bm.height*k);cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);IMGS.push(cv.toDataURL('image/jpeg',.82));renderPrev()}
 const warm=k=>fetch('/warm',{method:'POST',body:JSON.stringify({kind:k})}).catch(()=>{});
-$('att').onclick=async()=>{warm('vision');if(await needPerm('files','Acceso a tus fotos y archivos','Nixel solo verá las imágenes que tú elijas. Se procesan en este equipo y no se suben a ningún servidor.'))$('fi').click()};
+$('att').onclick=async()=>{warm('vision');if(await needPerm('files','Acceso a tus fotos y archivos','Calex solo verá las imágenes que tú elijas. Se procesan en este equipo y no se suben a ningún servidor.'))$('fi').click()};
 /* PDF y archivos de texto: se leen en el navegador (pdf.js) y el texto viaja con el mensaje. Los PDF escaneados se envían como imágenes. */
 let PDFJS=null;const PDFV='3.11.174',PDFB='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+PDFV+'/';
 async function loadPdf(){if(PDFJS)return PDFJS;await new Promise((ok,no)=>{const s=document.createElement('script');s.src=PDFB+'pdf.min.js';s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el lector de PDF (hace falta internet).'));document.head.appendChild(s)});
@@ -588,7 +653,7 @@ async function startLive(){
   warm('vision');
   if(!window.isSecureContext){LV={on:true,mic:false,cam:false,rec:{stop(){}}};lvOpen('El modo Live necesita una conexión segura (https o localhost): el navegador no permite cámara ni micrófono desde una dirección http como esta. Úsalo desde el PC, o con https (por ejemplo con Tailscale).',false);return}
   if(!SR){LV={on:true,mic:false,cam:false,rec:{stop(){}}};lvOpen('Este navegador no tiene reconocimiento de voz. Usa Microsoft Edge o Google Chrome.',false);return}
-  if(!await needPerm('live','Modo Live: cámara y micrófono','Nixel usará tu cámara y tu micrófono solo mientras este modo esté abierto. No se graba vídeo: se toman fotogramas sueltos para responderte. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google.'))return;
+  if(!await needPerm('live','Modo Live: cámara y micrófono','Calex usará tu cámara y tu micrófono solo mientras este modo esté abierto. No se graba vídeo: se toman fotogramas sueltos para responderte. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google.'))return;
   // pedimos los permisos reales del navegador por adelantado, para que aparezca su aviso y podamos explicar cualquier bloqueo
   let stream=null,err='';
   try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:{width:640,height:480,facingMode:'user'}})}
@@ -603,7 +668,7 @@ async function startLive(){
   LV.base=0;LV.tm=0;
   r.onstart=()=>{if(LV)LV.base=0};
   r.onresult=e=>{let txt='';for(let i=LV.base;i<e.results.length;i++)txt+=e.results[i][0].transcript;txt=txt.trim();if(!txt)return;
-    if(LV.speaking)liveStop(); // interrumpes a Nixel: se calla
+    if(LV.speaking)liveStop(); // interrumpes a Calex: se calla
     lvSay('🎤 '+txt);clearTimeout(LV.tm);
     const open=/(,|\b(y|e|o|u|pero|que|porque|pues|como|si|aunque|entonces|qué|cómo|cuál|dónde|cuándo|con|para|por|de|en|a|el|la|los|las|un|una|mi|tu|su|este|eh|mmm|es que|o sea))$/i.test(txt),end=/[.?!]$/.test(txt);
     LV.tm=setTimeout(()=>{LV.base=e.results.length;liveAsk(txt)},open?1100:end?120:300)};
@@ -645,7 +710,7 @@ function actions(el){if(!el||el.querySelector('.acts'))return;const raw=()=>el.d
   mk('Repetir','Repetir la pregunta',()=>{if(busy)return;const us=[...log.querySelectorAll('.m.u')].pop();if(us)send(us.dataset.raw||us.innerText)});el.append(a)}
 const WB_VER='2026-11-formal';
 function whatsNew(force){if(!force&&lsGet('dot-seen','')===WB_VER)return;const nm=P&&P.name?', '+esc(P.name):'';
-  const T=[['','Autorización en cada acción','Nixel actúa sobre su dispositivo solo cuando usted lo autoriza.'],['','Agente de trabajo','Diseña sitios web, programa, edita archivos y busca información en la web.'],['','Técnico','Diagnostica y repara problemas del equipo con su permiso.'],['','Creación de imágenes','Describa lo que desea ver y Nixel lo crea.'],['','Tareas con fotografía','Envíe una foto de ejercicios y obtenga la resolución paso a paso.'],['','Conversación por voz','Respuesta inmediata con cámara y micrófono.'],['','Memoria editable','Consulte y borre lo que Nixel recuerda.'],['','Más control','Detener respuestas, exportar conversaciones y atajos de teclado.']];
+  const T=[['','Autorización en cada acción','Calex actúa sobre su dispositivo solo cuando usted lo autoriza.'],['','Agente de trabajo','Diseña sitios web, programa, edita archivos y busca información en la web.'],['','Técnico','Diagnostica y repara problemas del equipo con su permiso.'],['','Creación de imágenes','Describa lo que desea ver y Calex lo crea.'],['','Tareas con fotografía','Envíe una foto de ejercicios y obtenga la resolución paso a paso.'],['','Conversación por voz','Respuesta inmediata con cámara y micrófono.'],['','Memoria editable','Consulte y borre lo que Calex recuerda.'],['','Más control','Detener respuestas, exportar conversaciones y atajos de teclado.']];
   $('wbc').innerHTML=`<div class="big">${avatar(P?P.avatar:DEF,'funny',104)}</div><h2 style="margin:6px 0 2px;font-size:28px;letter-spacing:-.01em">${greet()}${nm}</h2><p style="color:var(--mut);margin:0">Bienvenido de nuevo. Estas son las novedades de esta versión.</p>
     <div class="tiles">${T.map((t,i)=>`<div class="tile" style="animation-delay:${90+i*60}ms"><b>${t[1]}</b><small>${t[2]}</small></div>`).join('')}</div>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button type="button" id="wbr">Rehacer la bienvenida</button><button type="button" class="pri" id="wbx">Entrar</button></div>`;
@@ -661,7 +726,7 @@ applyLook();
 async function renderMem(){const j=await(await fetch('/memory')).json(),b=$('memlist');b.innerHTML='';
   j.facts.forEach((f,i)=>{const d=document.createElement('div');d.className='mi';d.innerHTML='<span></span><button type="button" title="Olvidar este dato" aria-label="Olvidar este dato">✕</button>';d.firstChild.textContent=f;
     d.querySelector('button').onclick=async()=>{await fetch('/memory?i='+i,{method:'DELETE'});renderMem()};b.append(d)});
-  $('mem').textContent=j.facts.length?`Nixel recuerda ${j.facts.length} dato(s) sobre ti:`:'Nixel aún no recuerda nada sobre ti.'}
+  $('mem').textContent=j.facts.length?`Calex recuerda ${j.facts.length} dato(s) sobre ti:`:'Calex aún no recuerda nada sobre ti.'}
 async function loadModes(){try{const j=await(await fetch('/modes')).json();fill($('sd'),Object.entries(j).map(([k,v])=>[k,v.label]),lsGet('dot-mode2','general'));$('sd').onchange=()=>{if($('sd').value!=='artist')lsSet('dot-mode2',$('sd').value)}}catch{}}
 setInterval(async()=>{if(document.hidden)return;try{const g=(await(await fetch('/gpu')).json()).gpu;$('gpuc').textContent=g?`GPU ${g.util}% · ${(g.used/1024).toFixed(1)}/${(g.total/1024).toFixed(1)} GB · ${g.temp}°C`:''}catch{}},3000);
 $('exp').onclick=()=>{if(chatId)location.href='/chats/'+chatId+'/export';else alert('Aún no hay ninguna charla que exportar: escribe algo primero.')};
@@ -672,14 +737,14 @@ const openCfg=async()=>{if(!$('ov').classList.contains('on')){await openSet()}};
 const TOURS={
   start:{t:'Primeros pasos',s:[
     {sel:'#q',title:'Escriba aquí',text:'Escriba su pregunta o petición y pulse Enter. Con Shift+Enter baja de línea.'},
-    {sel:'#att',title:'Adjuntar archivos',text:'Con este botón adjunta imágenes, PDF o archivos de texto para que Nixel los lea.'},
+    {sel:'#att',title:'Adjuntar archivos',text:'Con este botón adjunta imágenes, PDF o archivos de texto para que Calex los lea.'},
     {sel:'#mic',title:'Dictado por voz',text:'Dicte en lugar de escribir. El navegador le pedirá permiso para usar el micrófono.'},
-    {sel:'#liv',title:'Modo Live',text:'Conversación por voz con cámara. Nixel responde hablando y se calla si usted lo interrumpe.'},
-    {sel:'#sd',title:'Modos',text:'Cambie el papel de Nixel: Traductor, Profe, Programador, Agente, Técnico y más.'},
+    {sel:'#liv',title:'Modo Live',text:'Conversación por voz con cámara. Calex responde hablando y se calla si usted lo interrumpe.'},
+    {sel:'#sd',title:'Modos',text:'Cambie el papel de Calex: Traductor, Profe, Programador, Agente, Técnico y más.'},
     {sel:'#bs',title:'Configuración',text:'Aquí cambia el aspecto, su perfil, sus datos y la cuenta.'}]},
   docs:{t:'Leer un PDF o una imagen',s:[
     {sel:'#att',title:'1. Adjunte el archivo',text:'Pulse el clip y elija un PDF, una imagen o un archivo de texto. También puede arrastrarlo a la ventana.'},
-    {sel:'#q',title:'2. Haga su pregunta',text:'Escriba qué necesita: resumen, un dato concreto o resolver ejercicios. Si no escribe nada, Nixel hará un resumen.'}]},
+    {sel:'#q',title:'2. Haga su pregunta',text:'Escriba qué necesita: resumen, un dato concreto o resolver ejercicios. Si no escribe nada, Calex hará un resumen.'}]},
   account:{t:'Vincular una cuenta',s:[
     {sel:'#bs',title:'Abra la Configuración',text:'Pulse este botón.'},
     {sel:'#acb',before:openCfg,title:'Cuenta',text:'Con este botón inicia sesión o la vincula con Google, Facebook o Huawei, para guardar su perfil y sus conversaciones.'}]},
@@ -712,8 +777,8 @@ function gdPlace(){const g=GD;if(!g||!g.el)return;const r=g.el.getBoundingClient
   const bw=b.offsetWidth,bh=b.offsetHeight;let top=r.bottom+p+16,up=true;if(top+bh>innerHeight-10){top=r.top-p-16-bh;up=false}if(top<10){top=Math.max(10,Math.min(innerHeight-bh-10,r.top+r.height/2-bh/2));}
   const left=Math.max(10,Math.min(innerWidth-bw-10,r.left+r.width/2-bw/2));b.style.left=left+'px';b.style.top=top+'px';
   a.className=up?'up':'dn';a.style.left=Math.max(14,Math.min(bw-28,r.left+r.width/2-left-7))+'px'}
-/* ---------- llamar por voz: se dice el nombre ("Nixel, ...") y responde hablando ---------- */
-const BRAND_LC='Nixel'.toLowerCase(),WAKE_ALT={dot:['dot','dod','doc','dots','dota','dort'],nixel:['nixel','nicsel','niksel','nixle','niquel','nixell']};
+/* ---------- llamar por voz: se dice el nombre ("Calex, ...") y responde hablando ---------- */
+const BRAND_LC='Calex'.toLowerCase(),WAKE_ALT={dot:['dot','dod','doc','dots','dota','dort'],nixel:['nixel','nicsel','niksel','nixle','niquel','nixell']};
 const WAKE_RE=new RegExp('(?:^|[\\s,.])(?:oye\\s+|hey\\s+|hola\\s+|ok\\s+)?('+(WAKE_ALT[BRAND_LC]||[BRAND_LC]).join('|')+')\\b[\\s,:.!?]*(.*)$','i');
 let WK=null,WKSPEAK=false;
 const wakeSay=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=1.08;speechSynthesis.speak(u)}catch{}};
@@ -771,13 +836,13 @@ function spGo(d){if(!SPN)return;const n=SPN.c.steps.length,i=SPN.i+d;if(i<0)retu
 function spShow(){const g=SPN;if(!g)return;const n=g.c.steps.length;$('spt').textContent=g.c.title||'Pasos';$('spx').textContent=(g.i+1)+'. '+g.c.steps[g.i];$('spc').textContent=(g.i+1)+' de '+n;$('spp').style.visibility=g.i===0?'hidden':'visible';$('spnx').textContent=g.i===n-1?'Terminar':'Siguiente';spSay()}
 function spSay(){if(!SPN||!SPN.voice)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(SPN.c.steps[SPN.i]);u.lang='es-ES';u.rate=1.05;speechSynthesis.speak(u)}catch{}}
 
-/* ---------- Guíame en vivo (en el PC donde corre Nixel): marco y flecha sobre tu pantalla real, que sigue al elemento y avanza cuando haces clic; con voz opcional ---------- */
+/* ---------- Guíame en vivo (en el PC donde corre Calex): marco y flecha sobre tu pantalla real, que sigue al elemento y avanza cuando haces clic; con voz opcional ---------- */
 let LIVEOK,LIVEWHY=0,LG=null;
 async function liveOK(){if(LIVEOK===undefined){try{const r=await fetch('/guide/live/state');LIVEWHY=r.status;LIVEOK=r.ok&&!!(await r.json()).available}catch{LIVEOK=false}}return LIVEOK}
 async function guideGo(c,voice){
   if(c.topic&&TOURS[c.topic]){startTour(c.topic);return}
   if(await liveOK()){try{const r=await fetch('/guide/live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:c.title,steps:c.steps,voice:!!voice})});const j=await r.json();if(r.ok&&!j.error){liveWatch();return}}catch{}}
-  if(LIVEWHY===403)note('t','La guía sobre tu pantalla solo funciona abriendo Nixel en el propio PC (http://localhost:3000). Desde otro dispositivo o por un túnel te muestro el panel de pasos.');
+  if(LIVEWHY===403)note('t','La guía sobre tu pantalla solo funciona abriendo Calex en el propio PC (http://localhost:3000). Desde otro dispositivo o por un túnel te muestro el panel de pasos.');
   startSteps(c,voice)}
 function liveStop(){if(!LG)return;clearInterval(LG.t);try{speechSynthesis.cancel()}catch{}LG.want=false;if(LG.rec){try{LG.rec.onend=null;LG.rec.stop()}catch{}}LG=null}
 function liveWatch(){liveStop();LG={t:setInterval(liveTick,600),t0:Date.now(),i:-1,say:-1,voice:false,rec:null,want:false,speaking:false,quiet:0,seen:false};liveTick()}
@@ -824,9 +889,42 @@ $('hs').oninput=drawHist;
 async function openChat(id){if(busy)return;const c=await(await fetch('/chats/'+id)).json();chatId=id;log.innerHTML='';c.messages.forEach(m=>add(m.role==='user'?'u':'a',m.content));log.querySelectorAll('.m.a').forEach(actions);if(!c.messages.length)empty();scroll();loadHist();if(innerWidth<760)$('side').classList.add('hide')}
 function newChat(){if(busy)return;chatId=null;empty();loadHist();$('q').focus()}
 $('bn').onclick=newChat;$('bt').onclick=()=>$('side').classList.toggle('hide');
+/* ---------- móvil: menú «⋯» del encabezado y cierre del historial al tocar fuera ---------- */
+$('hm').onclick=e=>{e.stopPropagation();const h=document.querySelector('header'),on=h.classList.toggle('open');$('hm').setAttribute('aria-expanded',on?'true':'false')};
+document.addEventListener('click',e=>{if(innerWidth>760)return;const s=$('side');if(s&&!s.classList.contains('hide')&&!s.contains(e.target)&&!$('bt').contains(e.target))s.classList.add('hide')});
+/* ---------- actualizaciones: busca una versión nueva de la interfaz (y, en la app Android, de la propia app) ---------- */
+const BUILD_NOW=(document.querySelector('meta[name=build]')||{}).content||'';let UPD=null;
+const verNewer=(a,b)=>{const x=String(a).replace(/^v/,'').split('.').map(Number),y=String(b).replace(/^v/,'').split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)>(y[i]||0))return true;if((x[i]||0)<(y[i]||0))return false}return false};
+function showUpd(){let b=$('updbn');if(!b){b=document.createElement('div');b.id='updbn';b.setAttribute('role','status');b.innerHTML='<span>Hay una actualización</span><button type="button" class="pri">Actualizar</button>';document.body.append(b);b.querySelector('button').onclick=applyUpdate}b.classList.add('on')}
+async function applyUpdate(){try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}catch{}try{for(const k of await caches.keys())await caches.delete(k)}catch{}location.reload()}
+async function checkUpdate(manual){const st=$('updt'),bt=$('updb'),say=t=>{if(st)st.textContent=t};if(manual)say('Buscando…');let state='ok';
+  try{const t=await(await fetch('/?_='+Date.now(),{cache:'no-store'})).text();const m=t.match(/<meta name="build" content="([^"]*)"/),nb=m?m[1]:'';
+    if(nb&&BUILD_NOW&&nb!==BUILD_NOW){UPD=nb;state='new';say('Hay una versión nueva de la interfaz.');if(bt)bt.textContent='Actualizar ahora';showUpd()}}catch{state='err'}
+  const ua=/CalexApp\/([\d.]+)/.exec(navigator.userAgent);
+  if(ua){try{const j=await(await fetch('https://api.github.com/repos/federico3470/NixelTheAgent/releases/latest')).json();if(j&&j.tag_name&&verNewer(j.tag_name,ua[1])){const l=$('updl');if(l){l.href=j.html_url;l.textContent='Hay una versión nueva de la app ('+j.tag_name+'): descargar';l.hidden=false}state='new'}}catch{}}
+  if(manual&&state==='ok')say('Estás al día.');if(manual&&state==='err')say('No se pudo comprobar. Revisa tu conexión.')}
+$('updb').onclick=()=>UPD?applyUpdate():checkUpdate(true);(()=>{const q=$('q');if(q&&innerWidth<=760)q.placeholder=q.placeholder.split('  (')[0]})();
+setTimeout(()=>checkUpdate(false),6000);setInterval(()=>checkUpdate(false),20*60*1000);
+/* ---------- detalles de la casa ---------- */
+function tip(t){const e=document.createElement('div');e.className='tip';e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),3800)}
+function trot(m){const d=document.createElement('div');d.className='dog';d.textContent='🐕';document.body.append(d);setTimeout(()=>d.remove(),5200);if(m)tip(m)}
+(()=>{let n=0,t0=0;const nm=document.querySelector('header .name');if(nm)nm.addEventListener('click',()=>{const now=Date.now();if(now-t0>4000)n=0;t0=now;if(++n>=7){n=0;trot('Guau. El guardián del hogar hizo su ronda.')}});
+ const K=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];let ki=0;addEventListener('keydown',e=>{ki=(e.key===K[ki]||e.key.toLowerCase()===K[ki])?ki+1:(e.key===K[0]?1:0);if(ki===K.length){ki=0;const on=document.body.classList.toggle('maquina');tip(on?'Modo máquina de escribir':'Vuelves a la letra de siempre')}});
+ let c=0,ct=0;const cr=$('credit');if(cr)cr.addEventListener('click',()=>{const now=Date.now();if(now-ct>3000)c=0;ct=now;if(++c>=3){c=0;tip('Programado por Fede. Probado por la familia. Vigilado por el perro.')}});
+ try{console.log('%cCALEX','font:600 22px Georgia;letter-spacing:.2em','hecho en casa por Fede')}catch{}})();
+const plain=s=>String(s).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function eggReply(t){const s=plain(t);
+  if(/^(guau|woof|\/perro)$/.test(s))return{say:'Guau. El guardián del hogar está de ronda.',fx:()=>trot()};
+  if(s==='/familia'||s==='/integrantes')return{say:MEMBERS.map(m=>m.name+' — '+m.title).join('\n')};
+  if(/^(quien te (hizo|creo|programo)|\/fede)\??$/.test(s))return{say:'Lo programó Fede. Lo probó la familia. Lo vigila el perro.'};
+  const m=!ONE&&MEMBERS.find(x=>plain(x.name)===s);
+  if(m)return{say:m.name+': '+m.title+'.'+(m.id==='fede'?' Quien lo programó. Se le agradece, y se le pide que duerma.':m.id==='perro'?' Guau.':''),fx:m.id==='perro'?()=>trot():null};
+  return null}
+
 
 /* ---------- envío con streaming + temporizador ---------- */
 async function send(text){
+  {const egg=eggReply(text);if(egg&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',egg.say);a.dataset.raw=egg.say;actions(a);if(egg.fx)egg.fx();return}}
   const nu=needUser(text);if(nu&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',nu.say);a.dataset.raw=nu.say;actions(a);stepCard(nu.card);return}
   busy=true;CTL=new AbortController();$('go').textContent='■ Detener';$('go').classList.add('stop');if(log.querySelector('.empty'))log.innerHTML='';setMood('effort');
   const imgs=IMGS.slice(),docs=DOCS.slice();IMGS=[];DOCS=[];renderPrev();const ub=add('u',text);imgs.forEach(s=>{const im=document.createElement('img');im.src=s;im.alt='Imagen enviada';ub.prepend(im)});
@@ -857,7 +955,7 @@ async function send(text){
         else if(ev.type==='notice'){note('t',ev.text)}
         else if(ev.type==='guide'){startTour(ev.topic)}
         else if(ev.type==='steps'){if(cur){cur.classList.remove('cur');cur=null}stepCard(ev)}else if(ev.type==='liveguide'){liveWatch()}
-        else if(ev.type==='image'){if(cur){cur.classList.remove('cur');cur=null}const b=add('a',''),a=document.createElement('a');a.href=ev.url;a.target='_blank';a.rel='noopener';const im=document.createElement('img');im.src=ev.url;im.alt='Imagen creada por Nixel';im.className='gen';a.append(im);b.append(a);
+        else if(ev.type==='image'){if(cur){cur.classList.remove('cur');cur=null}const b=add('a',''),a=document.createElement('a');a.href=ev.url;a.target='_blank';a.rel='noopener';const im=document.createElement('img');im.src=ev.url;im.alt='Imagen creada por Calex';im.className='gen';a.append(im);b.append(a);
           const dl=document.createElement('a');dl.href=ev.url;dl.download='';dl.textContent='Descargar';dl.className='dl';b.append(dl)}
         else if(ev.type==='confirm'){const box=add('a','');box.textContent=ev.text+'\n';
           const mk=(l,ok)=>{const b=document.createElement('button');b.textContent=l;b.style.cssText='margin:8px 8px 0 0';if(ok)b.className='pri';
@@ -891,9 +989,9 @@ async function openSet(){await loadModels();CFG=await(await fetch('/config')).js
   $('rh').value=CFG.remote.host;$('ru').value=CFG.remote.user;$('rp').value=CFG.remote.port;$('rk').value=CFG.remote.key;$('rr').textContent='';
   const p=$('perms');p.innerHTML='';Object.entries(CFG.tools).forEach(([k,d])=>{const l=document.createElement('div');l.innerHTML='<b></b><small></small>';l.firstChild.textContent=k;l.lastChild.textContent=d.slice(0,90);
     const s=document.createElement('select');s.dataset.k=k;[['auto','Automático'],['ask','Preguntar'],['deny','Bloqueado']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;s.append(o)});s.value=CFG.perms[k]||'ask';p.append(l,s)});
-  const mem=await(await fetch('/memory')).json();$('mem').textContent='Nixel recuerda '+mem.facts.length+' dato(s) sobre ti'+(mem.facts.length?': '+mem.facts.join(' · ').slice(0,200):'.');
+  const mem=await(await fetch('/memory')).json();$('mem').textContent='Calex recuerda '+mem.facts.length+' dato(s) sobre ti'+(mem.facts.length?': '+mem.facts.join(' · ').slice(0,200):'.');
   $('lurl').textContent=CFG.lan.enabled&&CFG.lan.ips.length?'Desde otro dispositivo abre: '+CFG.lan.ips.map(i=>'http://'+i+':'+CFG.lan.port).join('   '):'';
-  const ro=!CFG.isLocal;$('ro').textContent=ro?'Solo se puede cambiar desde el PC donde corre Nixel.':'';$('ss').style.display=ro?'none':'';
+  const ro=!CFG.isLocal;$('ro').textContent=ro?'Solo se puede cambiar desde el PC donde corre Calex.':'';$('ss').style.display=ro?'none':'';
   $('ov').classList.add('on')}
 $('bs').onclick=openSet;$('sc').onclick=()=>$('ov').classList.remove('on');$('ov').onclick=e=>{if(e.target===$('ov'))$('ov').classList.remove('on')};
 $('rt').onclick=async()=>{const r=$('rr');r.style.color='var(--mut)';r.textContent='Conectando…';

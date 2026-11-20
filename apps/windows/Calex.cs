@@ -1,11 +1,11 @@
-// Nixel para Windows: abre https://nixel.federicoreta773.workers.dev como una aplicación (sin barra del navegador)
-// usando el Microsoft Edge (o Chrome) que ya tienes. Guarda su propio perfil en %LOCALAPPDATA%\Nixel, así la sesión y los permisos (micrófono) se mantienen.
+// Calex para Windows: abre https://nixel.federicoreta773.workers.dev como una aplicación (sin barra del navegador)
+// usando el Microsoft Edge (o Chrome) que ya tienes. Guarda su propio perfil en %LOCALAPPDATA%\Calex, así la sesión y los permisos (micrófono) se mantienen.
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 
-static class Nixel
+static class Calex
 {
   const string Url = "https://nixel.federicoreta773.workers.dev";
 
@@ -20,10 +20,10 @@ static class Nixel
     try
     {
       if (exe == null) { Process.Start(new ProcessStartInfo(Url) { UseShellExecute = true }); return 0; } // sin Edge ni Chrome: navegador predeterminado
-      string perfil = Path.Combine(local, "Nixel", "perfil"); Directory.CreateDirectory(perfil);
+      string perfil = Path.Combine(local, "Calex", "perfil"); Directory.CreateDirectory(perfil);
       ProcessStartInfo psi = new ProcessStartInfo(exe, "--app=" + Url + " --user-data-dir=\"" + perfil + "\" --window-size=1180,820 --no-first-run --no-default-browser-check");
       psi.UseShellExecute = false; Process.Start(psi); return 0;
     }
-    catch (Exception e) { MessageBox.Show("No se pudo abrir Nixel: " + e.Message + "\nAbre " + Url + " en tu navegador.", "Nixel"); return 1; }
+    catch (Exception e) { MessageBox.Show("No se pudo abrir Calex: " + e.Message + "\nAbre " + Url + " en tu navegador.", "Calex"); return 1; }
   }
 }
