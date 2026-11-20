@@ -1,13 +1,18 @@
-// Calex para Windows: abre https://nixel.federicoreta773.workers.dev como una aplicación (sin barra del navegador)
+// Calex para Windows: abre https://calex.federicoreta773.workers.dev como una aplicación (sin barra del navegador)
 // usando el Microsoft Edge (o Chrome) que ya tienes. Guarda su propio perfil en %LOCALAPPDATA%\Calex, así la sesión y los permisos (micrófono) se mantienen.
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
+[assembly: AssemblyTitle("Calex")]
+[assembly: AssemblyProduct("Calex")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 static class Calex
 {
-  const string Url = "https://nixel.federicoreta773.workers.dev";
+  const string Url = "https://calex.federicoreta773.workers.dev";
 
   [STAThread]
   static int Main(string[] args)

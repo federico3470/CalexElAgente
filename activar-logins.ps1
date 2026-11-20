@@ -3,7 +3,7 @@
 # Las claves las escribes tu cuando wrangler las pide: no se guardan en ningun archivo ni se muestran en pantalla.
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
-$url = "https://nixel.federicoreta773.workers.dev"
+$url = "https://calex.federicoreta773.workers.dev"
 $host_ = ([uri]$url).Host
 Write-Host "`nNixel: $url`n"
 

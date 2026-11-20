@@ -10,3 +10,5 @@ test/out/
 apps/dist/
 apps/android/build/
 *.jks
+release/v*/*.apk
+release/v*/*.exe

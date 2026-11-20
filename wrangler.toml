@@ -1,5 +1,5 @@
-# Nixel Cloud · configuración de Cloudflare Workers
-name = "nixel"
+# Calex Cloud · configuración de Cloudflare Workers
+name = "calex"
 main = "src/worker.js"
 compatibility_date = "2025-01-01"
 

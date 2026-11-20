@@ -30,7 +30,7 @@ import java.util.ArrayList;
  * - El dictado por voz usa el reconocedor de Android (el WebView no trae el del navegador).
  */
 public class MainActivity extends Activity {
-  static final String HOST = "https://nixel.federicoreta773.workers.dev";
+  static final String HOST = "https://calex.federicoreta773.workers.dev";
   static final int REQ_MIC = 7, REQ_FILE = 9;
   WebView web;
   ValueCallback<Uri[]> chooser;
@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.0");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.1");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
       @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
