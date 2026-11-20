@@ -1,0 +1,28 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Política de privacidad · Nixel</title>
+<style>body{font:16px/1.65 system-ui,"Segoe UI",sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 64px;background:#fff;color:#1b1e27}h1{font-size:26px}h2{font-size:18px;margin-top:28px}
+.note{background:#fff7e0;border:1px solid #f0d78c;padding:10px 14px;border-radius:10px;font-size:14px}.m{color:#667086;font-size:14px}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #d9dce5;padding:6px 8px;text-align:left;vertical-align:top}
+@media(prefers-color-scheme:dark){body{background:#0f1115;color:#e6e8ee}.note{background:#2a2410;border-color:#5a4a1a}.m{color:#8b93a5}a{color:#4fc3f7}td,th{border-color:#2a2f3a}}</style></head><body>
+<h1>Política de privacidad de Nixel</h1>
+<p class="m">Versión {{VERSION}} · Responsable del tratamiento: <b>{{OWNER}}</b> · Contacto: <b>{{EMAIL}}</b></p>
+<p class="note"><b>Aviso:</b> plantilla de partida, no es asesoramiento jurídico. El responsable debe completar sus datos y hacerla revisar por un abogado de su país (RGPD, LGPD, CCPA u otra norma aplicable).</p>
+<h2>1. Idea general</h2><p>Nixel es una aplicación web. Tus datos se guardan en tu cuenta de Nixel, en la infraestructura de <b>Cloudflare</b> (base de datos D1), y tus mensajes los procesa la IA de Cloudflare (Workers AI). No vendemos tus datos, no los usamos para publicidad ni para entrenar modelos propios.</p>
+<h2>2. Qué datos tratamos</h2>
+<table><tr><th>Dato</th><th>Para qué</th></tr>
+<tr><td>Identificador, nombre y correo que te da Google, Facebook o Huawei al iniciar sesión (o un identificador anónimo si entras como invitado)</td><td>Tu cuenta</td></tr>
+<tr><td>Edad, nombre elegido, tono, personaje y tema de color</td><td>Personalizar las respuestas y el aspecto</td></tr>
+<tr><td>Conversaciones</td><td>Dar continuidad a las charlas (guardamos las últimas 40 mensajes de cada una)</td></tr>
+<tr><td>Imágenes y fotogramas de cámara que envías</td><td>Que la IA los analice y responda. <b>No se guardan</b>: solo viajan en esa petición</td></tr>
+<tr><td>Contador de mensajes diarios y dirección IP (temporal, para evitar abusos)</td><td>Aplicar el límite diario y proteger el servicio</td></tr></table>
+<h2>3. Base legal</h2><p>Ejecución del servicio que pides y tu <b>consentimiento</b>, que das al aceptar estos documentos y al conceder permisos de cámara, micrófono o archivos. Puedes retirarlo en cualquier momento.</p>
+<h2>4. Con quién se comparte</h2><ul>
+<li><b>Cloudflare</b> (alojamiento, base de datos y modelos de IA), sujeto a su política de privacidad.</li>
+<li><b>Google, Facebook o Huawei</b>, solo si inicias sesión con ellos: reciben tu solicitud de acceso y nos devuelven tu identificador, nombre y correo.</li>
+<li><b>Reconocimiento de voz del navegador:</b> el dictado y el modo Live usan el servicio de voz de tu navegador; en Chrome y Edge el audio puede enviarse a Google o Microsoft para transcribirlo.</li></ul>
+<h2>5. Cookies</h2><p>Solo una cookie técnica de sesión (necesaria para mantenerte conectado) y almacenamiento local para recordar tu tema y preferencias. No usamos cookies de seguimiento ni publicidad.</p>
+<h2>6. Cuánto tiempo guardamos los datos</h2><p>Hasta que borres tu cuenta o tus charlas. Las sesiones caducan a los 30 días.</p>
+<h2>7. Tus derechos</h2><p>Puedes <b>acceder, rectificar, borrar, exportar (portabilidad) y limitar</b> el tratamiento de tus datos y retirar tu consentimiento. En la aplicación: <b>Configuración → Privacidad y datos → «Descargar mis datos» y «Borrar mis datos y cuenta»</b>. También puedes escribir a <b>{{EMAIL}}</b>. Si crees que se vulneran tus derechos, puedes reclamar ante la autoridad de protección de datos de tu país.</p>
+<h2>8. Menores</h2><p>Nixel es para personas de 13 años o más. Los menores de esa edad solo pueden usarlo con la confirmación y supervisión de su padre, madre o tutor, que acepta esta política en su nombre. Si crees que un menor ha dado datos sin permiso, escríbenos y los borraremos.</p>
+<h2>9. Seguridad</h2><p>Conexión cifrada (https), cookies HttpOnly y Secure, protección contra CSRF, límite de intentos y de uso, e inicio de sesión mediante OAuth con protección anti-CSRF y PKCE cuando el proveedor lo admite. Ningún sistema es 100 % seguro.</p>
+<h2>10. Transferencias internacionales</h2><p>Cloudflare y los proveedores de inicio de sesión pueden tratar datos fuera de tu país. Consulta sus políticas.</p>
+<h2>11. Cambios</h2><p>Si cambiamos esta política de forma relevante, te lo diremos y te pediremos aceptarla de nuevo. Contacto: <b>{{EMAIL}}</b> · Jurisdicción: <b>{{COUNTRY}}</b>.</p>
+<p class="m"><a href="/legal/terminos">Términos y condiciones</a></p></body></html>

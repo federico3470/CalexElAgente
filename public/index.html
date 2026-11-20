@@ -1,0 +1,938 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nixel</title>
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><meta name="theme-color" content="#0f1115">
+<script>
+/* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
+const T=(id,n,bg,side,panel,line,txt,mut,acc,accd,onacc,bgimg)=>({id,n,bg,side,panel,line,txt,mut,acc,accd,onacc,bgimg});
+const THEMES=[
+ T('dark','Oscuro','#0f1115','#13161c','#181b22','#262b36','#e6e8ee','#8b93a5','#4fc3f7','#1b739e','#ffffff',''),
+ T('bw','Blanco y negro','#ffffff','#f1f1f1','#ffffff','#d9d9d9','#111111','#666666','#111111','#111111','#ffffff',''),
+ T('wb','Negro y blanco','#000000','#0a0a0a','#111111','#2a2a2a','#f5f5f5','#9a9a9a','#ffffff','#e6e6e6','#000000',''),
+ T('rg','Rojo y verde','#120c0c','#170e0e','#1d1414','#3a2323','#f3eaea','#b39a9a','#e04848','#c93636','#ffffff','linear-gradient(135deg,#2a0d0d 0%,#0d2415 100%)'),
+ T('gold','Negro y dorado','#0b0a08','#100e0a','#161309','#3a3115','#f4ecd6','#a89a74','#d4af37','#b8921f','#111111',''),
+ T('wg','Blanco a gris','#f4f4f5','#e9e9eb','#ffffff','#d4d4d8','#1c1c1f','#6b6b73','#5b6470','#4a525c','#ffffff','linear-gradient(180deg,#ffffff 0%,#c9ccd1 100%)'),
+ T('ocean','Océano','#07131f','#0a1a2a','#0e2236','#1d3b57','#e3f1ff','#7fa3c2','#29b6f6','#0277bd','#ffffff','linear-gradient(160deg,#061220 0%,#0b2c4a 100%)'),
+ T('violet','Violeta','#120d1f','#160f26','#1c1430','#35285a','#efe9ff','#9d8fc4','#a78bfa','#7c5ce0','#ffffff','linear-gradient(160deg,#150d2a 0%,#2a1050 100%)'),
+ T('sunset','Atardecer','#1a0f12','#20121a','#26151a','#4a2530','#ffece3','#c49a8b','#ff8a4c','#e0642a','#1a0a00','linear-gradient(160deg,#2b1020 0%,#4a1f12 100%)'),
+ T('forest','Bosque','#0b140e','#0e1a12','#101c14','#213a28','#e6f3ea','#86a68f','#4ade80','#22a559','#04210f','linear-gradient(160deg,#0a1a10 0%,#0f2b1a 100%)'),
+ T('rose','Rosa','#fff5f8','#ffe8ef','#ffffff','#f3c9d6','#3a1d28','#8a5b6b','#e91e63','#c2185b','#ffffff','linear-gradient(160deg,#fff5f8 0%,#ffd6e3 100%)'),
+];
+function applyTheme(id,save){const t=THEMES.find(x=>x.id===id)||THEMES[0],s=document.documentElement.style;
+ for(const [k,v] of [['bg',t.bg],['side',t.side],['panel',t.panel],['line',t.line],['txt',t.txt],['mut',t.mut],['acc',t.acc],['accd',t.accd],['onacc',t.onacc],['bgimg',t.bgimg||t.bg]])s.setProperty('--'+k,v);
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t.bg;
+ if(save){try{localStorage.setItem('dot-theme',t.id)}catch{}}const hx=t.bg.replace('#',''),lum=(parseInt(hx.slice(0,2),16)*.299+parseInt(hx.slice(2,4),16)*.587+parseInt(hx.slice(4,6),16)*.114)/255;document.documentElement.dataset.mode=lum>.6?'light':'dark';window.curTheme=t.id}
+try{applyTheme(localStorage.getItem('dot-theme')||'dark')}catch{applyTheme('dark')}
+</script>
+<style>
+:root{--bg:#0f1115;--side:#13161c;--panel:#181b22;--line:#262b36;--txt:#e6e8ee;--mut:#8b93a5;--acc:#4fc3f7;--accd:#2b8fbf;--ok:#5ad19a;--bad:#ef6b6b}
+@media(prefers-color-scheme:light){:root{--bg:#f6f7fa;--side:#eceff5;--panel:#fff;--line:#dfe3ec;--txt:#1b1e27;--mut:#667086;--acc:#1c8fc7;--accd:#12709d}}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 system-ui,"Segoe UI",sans-serif;display:flex;overflow:hidden;background:var(--bgimg,var(--bg)) fixed}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--acc)}button.pri{background:var(--accd);border-color:var(--accd);color:var(--onacc,#fff)}
+select,input[type=text],input[type=number],input[type=password],textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+/* sidebar */
+#side{width:260px;background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0;transition:margin .2s}
+#side.hide{margin-left:-260px}
+.sh{padding:12px;display:flex;gap:8px}.sh button{flex:1}
+#hist{flex:1;overflow:auto;padding:0 8px 8px}
+.h{display:flex;align-items:center;gap:4px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--mut)}
+.h:hover,.h.on{background:var(--panel);color:var(--txt)}
+.h span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.h i{font-style:normal;opacity:0;padding:0 4px}.h:hover i{opacity:.8}.h i:hover{color:var(--bad)}
+.hl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:10px 10px 4px}
+/* main */
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.brand{display:flex;flex-direction:column;line-height:1.15}
+.name{font-weight:700;font-size:18px;letter-spacing:.18em;background:linear-gradient(90deg,#8a919e,#4fc3f7);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.sp{flex:1}
+#log{flex:1;overflow:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:860px;margin:0 auto}
+.m{padding:10px 14px;border-radius:14px;max-width:88%;white-space:pre-wrap;word-wrap:break-word}
+.u{align-self:flex-end;background:var(--accd);color:var(--onacc,#fff)}
+.a{align-self:flex-start;background:var(--panel);border:1px solid var(--line)}
+.a code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:.9em}.a a{color:var(--acc)}
+.t{align-self:flex-start;font-size:12.5px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;max-width:88%;overflow-wrap:anywhere}
+.cur::after{content:"▍";color:var(--acc);animation:bl 1s steps(2) infinite}@keyframes bl{50%{opacity:0}}
+details.think{align-self:flex-start;max-width:88%;font-size:13px;color:var(--mut)}
+details.think summary{cursor:pointer;padding:2px 0;user-select:none}
+details.think div{border-left:2px solid var(--line);padding:4px 0 4px 10px;margin:4px 0;white-space:pre-wrap}
+.pg{align-self:flex-start;font-size:13px;color:var(--acc)}
+.empty{margin:auto;text-align:center;color:var(--mut)}.empty b{display:block;font-size:20px;color:var(--txt);margin-bottom:6px}
+/* composer + status */
+#comp{width:100%;max-width:860px;margin:0 auto;padding:8px 16px 4px}
+#row{display:flex;gap:8px}
+#q{flex:1;resize:none;border-radius:12px;padding:10px 12px;max-height:160px}
+#bar{width:100%;max-width:860px;margin:0 auto;padding:2px 16px 10px;display:flex;gap:14px;font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums;flex-wrap:wrap;align-items:center}
+#bar b{color:var(--txt);font-weight:600}.dot{width:8px;height:8px;border-radius:50%;background:var(--mut)}.dot.on{background:var(--ok);animation:pu 1s infinite}@keyframes pu{50%{opacity:.35}}
+/* modal */
+#ov{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
+#ov.on{display:flex}
+#set{background:var(--bg);border:1px solid var(--line);border-radius:14px;width:min(680px,100%);max-height:90vh;overflow:auto;padding:18px 20px}
+#set h3{margin:0 0 4px}#set h4{margin:18px 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.r{display:flex;gap:10px;align-items:center;padding:5px 0;flex-wrap:wrap}.r label{flex:1;min-width:160px}.r small{color:var(--mut);display:block}
+.perm{display:grid;grid-template-columns:1fr 110px;gap:6px 10px;align-items:center}.perm div small{display:block;color:var(--mut);font-size:12px}
+/* avatar + bienvenida */
+.avb{padding:0;border-radius:50%;width:40px;height:40px;overflow:hidden;line-height:0;border:2px solid var(--line)}
+.av{display:block}.m-effort{animation:shk .22s infinite}.m-funny{animation:bnc .45s infinite alternate}
+@keyframes shk{0%,100%{transform:translateX(-1px) rotate(-1deg)}50%{transform:translateX(1px) rotate(1deg)}}
+@keyframes bnc{to{transform:translateY(-5px) rotate(3deg)}}
+.empty .gav{display:inline-block;margin-bottom:10px;border-radius:50%;overflow:hidden;line-height:0;border:3px solid var(--line)}
+.empty small{display:block;margin-top:4px}
+#ob{position:fixed;inset:0;background:var(--bgimg,var(--bg));z-index:20;display:none;align-items:center;justify-content:center;padding:16px;overflow:auto}
+#ob.on{display:flex}#obc{width:min(560px,100%);text-align:center}
+#obc h2{margin:6px 0 4px;font-size:24px}#obc p{color:var(--mut);margin:0 0 16px}
+#obc input[type=text],#obc textarea{width:100%;font-size:17px;padding:10px 12px;text-align:center}
+.steps{display:flex;gap:6px;justify-content:center;margin-bottom:18px}.steps i{width:26px;height:4px;border-radius:2px;background:var(--line)}.steps i.on{background:var(--acc)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left}
+.card{padding:12px;border:2px solid var(--line);border-radius:12px;cursor:pointer;background:var(--panel)}.card.on{border-color:var(--acc)}.card b{display:block}.card small{color:var(--mut)}
+.bld{display:grid;gap:10px;text-align:left;margin-top:12px}.bld .o{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bld label{width:84px;color:var(--mut);font-size:13px}
+.sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);padding:0;cursor:pointer}.sw.on{border-color:var(--txt);box-shadow:0 0 0 2px var(--acc)}
+.ch{padding:4px 10px;font-size:13px}.ch.on{background:var(--accd);color:var(--onacc,#fff);border-color:var(--accd)}
+.thg{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.th{position:relative;width:56px;height:56px;border-radius:50%;border:3px solid var(--line);padding:0;cursor:pointer;overflow:hidden}
+.th i{position:absolute;right:6px;bottom:6px;width:19px;height:19px;border-radius:50%}.th b{position:absolute;left:8px;top:9px;width:22px;height:12px;border-radius:6px;opacity:.95}
+.th.on{border-color:var(--txt);box-shadow:0 0 0 3px var(--acc)}
+#obnav{display:flex;justify-content:space-between;margin-top:20px}
+.big{display:inline-block;border-radius:50%;overflow:hidden;line-height:0;border:3px solid var(--line);margin-bottom:6px}
+#pm{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:40;padding:16px}#pm.on{display:flex}.pmb{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(400px,100%);text-align:center}.pmb h3{margin:0 0 6px}.pmb p{color:var(--mut);font-size:14px}
+#prev{display:flex;gap:8px;flex-wrap:wrap;padding:0 0 8px}#prev .pi{position:relative}#prev img{height:54px;border-radius:8px;border:1px solid var(--line);display:block}#prev i{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--bad);color:#fff;font-style:normal;font-size:12px;display:grid;place-items:center;cursor:pointer}
+.u img{max-height:140px;border-radius:8px;display:block;margin-bottom:6px}.tb{padding:6px 10px}.tb.on{background:var(--accd);color:var(--onacc,#fff);border-color:var(--accd)}
+#lv{position:fixed;inset:0;background:#000;z-index:35;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:16px;color:#fff}#lv.on{display:flex}
+#lvv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.9}#lvt,#lvb{position:relative;z-index:2}
+#lva{border-radius:50%;overflow:hidden;line-height:0;border:3px solid #fff8;box-shadow:0 0 0 6px #0006}#lvs{position:relative;z-index:2;max-width:760px;text-align:center;font-size:20px;line-height:1.4;background:#000a;padding:10px 16px;border-radius:14px;min-height:48px}
+#lvb{display:flex;gap:10px}#lvb button{background:#000a;color:#fff;border-color:#fff4;padding:10px 16px}#lvb .x{background:var(--bad);border-color:var(--bad)}
+.kinds{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.kd{padding:3px;border-radius:50%;line-height:0;justify-self:center}.kd.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0 12px}.chips .ch{padding:7px 14px;font-size:14px}
+.legal{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;margin-bottom:10px}.legal ul{margin:6px 0;padding-left:20px}.legal li{margin:3px 0}.legal a{color:var(--acc)}
+.ck{display:flex;gap:10px;align-items:flex-start;text-align:left;margin:8px 0;font-size:14px;cursor:pointer}.ck input{margin-top:4px;width:18px;height:18px;flex-shrink:0}
+.sug{min-height:22px;margin:8px 0;font-size:14px;color:var(--acc)}
+/* inicio de sesión */
+#lg{position:fixed;inset:0;background:var(--bgimg,var(--bg));z-index:30;display:none;align-items:center;justify-content:center;padding:16px;overflow:auto}#lg.on{display:flex}
+#lgc{width:min(380px,100%);text-align:center}#lgc h2{margin:8px 0 4px;font-size:24px}#lgc p{color:var(--mut);margin:0 0 16px}
+.oa{display:grid;gap:8px}.ob{display:flex;align-items:center;gap:12px;padding:10px 14px;text-align:left;font-weight:500}
+.ob i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:700;border:1px solid var(--line);flex-shrink:0}.ob.off{opacity:.55}
+.lgh{min-height:18px;margin:8px 0 0;font-size:13px;color:var(--mut)}
+.or{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:12px;margin:10px 0}.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+#lgf{display:grid;gap:8px}#lgf input{padding:10px 12px}.r2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lge{min-height:20px;margin-top:8px;color:var(--bad);font-size:13px}.lnk{background:none;border:0;color:var(--mut);text-decoration:underline;padding:6px;margin-top:4px}
+#oas details{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:6px 0}#oas summary{cursor:pointer;font-weight:600}
+#oas .f{display:grid;gap:6px;margin-top:8px}#oas .f input,#oas .f textarea{width:100%}#oas small{color:var(--mut);display:block}#oas code{background:var(--panel);padding:1px 5px;border-radius:4px;font-size:12px;overflow-wrap:anywhere}
+@media(max-width:760px){#side{position:fixed;z-index:5;height:100%;box-shadow:0 0 30px #0008}.tag{display:none}}
+/* ================= LIQUID GLASS ================= */
+:root{--gl:color-mix(in srgb,var(--panel) 54%,transparent);--gl2:color-mix(in srgb,var(--panel) 72%,transparent);--glb:color-mix(in srgb,var(--txt) 15%,transparent);--spec:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(0,0,0,.08);--sh:0 10px 40px rgba(0,0,0,.22);--blur:26px;--r:26px;--spring:cubic-bezier(.2,.9,.3,1.25)}
+body{padding:12px;gap:12px;position:relative}
+body::before{content:"";position:fixed;inset:-25%;z-index:-1;pointer-events:none;filter:blur(36px);animation:drift 26s ease-in-out infinite alternate;
+  background:radial-gradient(38% 38% at 18% 22%,color-mix(in srgb,var(--acc) 42%,transparent),transparent 72%),radial-gradient(34% 34% at 82% 16%,color-mix(in srgb,#b388ff 34%,transparent),transparent 72%),radial-gradient(44% 44% at 68% 88%,color-mix(in srgb,#ff8fb1 28%,transparent),transparent 72%),radial-gradient(30% 30% at 12% 82%,color-mix(in srgb,#5ad19a 24%,transparent),transparent 72%)}
+@keyframes drift{to{transform:translate3d(4%,3%,0) scale(1.1) rotate(4deg)}}
+#side,header,#row,#bar span.chip,.pmb,#set,#obc,#lgc,.card,.legal,.m.a,.t,details.think,#lvs,#lvb button,#oas details,.sug{background:var(--gl);-webkit-backdrop-filter:blur(var(--blur)) saturate(170%);backdrop-filter:blur(var(--blur)) saturate(170%);border:1px solid var(--glb);box-shadow:var(--spec),var(--sh)}
+#side{margin:0;border-radius:30px;width:268px}#side.hide{margin-left:-280px}
+.sh{padding:14px 14px 8px}.hl{padding:12px 18px 6px}#hist{padding:0 10px 8px}
+.h{border-radius:18px;padding:10px 14px;transition:background .25s,transform .25s var(--spring)}.h:hover{transform:translateX(3px)}.h.on{background:color-mix(in srgb,var(--acc) 22%,transparent);color:var(--txt);box-shadow:var(--spec)}
+.h .pin{opacity:.0;font-style:normal;padding:0 4px}.h:hover .pin,.h.pinned .pin{opacity:.8}
+header{border-radius:28px;margin:0 0 10px;padding:10px 14px}
+#main{min-width:0}
+button,select,input[type=text],input[type=search],input[type=number],input[type=password],input[type=email],textarea{border-radius:999px;color:var(--txt);border:1px solid var(--glb);background:color-mix(in srgb,var(--panel) 60%,transparent);box-shadow:var(--spec);transition:transform .25s var(--spring),background .2s,border-color .2s,box-shadow .2s}
+textarea{border-radius:22px}
+button{padding:8px 16px}button:hover{transform:translateY(-1px) scale(1.03);border-color:var(--acc)}button:active{transform:scale(.96)}
+button.pri{background:linear-gradient(180deg,color-mix(in srgb,var(--accd) 88%,#fff),var(--accd));border-color:color-mix(in srgb,var(--accd) 60%,#fff);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px color-mix(in srgb,var(--accd) 45%,transparent)}
+#log{padding:20px 14px;gap:14px}
+.m{border-radius:24px;padding:12px 18px;animation:pop .45s var(--spring) both}.m.u{border-bottom-right-radius:8px;background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 85%,#fff),var(--accd));border:1px solid color-mix(in srgb,#fff 35%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 8px 24px color-mix(in srgb,var(--accd) 40%,transparent)}
+.m.a{border-bottom-left-radius:8px;background:var(--gl2)}.t{border-radius:16px;padding:6px 12px}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+#comp{padding:0 4px 4px}#row{border-radius:32px;padding:8px 8px 8px 10px;align-items:flex-end;gap:6px}
+#row textarea{background:transparent;border:0;box-shadow:none;border-radius:20px}#row textarea:focus-visible{outline:none}
+#row:focus-within{border-color:var(--acc);box-shadow:var(--spec),var(--sh),0 0 0 3px color-mix(in srgb,var(--acc) 30%,transparent)}
+#row .tb{border-radius:50%;width:40px;height:40px;padding:0;display:grid;place-items:center}#row #go{border-radius:999px;height:40px;padding:0 20px}#row #liv{width:auto;border-radius:999px;padding:0 14px}
+#bar{padding:4px 18px 8px}#bar b{font-weight:600}
+.empty{animation:pop .6s var(--spring) both}.empty .gav{border-radius:50%;box-shadow:0 12px 40px color-mix(in srgb,var(--acc) 40%,transparent),var(--spec);animation:float 5s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+.empty b{font-size:26px;letter-spacing:-.01em}
+#ov,#pm{background:rgba(10,12,20,.38);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+#set,.pmb{border-radius:32px;box-shadow:var(--spec),0 30px 80px rgba(0,0,0,.4);animation:pop .4s var(--spring) both}#set{background:var(--gl2);padding:22px 24px}
+#ob,#lg{background:var(--bgimg,var(--bg))}#ob::before,#lg::before{content:"";position:absolute;inset:-20%;pointer-events:none;filter:blur(40px);background:radial-gradient(38% 38% at 20% 25%,color-mix(in srgb,var(--acc) 40%,transparent),transparent 72%),radial-gradient(34% 34% at 80% 75%,color-mix(in srgb,#b388ff 34%,transparent),transparent 72%);animation:drift 20s ease-in-out infinite alternate}
+#obc,#lgc{position:relative;border-radius:38px;padding:30px 28px;animation:pop .5s var(--spring) both;background:var(--gl2)}
+.card{border-radius:22px;transition:transform .25s var(--spring),border-color .2s}.card:hover{transform:translateY(-2px)}.card.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,var(--gl))}
+.legal{border-radius:22px}.sug{border-radius:16px;padding:8px 12px}details.think{border-radius:16px;padding:6px 12px}
+.big,.kd,.th,.sw{box-shadow:var(--spec),0 6px 18px rgba(0,0,0,.18)}.kd{border-radius:50%}.th{border-radius:50%}.th.on,.kd.on,.sw.on{box-shadow:0 0 0 3px var(--acc),0 6px 18px rgba(0,0,0,.2)}
+.ch{border-radius:999px}.steps i{height:5px;border-radius:3px;transition:background .3s,width .3s}.steps i.on{width:34px}
+.dot{box-shadow:0 0 10px currentColor}
+#bar .chip{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:3px 12px}
+::-webkit-scrollbar{width:10px}::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--txt) 22%,transparent);border-radius:10px;border:3px solid transparent;background-clip:content-box}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){#side,header,#row,.pmb,#set,#obc,#lgc,.m.a{background:var(--panel)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+body.noanim *,body.noanim *::before,body.noanim *::after{animation:none!important;transition:none!important}
+@media(max-width:760px){body{padding:8px;gap:8px}#side{border-radius:26px}header{border-radius:24px}}
+#prev .doc{background:var(--gl);border:1px solid var(--glb);border-radius:999px;padding:7px 28px 7px 14px;font-size:13px;max-width:260px}#prev .doc span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dchip{font-size:12.5px;opacity:.85;margin-bottom:4px}
+.gen{display:block;max-width:min(100%,520px);border-radius:18px;margin:2px 0 6px;background:#fff}.dl{font-size:12.5px;color:var(--acc)}
+.wl{list-style:none;margin:2px auto 14px;padding:0;text-align:left;display:inline-block;font-size:13.5px;color:var(--mut)}.wl li{padding:3px 0 3px 20px;position:relative}.wl li::before{content:"";position:absolute;left:2px;top:.75em;width:8px;height:8px;border-radius:50%;background:var(--acc)}
+#ep{position:fixed;z-index:70;width:300px;padding:16px 18px;border-radius:24px;background:var(--panel);border:1px solid var(--glb);box-shadow:var(--sh);display:none;color:var(--txt)}#ep.on{display:block}
+#ep .eh{display:flex;justify-content:space-between;margin-bottom:10px}#ep input[type=range]{width:100%;height:28px;accent-color:var(--acc)}#ep .et3{display:flex;gap:6px;justify-content:space-between;margin:6px 0 8px}#ep .et3 button{flex:1;padding:6px 8px;font-size:13px}#ep p{margin:0;font-size:13px;color:var(--mut);line-height:1.4;min-height:36px}
+/* ===== Liquid glass v2: cristal luminoso con reflejos y fondo vivo ===== */
+:root[data-mode=dark]{--gl:rgba(255,255,255,.07);--gl2:rgba(255,255,255,.11);--glb:rgba(255,255,255,.17);--spec:inset 0 1px 0 rgba(255,255,255,.40),inset 0 -1px 0 rgba(255,255,255,.05),inset 0 0 24px rgba(255,255,255,.035);--sh:0 16px 48px rgba(0,0,0,.40),0 2px 8px rgba(0,0,0,.25);--shine:linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,0) 38%,rgba(255,255,255,0) 62%,rgba(255,255,255,.07))}
+:root[data-mode=light]{--gl:rgba(255,255,255,.50);--gl2:rgba(255,255,255,.70);--glb:rgba(255,255,255,.90);--spec:inset 0 1px 0 rgba(255,255,255,1),inset 0 -1px 0 rgba(0,0,0,.05);--sh:0 16px 44px rgba(30,40,90,.16),0 2px 8px rgba(30,40,90,.08);--shine:linear-gradient(135deg,rgba(255,255,255,.65),rgba(255,255,255,0) 40%,rgba(255,255,255,0) 60%,rgba(255,255,255,.3))}
+:root{--blur:30px}
+body::before{inset:-20%;filter:blur(34px) saturate(1.3);background:radial-gradient(34% 40% at 14% 20%,color-mix(in srgb,var(--acc) 64%,transparent),transparent 70%),radial-gradient(30% 36% at 86% 14%,color-mix(in srgb,#b388ff 56%,transparent),transparent 70%),radial-gradient(40% 44% at 72% 90%,color-mix(in srgb,#ff7eb3 48%,transparent),transparent 70%),radial-gradient(28% 32% at 10% 86%,color-mix(in srgb,#4ade80 40%,transparent),transparent 70%),radial-gradient(24% 28% at 52% 46%,color-mix(in srgb,var(--acc) 26%,transparent),transparent 70%)}
+#side,header,#row,.pmb,#set,#obc,#lgc,.card,.legal,.m.a,.t,details.think,#lvs,#lvb button,#oas details,.sug,.stepcard,#ep,#gdb,#sp,.tile,#wbc,#gdm{background-color:var(--gl);background-image:var(--shine);-webkit-backdrop-filter:blur(var(--blur)) saturate(190%) brightness(1.06);backdrop-filter:blur(var(--blur)) saturate(190%) brightness(1.06);border:1px solid var(--glb);box-shadow:var(--spec),var(--sh)}
+#set,.pmb,#obc,#lgc,#wbc,.stepcard,.m.a{background-color:var(--gl2)}
+#side{border-radius:36px}header{border-radius:34px}#row{border-radius:36px}.m{border-radius:26px}.m.u{border-bottom-right-radius:9px}.m.a{border-bottom-left-radius:9px}
+.m.u{background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 90%,#fff),var(--accd));box-shadow:inset 0 1.5px 0 rgba(255,255,255,.6),inset 0 -10px 20px rgba(0,0,0,.14),0 12px 30px color-mix(in srgb,var(--accd) 45%,transparent);border:1px solid rgba(255,255,255,.35)}
+button,select,input[type=text],input[type=search],input[type=number],input[type=password],input[type=email],textarea{background-color:var(--gl);background-image:var(--shine);border:1px solid var(--glb);box-shadow:var(--spec)}
+button:hover,select:hover{background-color:var(--gl2)}button.pri{background-image:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0) 55%),linear-gradient(135deg,color-mix(in srgb,var(--accd) 88%,#fff),var(--accd))}
+#row textarea,#row textarea:focus{background:transparent;box-shadow:none;border:0}#row:focus-within{box-shadow:var(--spec),var(--sh),0 0 0 3px color-mix(in srgb,var(--acc) 38%,transparent)}
+.h.on{background-color:color-mix(in srgb,var(--acc) 24%,transparent)}.h:hover{background-color:var(--gl)}
+select option{background:var(--panel);color:var(--txt)}
+#eb,#wake,#gdbtn{white-space:nowrap}header{gap:8px}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(46% 40% at 50% 54%,color-mix(in srgb,var(--acc) 20%,transparent),transparent 72%),radial-gradient(30% 26% at 62% 30%,color-mix(in srgb,#b388ff 16%,transparent),transparent 72%)}
+.empty .gav{box-shadow:0 18px 50px color-mix(in srgb,var(--acc) 45%,transparent),var(--spec)}
+/* guía con foco */
+#gd{position:fixed;inset:0;z-index:80}#gdk{position:absolute;inset:0}
+#gdh{position:absolute;border-radius:16px;box-shadow:0 0 0 100vmax rgba(5,8,16,.68),0 0 0 3px var(--acc),0 0 30px 4px color-mix(in srgb,var(--acc) 55%,transparent);transition:left .16s,top .16s,width .16s,height .16s;pointer-events:none}
+#gdb{position:absolute;width:min(340px,92vw);padding:16px 18px;border-radius:22px;background:var(--panel);border:1px solid var(--glb);box-shadow:var(--sh);color:var(--txt);transition:left .16s,top .16s}
+#gdb b{display:block;font-size:16px;margin-bottom:4px}#gdb p{margin:0 0 12px;font-size:14px;line-height:1.45;color:var(--mut)}
+.stepcard{max-width:min(560px,100%)}.stepcard b{display:block;font-size:16px;margin-bottom:4px}.stepcard .why{margin:0 0 8px;color:var(--mut);font-size:13.5px}.stepcard ol{margin:6px 0 10px;padding-left:22px}.stepcard li{margin:4px 0;line-height:1.45}
+.stepcard .tpl{white-space:pre-wrap;margin:0 0 10px;padding:10px 14px;border-radius:16px;background:color-mix(in srgb,var(--panel) 60%,transparent);border:1px solid var(--glb);font:13px/1.5 ui-monospace,Consolas,monospace}.sbtn{display:flex;gap:8px;flex-wrap:wrap}
+#sp{position:fixed;right:16px;bottom:16px;z-index:75;width:min(380px,92vw);padding:16px 18px;border-radius:22px;background:var(--panel);border:1px solid var(--glb);box-shadow:var(--sh);color:var(--txt)}#sp b{display:block;font-size:15px;margin-bottom:4px}#sp p{margin:0 0 12px;font-size:14px;line-height:1.45;color:var(--txt)}
+.gdn{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.gdn small{margin-right:auto;color:var(--mut)}.gdn button{padding:6px 14px}.gdv{font-size:12.5px;color:var(--mut);display:flex;gap:4px;align-items:center;cursor:pointer}
+#gda{position:absolute;width:14px;height:14px;background:var(--panel);border:1px solid var(--glb);transform:rotate(45deg)}#gda.up{top:-8px;border-width:1px 0 0 1px}#gda.dn{bottom:-8px;border-width:0 1px 1px 0}
+#gdm{position:fixed;z-index:70;min-width:260px;padding:8px;border-radius:20px;background:var(--panel);border:1px solid var(--glb);box-shadow:var(--sh);display:none}#gdm.on{display:block}#gdm button{display:block;width:100%;text-align:left;border-radius:14px;margin:2px 0}
+#wake.on{background:var(--accd);color:var(--onacc,#fff);border-color:var(--accd)}
+/* animaciones rápidas: la interfaz responde al instante */
+.m{animation-duration:.16s!important}.empty,#obc,#lgc,#set,.pmb,#wbc{animation-duration:.2s!important}.tile{animation-duration:.2s!important;animation-delay:0s!important}
+button,select,input,textarea,.h,.card,.kd,.th,.sw,.ch,.steps i{transition-duration:.1s!important}.acts{transition-duration:.08s!important}
+.sugs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:20px auto 0;max-width:660px}.sg{font-size:13.5px;padding:9px 16px;color:var(--txt)}
+.acts{display:flex;gap:4px;margin-top:8px;opacity:0;transition:opacity .2s}.m.a:hover .acts,.m.a:focus-within .acts{opacity:1}.acts button{padding:3px 10px;font-size:12px;border-radius:999px}@media(hover:none){.acts{opacity:1}}
+#gpuc{font-size:11.5px;color:var(--mut)}#gpuc:empty{display:none}
+.h input.rn{flex:1;min-width:0;padding:4px 10px;border-radius:12px;font-size:14px}.h .pin{cursor:pointer}
+#go.stop{background:linear-gradient(180deg,#ff8f8f,#d94646);border-color:#ffb0b0;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 18px rgba(217,70,70,.4)}
+#wb{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(10,12,20,.42);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);overflow:auto}#wb.on{display:flex}
+#wbc{width:min(680px,100%);border-radius:42px;padding:30px 28px;text-align:center;background:var(--gl2);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--glb);box-shadow:var(--spec),0 40px 100px rgba(0,0,0,.45);animation:pop .6s var(--spring) both}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:20px 0;text-align:left}
+.tile{padding:13px 16px;border-radius:24px;background:color-mix(in srgb,var(--panel) 50%,transparent);border:1px solid var(--glb);box-shadow:var(--spec);animation:pop .55s var(--spring) both}.tile b{display:block;margin-bottom:3px}.tile small{color:var(--mut);line-height:1.35;display:block}
+#memlist .mi{display:flex;gap:8px;align-items:center;padding:7px 12px;border-radius:16px;background:color-mix(in srgb,var(--panel) 50%,transparent);margin:5px 0;font-size:13.5px}.mi span{flex:1}.mi button{padding:2px 10px}
+input[type=range]{accent-color:var(--acc);padding:0;border:0;background:transparent;box-shadow:none}
+.mbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;text-align:center;margin:8px 0}
+.mb{display:flex;flex-direction:column;align-items:center;gap:3px;padding:14px 8px;border:2px solid var(--line);border-radius:20px;background:var(--panel);color:var(--txt);font:inherit;cursor:pointer;transition:transform .25s var(--spring,ease),border-color .2s}
+button.mb:hover{transform:translateY(-2px)}div.mb{cursor:default}.mb.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,var(--panel))}
+.mb b{font-size:15px;font-weight:600}.mb small{color:var(--mut);font-size:12px;line-height:1.25}
+.mba{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accd),var(--acc));color:#fff;font-weight:700;font-size:20px;margin-bottom:4px}
+</style></head><body>
+<aside id="side">
+  <div class="sh"><button class="pri" id="bn">+ Nueva charla</button></div>
+  <div class="hl">Historial</div><div style="padding:0 14px 6px"><input type="search" id="hs" placeholder="Buscar charlas…" aria-label="Buscar en el historial" style="width:100%;padding:8px 14px"></div><div id="hist"></div>
+  <div class="sh"><button id="bs">⚙ Configuración</button></div>
+</aside>
+<div id="main">
+<header>
+  <button id="bt" title="Mostrar/ocultar historial" aria-label="Historial">☰</button>
+  <svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><defs><linearGradient id="brandg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#brandg)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg>
+  <div class="brand"><span class="name">NIXEL</span><span class="tag">Powered by Intelligence &nbsp;·&nbsp; Driven by an Engineer</span></div>
+  <span class="sp"></span>
+  <button id="hav" class="avb" title="Tu perfil y avatar" aria-label="Tu perfil"></button>
+  <select id="sm" title="Modelo" aria-label="Modelo"></select>
+  <select id="sd" title="Modo de conversación" aria-label="Modo"></select>
+  <select id="se" title="Esfuerzo" aria-label="Esfuerzo" style="display:none"></select>
+  <button type="button" id="eb" title="Velocidad y profundidad de las respuestas" aria-haspopup="dialog" aria-expanded="false" style="height:40px">Esfuerzo: Estándar</button>
+  <button type="button" id="exp" title="Exportar esta charla (Markdown)" aria-label="Exportar charla" style="width:40px;height:40px;padding:0">⤓</button>
+  <button type="button" id="wake" title="Llamar por voz: diga el nombre y la petición" aria-pressed="false" style="height:40px">Llamar</button>
+</header>
+<div id="log"></div>
+<div id="comp"><div id="prev"></div><form id="row"><button type="button" class="tb" id="att" title="Adjuntar imagen, PDF o archivo de texto" aria-label="Adjuntar imagen, PDF o archivo de texto">📎</button><button type="button" class="tb" id="mic" title="Dictar con el micrófono" aria-label="Dictar">🎤</button><textarea id="q" rows="1" placeholder="Escribe a Nixel…  (Enter envía · Shift+Enter nueva línea)" autofocus></textarea><button type="button" class="tb" id="liv" title="Modo Live: cámara y voz" aria-label="Modo Live">⚡ Live</button><button class="pri" id="go">Enviar</button></form><input type="file" id="fi" accept="image/*,.pdf,application/pdf,.txt,.md,.csv,.json,.html,.xml,.log,.js,.py,.css,.ts" multiple hidden></div>
+<div id="bar"><span class="dot" id="dt"></span><span>⏱ <b id="tm">0.0 s</b></span><span>1.er token <b id="tf">–</b></span><span><b id="tp">–</b> tok/s</span><span id="tmod"></span><span class="chip" id="gpuc" title="Uso de la tarjeta gráfica"></span></div>
+</div>
+
+<div id="wb"><div id="wbc"></div></div>
+<div id="pm"></div>
+<div id="lv"><video id="lvv" autoplay muted playsinline></video><div id="lvt"><div id="lva"></div></div><div id="lvs" aria-live="polite">Preparando…</div>
+  <div id="lvb"><button type="button" id="lvc">📷 Cámara</button><button type="button" id="lvm">🎤 Micrófono</button><button type="button" class="x" id="lvx">Salir</button></div></div>
+<div id="lg"><div id="lgc"></div></div>
+<div id="ob"><div id="obc"></div></div>
+<div id="ov"><div id="set" role="dialog" aria-label="Configuración">
+  <h3>Configuración</h3><small style="color:var(--mut)" id="ro"></small>
+  <h4>Cuenta</h4>
+  <div class="r"><label id="acl">…</label><button id="acb">Iniciar sesión</button></div>
+  <h4>Apariencia</h4>
+  <div id="thset"></div>
+  <div class="r"><label>Intensidad del cristal<small>Más desenfoque y transparencia, o más sólido.</small></label><input type="range" id="gls" min="0" max="100" style="width:150px"></div>
+  <div class="r"><label>Tamaño del texto</label><select id="fsz"><option value="14">Pequeño</option><option value="15">Normal</option><option value="17">Grande</option><option value="19">Muy grande</option></select></div>
+  <div class="r"><label><input type="checkbox" id="anm"> Animaciones y fondo en movimiento</label></div>
+  <div class="r"><label>Novedades<small>Atajos: Ctrl+K nueva charla · Ctrl+/ escribir · Ctrl+, configuración</small></label><button id="wbn">Ver novedades</button></div>
+  <h4>Integrantes</h4>
+  <div id="mbl"></div>
+  <h4>Perfil</h4>
+  <div class="r"><label id="pf">…</label><button id="pe">Editar perfil y avatar</button></div>
+  <h4>Modelo</h4>
+  <div class="r"><label>Modelo por defecto<small>Los 4B van rápido en tu GPU; el 8B es más listo pero más lento.</small></label><select id="cm"></select></div>
+  <div class="r"><label>Esfuerzo por defecto<small>Rápido = respuestas cortas · Profundo = razona más.</small></label><select id="ce"></select></div>
+  <div class="r"><label>Webs a leer en investigación profunda<small>Hasta cuántas páginas lee Nixel.</small></label><input type="number" id="cr" min="5" max="60" style="width:80px"></div>
+  <h4>Seguridad</h4>
+  <div class="r"><label>Nivel de seguridad<small>Qué hace Nixel solo y qué te pregunta. Los límites (borrar, apagar, carpetas del sistema…) siempre aplican.</small></label><select id="sl"><option value="careful">Cuidadoso</option><option value="balanced">Equilibrado</option><option value="trusting">Confiado</option><option value="custom" disabled>Personalizado</option></select></div>
+  <h4>Permisos de herramientas</h4>
+  <div class="perm" id="perms"></div>
+  <small style="color:var(--mut)">Automático = lo hace solo · Preguntar = te pide permiso antes · Bloqueado = no puede usarla. Lo peligroso para Windows siempre pregunta.</small>
+  <h4>Memoria</h4>
+  <div class="r"><label id="mem">…</label><button id="cmem">Borrar toda la memoria</button></div>
+  <div id="memlist"></div>
+  <div class="r"><label>Instrucciones extra<small>Tono, reglas o datos que Nixel siempre debe tener en cuenta.</small></label></div>
+  <textarea id="cx" rows="3" style="width:100%"></textarea>
+  <h4>Acceso desde otros dispositivos</h4>
+  <div class="r"><label><input type="checkbox" id="lo"> Permitir acceso desde el móvil u otros PCs de tu red</label></div>
+  <div class="r"><label>Código de acceso<small>Obligatorio. Elige uno que no sea obvio.</small></label><input type="text" id="lp" style="width:160px"></div>
+  <div class="r"><label><input type="checkbox" id="lt"> Dejar que los dispositivos remotos usen las herramientas del PC<small>Desactivado: solo pueden chatear y buscar.</small></label></div>
+  <div class="r"><label id="lurl" style="color:var(--acc)"></label></div>
+  <h4>Privacidad y datos</h4>
+  <div class="r"><label><a href="/legal/terminos" target="_blank" rel="noopener" style="color:var(--acc)">Términos y condiciones</a> · <a href="/legal/privacidad" target="_blank" rel="noopener" style="color:var(--acc)">Política de privacidad</a></label></div>
+  <div class="r"><label>Descargar mis datos<small>Perfil, memoria y chats en un archivo.</small></label><button id="dlx">Descargar</button></div>
+  <div class="r"><label>Borrar mis datos y cuenta<small>Elimina perfil, chats, memoria y cuenta. No se puede deshacer.</small></label><button id="dld" style="border-color:var(--bad);color:var(--bad)">Borrar todo…</button></div>
+  <details style="margin:6px 0"><summary style="cursor:pointer">Datos del responsable (para los textos legales)</summary>
+    <div class="r"><label>Nombre o empresa</label><input type="text" id="lgo" style="width:100%"></div><div class="r"><label>Correo de contacto</label><input type="text" id="lgm" style="width:100%"></div><div class="r"><label>País o jurisdicción</label><input type="text" id="lgc2" style="width:100%"></div>
+    <small style="color:var(--mut)">Aparecen en los Términos y la Política. Si compartes Nixel con otras personas, complétalos y haz revisar los textos por un abogado.</small></details>
+  <h4>Cuentas (avanzado)</h4>
+  <details><summary style="cursor:pointer">Activar Google, Facebook, Huawei y Apple — solo para quien instala o publica Nixel</summary>
+  <small style="color:var(--mut)">Tus usuarios <b>no ven nada de esto</b>: solo pulsan «Continuar con…» y aceptan. Tú registras una vez la app en el panel de cada empresa y pegas aquí su ID y secreto. Los secretos se guardan solo en este PC.</small>
+  <div id="oas"></div></details>
+  <div class="r"><label>Dirección pública (opcional)<small>Solo si Nixel es accesible por una dirección https propia. Apple la exige.</small></label><input type="text" id="opu" placeholder="https://dot.midominio.com" style="width:100%"></div>
+  <h4>Nube opcional · imágenes y Live más rápidos</h4>
+  <small style="color:var(--mut)">Apagada por defecto. Usa un servicio externo con plan gratis para responder imágenes y Live en 1 o 2 s. <b>Lo que envías sale de tu equipo</b>: el mensaje y las imágenes de esa petición (no tu nombre, edad ni memoria). Si falla o se agota el límite, Nixel vuelve solo al modelo local.</small>
+  <div class="r"><label>Proveedor</label><select id="cp"></select></div>
+  <div class="r"><small id="cpl"></small></div>
+  <div class="r"><label>Dirección de la API<small>En Cloudflare cambia TU_ACCOUNT_ID por el ID de tu cuenta.</small></label><input type="text" id="cu" style="width:100%"></div>
+  <div class="r"><label>Modelo<small>Para fotos debe ver imágenes. Comprueba el nombre exacto en el panel del proveedor: cambian a menudo.</small></label><input type="text" id="cm2" style="width:100%"></div>
+  <div class="r"><label>Clave de API<small>Se guarda solo en este PC y no se vuelve a mostrar.</small></label><input type="password" id="ck2" autocomplete="off" style="width:100%"></div>
+  <div class="r"><label>Usar la nube para</label><select id="cuf"><option value="media">Imágenes y modo Live (recomendado)</option><option value="all">Toda la conversación</option><option value="off">Nada</option></select></div>
+  <div class="r"><label class="ck"><input type="checkbox" id="cco"> Entiendo que los mensajes e imágenes de esas peticiones se envían a este proveedor, con sus propias condiciones y política de privacidad.</label></div>
+  <div class="r"><label><input type="checkbox" id="cen"> Activar la nube</label><button type="button" id="ctb">Probar conexión</button><label id="ctr" style="font-size:13px;white-space:pre-wrap"></label></div>
+  <h4>Pasarela pública · modelos de este PC</h4>
+  <small style="color:var(--mut)">Permite que los usuarios de Nixel (la versión web pública) usen los modelos de este PC. Abre un servidor aparte, solo local (127.0.0.1:3001), que únicamente atiende conversaciones: sin herramientas, sin su memoria y sin acceso a su equipo. Hay que publicarlo con un túnel (Tailscale Funnel o Cloudflare Tunnel) apuntando al puerto 3001, nunca al 3000.</small>
+  <div class="r"><label><input type="checkbox" id="gwe"> Activar la pasarela</label><small id="gws" style="color:var(--mut)"></small></div>
+  <div class="r"><label>Páginas autorizadas<small>Direcciones https desde las que se permite usarla, separadas por comas.</small></label><input type="text" id="gwo" style="width:100%"></div>
+  <div class="r"><label>Mensajes por hora y persona</label><input type="number" id="gwh" min="3" max="600" style="width:90px"></div>
+  <div class="r"><label>Modelos que se comparten<small>Si no marca ninguno, se comparten todos los instalados.</small></label><div id="gwm"></div></div>
+  <h4>PC remota de Nixel (nube)</h4>
+  <small style="color:var(--mut)">Un servidor Linux alquilado donde Nixel instala, programa y ejecuta cosas sin tocar tu PC. Guía: <code>D:\dot-agent\remote\LEEME.md</code></small>
+  <div class="r"><label>Dirección (IP o dominio)</label><input type="text" id="rh" placeholder="203.0.113.10" style="width:200px"></div>
+  <div class="r"><label>Usuario</label><input type="text" id="ru" style="width:200px"></div>
+  <div class="r"><label>Puerto SSH</label><input type="number" id="rp" style="width:90px"></div>
+  <div class="r"><label>Llave privada SSH<small>Ruta del archivo en este PC, ej. C:\Users\tu\.ssh\dot_remote</small></label><input type="text" id="rk" style="width:100%"></div>
+  <div class="r"><button id="rt">Probar conexión</button><label id="rr" style="white-space:pre-wrap;font-size:13px"></label></div>
+  <div class="r" style="justify-content:flex-end;margin-top:12px"><button id="sc">Cerrar</button><button class="pri" id="ss">Guardar</button></div>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);let chatId=null,busy=false,CFG=null;
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const md=s=>esc(s).replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>').replace(/(https?:\/\/[^\s<)\]]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+const log=$('log');const scroll=()=>log.scrollTop=log.scrollHeight;
+const add=(c,t)=>{const d=document.createElement('div');d.className='m '+c;d.dataset.raw=t;if(c==='a')d.innerHTML=md(t);else d.textContent=t;log.append(d);scroll();return d};
+const note=(c,t)=>{const d=document.createElement('div');d.className=c;d.textContent=t;log.append(d);scroll();return d};
+/* ---------- perfil, avatar (estilo Mii) y saludo ---------- */
+let P=null,mood='normal',moodT=null,uid=0;
+const AVK=['robot','cat','fox','panda','owl','dragon','alien','ghost'],AVN={robot:'Robot',cat:'Gato',fox:'Zorro',panda:'Panda',owl:'Búho',dragon:'Dragón',alien:'Alien',ghost:'Fantasma'};
+const DEF={kind:'robot',color:'#4fc3f7',acc:0};
+const COLORS=['#4fc3f7','#ef6b6b','#5ad19a','#f5b342','#9b7cf4','#ff8fb1','#8b93a5','#2b2f3a'];
+const shade=(h,k)=>{const n=parseInt(h.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(k<0?v*(1+k):v+(255-v)*k)));return '#'+[n>>16&255,n>>8&255,n&255].map(f).map(v=>v.toString(16).padStart(2,'0')).join('')};
+/* Avatares de personaje (no personas): cada uno con 3 reacciones: normal, esfuerzo y gracia */
+function avatar(a,m='normal',size=48){a={...DEF,...a};const K=AVK.includes(a.kind)?a.kind:'robot',c=a.color||a.shirt||DEF.color;
+  const id='c'+(++uid),dk=shade(c,-.25),lt=shade(c,.4),DARK='#2b2320';
+  let back='',head='',front='',eyeBg='',eyeInk=DARK,browInk=DARK,mouthInk=DARK,mouthFill='#7a1f2b',ex1=40,ex2=60,ey=54,mo=0,blush=true,body=true,beak='';
+  switch(K){
+  case 'robot':back=`<rect x="48" y="6" width="4" height="16" fill="${dk}"/><circle cx="50" cy="7" r="5" fill="#ef6b6b"/><circle cx="19" cy="50" r="6" fill="${dk}"/><circle cx="81" cy="50" r="6" fill="${dk}"/>`;
+    head=`<rect x="20" y="20" width="60" height="58" rx="14" fill="${c}"/><rect x="27" y="31" width="46" height="38" rx="9" fill="#1b2230"/>`;eyeInk=browInk=mouthInk=mouthFill='#7fe8ff';mo=-3;blush=false;break;
+  case 'cat':back=`<path d="M22 46L25 13L47 30Z M78 46L75 13L53 30Z" fill="${c}"/><path d="M29 38L30 21L41 30Z M71 38L70 21L59 30Z" fill="#ffb3c7"/>`;
+    head=`<ellipse cx="50" cy="55" rx="31" ry="27" fill="${c}"/>`;front=`<path d="M46.5 60.5L53.5 60.5L50 65Z" fill="#ff8fb1"/><path d="M30 62L15 59M30 67L15 69M70 62L85 59M70 67L85 69" stroke="${dk}" stroke-width="1.7" stroke-linecap="round"/>`;mo=2;break;
+  case 'fox':back=`<path d="M19 50L23 11L47 31Z M81 50L77 11L53 31Z" fill="${c}"/><path d="M23 11L31 25L20 27Z M77 11L69 25L80 27Z" fill="#2b2320"/>`;
+    head=`<ellipse cx="50" cy="55" rx="31" ry="27" fill="${c}"/>`;front=`<path d="M20 58Q36 52 50 67Q64 52 80 58Q74 83 50 83Q26 83 20 58Z" fill="#fff"/><ellipse cx="50" cy="64" rx="4.2" ry="3.2" fill="#2b2320"/>`;mo=4;break;
+  case 'panda':back=`<circle cx="25" cy="26" r="11" fill="#22252b"/><circle cx="75" cy="26" r="11" fill="#22252b"/>`;
+    head=`<ellipse cx="50" cy="55" rx="31" ry="28" fill="#f7f7f7"/>`;eyeBg=`<ellipse cx="37" cy="54" rx="9" ry="11.5" transform="rotate(22 37 54)" fill="#22252b"/><ellipse cx="63" cy="54" rx="9" ry="11.5" transform="rotate(-22 63 54)" fill="#22252b"/>`;
+    front=`<ellipse cx="50" cy="64" rx="4.5" ry="3.3" fill="#22252b"/>`;ex1=37;ex2=63;eyeInk='#fff';mouthInk='#22252b';mo=4;break;
+  case 'owl':back=`<path d="M22 36L25 11L45 26Z M78 36L75 11L55 26Z" fill="${dk}"/>`;
+    head=`<ellipse cx="50" cy="55" rx="32" ry="29" fill="${c}"/><ellipse cx="50" cy="70" rx="20" ry="11" fill="${lt}"/>`;eyeBg=`<circle cx="37" cy="52" r="13" fill="#fff"/><circle cx="63" cy="52" r="13" fill="#fff"/>`;
+    ex1=37;ex2=63;ey=52;blush=false;
+    beak=m==='funny'?`<path d="M44 62L56 62L50 66Z M45 67L55 67L50 73Z" fill="#f5a623"/>`:`<path d="M44 61L56 61L50 71Z" fill="#f5a623"/>`;break;
+  case 'dragon':back=`<path d="M33 30L37 13L44 27Z M46 25L50 7L54 25Z M56 27L63 13L67 30Z" fill="${dk}"/><path d="M27 38L21 16L40 31Z M73 38L79 16L60 31Z" fill="#f3e6c4"/>`;
+    head=`<ellipse cx="50" cy="55" rx="31" ry="27" fill="${c}"/><ellipse cx="50" cy="66" rx="17" ry="11" fill="${lt}"/>`;front=`<circle cx="44" cy="63" r="1.7" fill="${dk}"/><circle cx="56" cy="63" r="1.7" fill="${dk}"/>`;mo=5;break;
+  case 'alien':back=`<path d="M41 17L37 5M59 17L63 5" stroke="${dk}" stroke-width="3" stroke-linecap="round"/><circle cx="37" cy="5" r="4" fill="${lt}"/><circle cx="63" cy="5" r="4" fill="${lt}"/>`;
+    head=`<path d="M50 14Q83 16 81 52Q79 82 50 84Q21 82 19 52Q17 16 50 14Z" fill="${c}"/>`;eyeBg=`<ellipse cx="37" cy="52" rx="10" ry="13" transform="rotate(-14 37 52)" fill="#11151c"/><ellipse cx="63" cy="52" rx="10" ry="13" transform="rotate(14 63 52)" fill="#11151c"/>`;
+    ex1=37;ex2=63;ey=52;eyeInk='#fff';mo=7;break;
+  case 'ghost':head=`<path d="M19 56Q19 16 50 16Q81 16 81 56L81 94Q75 85 68.5 94Q62 85 56 94Q50 85 43.5 94Q37 85 31 94Q25 85 19 94Z" fill="${shade(c,.78)}" stroke="${shade(c,.2)}" stroke-width="1.5"/>`;body=false;break;
+  }
+  const torso=body?(K==='robot'?`<rect x="31" y="78" width="38" height="30" rx="8" fill="${dk}"/>`:`<path d="M17 106Q19 80 50 80Q81 80 83 106Z" fill="${dk}"/>`):'';
+  const sweat=m==='effort'?`<path d="M82 28Q86 36 82 40Q78 36 82 28Z" fill="#6ec6ff" stroke="#3b9ad6" stroke-width="1"/>`:'';
+  let eyes,brows,mouth,extra='';
+  if(m==='funny'){eyes=`<path d="M${ex1-6} ${ey+2}Q${ex1} ${ey-7} ${ex1+6} ${ey+2}M${ex2-6} ${ey+2}Q${ex2} ${ey-7} ${ex2+6} ${ey+2}" fill="none" stroke="${eyeInk}" stroke-width="3.2" stroke-linecap="round"/>`;
+    brows=`<path d="M${ex1-7} ${ey-12}Q${ex1} ${ey-17} ${ex1+7} ${ey-12}M${ex2-7} ${ey-12}Q${ex2} ${ey-17} ${ex2+7} ${ey-12}" fill="none" stroke="${browInk}" stroke-width="2.4" stroke-linecap="round"/>`;
+    mouth=K==='owl'?beak:`<path d="M36 64Q50 86 64 64Z" fill="${mouthFill}" stroke="${mouthInk}" stroke-width="2" stroke-linejoin="round"/><path d="M42 74Q50 80 58 74Q50 70 42 74Z" fill="#ef7a8a"/>`;
+    extra=`<circle cx="${ex1-8}" cy="${ey+10}" r="3" fill="#6ec6ff"/><circle cx="${ex2+8}" cy="${ey+10}" r="3" fill="#6ec6ff"/>`}
+  else if(m==='effort'){eyes=`<path d="M${ex1-7} ${ey-2}L${ex1+5} ${ey+3}M${ex2+7} ${ey-2}L${ex2-5} ${ey+3}" stroke="${eyeInk}" stroke-width="3.4" stroke-linecap="round"/>`;
+    brows=`<path d="M${ex1-9} ${ey-12}L${ex1+6} ${ey-7}M${ex2+9} ${ey-12}L${ex2-6} ${ey-7}" stroke="${browInk}" stroke-width="3" stroke-linecap="round"/>`;
+    mouth=K==='owl'?`<path d="M44 62L56 62L50 69Z" fill="#f5a623"/>`:`<rect x="38" y="64" width="24" height="9" rx="3" fill="#fff" stroke="${mouthInk}" stroke-width="2"/><path d="M44 64V73M50 64V73M56 64V73" stroke="${mouthInk}" stroke-width="1.5"/>`}
+  else{const r=[3.2,4.4];eyes=`<ellipse cx="${ex1}" cy="${ey}" rx="${r[0]}" ry="${r[1]}" fill="${eyeInk}"/><ellipse cx="${ex2}" cy="${ey}" rx="${r[0]}" ry="${r[1]}" fill="${eyeInk}"/>`+(eyeInk===DARK?`<circle cx="${ex1+1.4}" cy="${ey-1.8}" r="1.3" fill="#fff"/><circle cx="${ex2+1.4}" cy="${ey-1.8}" r="1.3" fill="#fff"/>`:'');
+    brows=`<path d="M${ex1-7} ${ey-10}Q${ex1} ${ey-13} ${ex1+7} ${ey-10}M${ex2-7} ${ey-10}Q${ex2} ${ey-13} ${ex2+7} ${ey-10}" fill="none" stroke="${browInk}" stroke-width="2.3" stroke-linecap="round"/>`;
+    mouth=K==='owl'?beak:`<path d="M43 67Q50 73 57 67" fill="none" stroke="${mouthInk}" stroke-width="2.6" stroke-linecap="round"/>`}
+  if(K==='owl'&&m!=='normal')mouth=m==='funny'?beak:mouth;
+  const mouthG=K==='owl'?mouth:`<g transform="translate(0 ${mo})">${mouth}</g>`;
+  const acc=[ '',
+    `<g fill="none" stroke="#2b2b33" stroke-width="2.4"><circle cx="${ex1}" cy="${ey}" r="9.5"/><circle cx="${ex2}" cy="${ey}" r="9.5"/><path d="M${ex1+9.5} ${ey}H${ex2-9.5}"/></g>`,
+    `<path d="M24 40Q24 11 50 11Q76 11 76 40Z" fill="#ef6b6b"/><rect x="22" y="35" width="56" height="9" rx="4.5" fill="#c94a4a"/><circle cx="50" cy="8" r="5.5" fill="#fff"/>`,
+    `<path d="M50 87L37 79L37 95Z M50 87L63 79L63 95Z" fill="#ef6b6b"/><circle cx="50" cy="87" r="4" fill="#c94a4a"/>`,
+    `<path d="M19 54Q19 13 50 13Q81 13 81 54" fill="none" stroke="#2b2f3a" stroke-width="5"/><rect x="12" y="47" width="12" height="22" rx="6" fill="#2b2f3a"/><rect x="76" y="47" width="12" height="22" rx="6" fill="#2b2f3a"/>`][a.acc|0]||'';
+  const bl=blush?`<circle cx="31" cy="64" r="4.5" fill="#ff8a8a" opacity=".28"/><circle cx="69" cy="64" r="4.5" fill="#ff8a8a" opacity=".28"/>`:'';
+  return `<svg class="av m-${m}" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true"><defs><clipPath id="${id}"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#${id})"><rect width="100" height="100" fill="#cfe8f7"/>${back}${torso}${head}${front}${bl}${eyeBg}${brows}${eyes}${mouthG}${extra}${acc}${sweat}</g></svg>`}
+const greet=()=>{const h=new Date().getHours();return h>=21||h<8?'Buenas noches':h>=14?'Buenas tardes':'Buenos días'};
+const clock=()=>new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+function paintAv(){const a=P?P.avatar:DEF;$('hav').innerHTML=avatar(a,mood,36);const g=document.querySelector('.gav');if(g)g.innerHTML=avatar(a,mood,96)}
+function setMood(m,ms){mood=m;paintAv();clearTimeout(moodT);if(ms)moodT=setTimeout(()=>setMood('normal'),ms)}
+const empty=()=>{const nm=P&&P.name?', '+esc(P.name):'';
+  const SUG=['Explíqueme qué es una VPN en dos frases','Proponga una cena con pollo y arroz','Traduzca «buenos días» a cinco idiomas','Ayúdeme a redactar un correo formal','Resuma las ventajas de ahorrar a diario','Explique la fotosíntesis de forma sencilla'];
+  log.innerHTML=`<div class="empty"><div class="gav"></div><b>${greet()}${nm}</b>Son las ${clock()} · ¿En qué puedo ayudarle?<small>Puedo redactar, traducir, explicar y analizar imágenes que usted adjunte, y conversar por voz.</small>
+    <div class="sugs">${SUG.map(s=>`<button type="button" class="sg">${esc(s)}</button>`).join('')}</div></div>`;paintAv();
+  log.querySelectorAll('.sg').forEach(b=>b.onclick=()=>{if(!busy)send(b.textContent)})};
+const fmt=ms=>(ms/1000).toFixed(1)+' s';
+
+/* ---------- asistente de bienvenida / editar perfil ---------- */
+const ob={step:0,d:null,mood:'normal',tones:{},host:{},legalVersion:'',note:'',detected:''};
+/*MEMBERS*/const MEMBERS=[{"id":"lorenzo","name":"Lorenzo","title":"Hermano mayor"},{"id":"benja","name":"Benja","title":"Hermano del medio"},{"id":"fede","name":"Fede","title":"Creador y programador"},{"id":"jose","name":"José","title":"Padre"},{"id":"nora","name":"Nora","title":"Madre"},{"id":"perro","name":"El perro","title":"Guardián del hogar","icon":"🐕"}];/*/MEMBERS*/
+const ONE=MEMBERS.length===1; // un solo integrante (Nixel en el PC): no se pregunta el nombre
+const seq=()=>['welcome','legal',...(ONE?[]:['name']),'tone','avatar','theme','done'];
+function paintMembers(){const el=$('mbl');if(!el)return;el.innerHTML='<div class="mbs">'+MEMBERS.map(m=>`<div class="mb ${P&&P.name===m.name?'on':''}"><span class="mba">${esc(m.icon||m.name[0])}</span><b>${esc(m.name)}</b><small>${esc(m.title)}</small></div>`).join('')+'</div>'}
+const themeHTML=()=>'<div class="thg">'+THEMES.map(t=>`<button type="button" class="th ${curTheme===t.id?'on':''}" data-th="${t.id}" title="${t.n}" aria-label="${t.n}" style="background:${t.bgimg||t.bg}"><b style="background:${t.panel};box-shadow:0 0 0 1px ${t.line}"></b><i style="background:${t.acc}"></i></button>`).join('')+'</div>';
+const bindThemes=root=>root.querySelectorAll('[data-th]').forEach(b=>b.onclick=()=>{applyTheme(b.dataset.th,true);root.querySelectorAll('.th').forEach(x=>x.classList.toggle('on',x===b))});
+const TONEDESC={friendly:'Cercano y cálido',formal:'Profesional y respetuoso',funny:'Con humor y bromas ligeras',direct:'Solo lo esencial, sin rodeos',custom:'Lo describes tú'};
+const SAFE={careful:['Con su autorización en cada acción (recomendado)','Nixel solo actúa sobre su dispositivo después de que usted lo autorice, cada vez que se lo pide. Las búsquedas y los cálculos se hacen sin preguntar.'],balanced:['Equilibrado · recomendado','Abre programas, busca y crea documentos solo. Te pregunta para escribir archivos y ejecutar comandos.'],trusting:['Confiado','Hace casi todo solo. Aun así te pregunta siempre lo que borra, formatea, apaga o toca el sistema.']};
+const OSL=['Windows','macOS','Linux','FreeBSD','Android','iOS','HarmonyOS','Otro'];
+function detectOS(){const u=navigator.userAgent,p=(navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'';
+  if(/HarmonyOS|OpenHarmony/i.test(u))return 'HarmonyOS';if(/Android/i.test(u))return 'Android';if(/iPhone|iPad|iPod/i.test(u))return 'iOS';
+  if(/FreeBSD/i.test(u+p))return 'FreeBSD';if(/Mac/i.test(p+u))return 'macOS';if(/Win/i.test(p+u))return 'Windows';if(/Linux|X11|CrOS/i.test(p+u))return 'Linux';return ''}
+const BRANDS=[[/\b(harmony\w*|huawei|matepad|mate ?\d*|pura ?\d*|nova ?\d*)\b/,'HarmonyOS','Los Huawei nuevos usan HarmonyOS; algunos modelos antiguos usan Android (EMUI).'],
+ [/\b(samsung|galaxy|xiaomi|redmi|poco|oppo|realme|oneplus|vivo|motorola|moto|pixel|nokia|xperia|honor|zte|tecno|infinix|android)\b/,'Android'],
+ [/\b(iphone|ipad|ipod|ios)\b/,'iOS'],[/\b(mac|macbook|imac|macos|mac os)\b/,'macOS'],[/\b(freebsd|bsd|ghostbsd)\b/,'FreeBSD'],
+ [/\b(linux|ubuntu|debian|fedora|arch|mint|manjaro|steamos|steam deck|raspberry)\b/,'Linux'],[/\b(windows|win ?\d+|pc|laptop|portatil|notebook|hp|dell|lenovo|asus|acer|msi|surface|thinkpad)\b/,'Windows']];
+const guessOS=t=>{t=t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');for(const [re,o,n] of BRANDS)if(re.test(t))return{os:o,note:n||''};return null};
+async function openOb(step='welcome'){const j=await(await fetch('/profile')).json();ob.tones=j.tones;ob.host=j.host||{};ob.legalVersion=j.legalVersion;P=j.profile;
+  ob.d=P?JSON.parse(JSON.stringify(P)):{name:'',tone:'formal',customTone:'',avatar:{...DEF},device:{os:'',brand:''},consent:null};
+  ob.d.device=ob.d.device||{os:'',brand:''};ob.d.avatar={...DEF,...ob.d.avatar};ob.d.safe=ob.d.safe||'careful';
+  if(ONE){ob.d.anonymous=false;ob.d.name=MEMBERS[0].name;ob.d.member=MEMBERS[0].id;ob.d.title=MEMBERS[0].title}
+  ob.detected=detectOS();if(!ob.d.device.os&&ob.detected)ob.d.device.os=ob.detected;
+  ob.step=Math.max(0,seq().indexOf(step));ob.mood='normal';ob.note='';drawOb();$('ob').classList.add('on')}
+const legalOK=()=>ob.d.consent&&ob.d.consent.terms===ob.legalVersion;
+function go(dir){do{ob.step+=dir}while(seq()[ob.step]==='legal'&&legalOK());drawOb()}
+function drawOb(){const d=ob.d,A=d.avatar,S=seq(),s=ob.step,st=S[s],c=$('obc'),isNew=!P;
+  const sw=(k,list)=>list.map(v=>`<button type="button" class="sw ${A[k]===v?'on':''}" style="background:${v}" data-k="${k}" data-v="${v}" aria-label="${k} ${v}"></button>`).join('');
+  const ch=(k,names)=>names.map((n,i)=>`<button type="button" class="ch ${(A[k]|0)===i?'on':''}" data-k="${k}" data-v="${i}">${n}</button>`).join('');
+  let h='<div class="steps">'+S.map((_,i)=>`<i class="${i<=s?'on':''}"></i>`).join('')+'</div>';
+  if(st==='welcome')h+=`<svg viewBox="0 0 48 48" width="72" height="72" aria-hidden="true"><defs><linearGradient id="og" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#og)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg><h2>Bienvenido a Nixel</h2><p>Vamos a dejarlo a tu medida en un minuto: los términos, su personalidad y tu personaje.<br>Tu perfil y tus charlas se guardan en tu cuenta y las ves desde cualquier dispositivo.</p>${ob.note?`<p style="color:var(--bad)" role="alert">${esc(ob.note)}</p>`:''}`;
+  if(st==='legal')h+=`<h2>Términos y privacidad</h2><p>Antes de empezar, revisa cómo funciona Nixel.</p><div class="legal">
+    <ul><li><b>Nixel es una IA</b> y puede equivocarse. No sustituye a un profesional.</li><li>Tus chats y tu perfil <b>se guardan en tu cuenta</b>, en servidores de Cloudflare. No se venden ni se usan para publicidad.</li><li>Tus mensajes los procesa una IA de Cloudflare (Workers AI).</li><li>La cámara, el micrófono y tus archivos solo se usan <b>cuando tú lo permites</b>.</li><li>El dictado de voz del navegador puede enviar el audio a Google o Microsoft.</li><li>Puedes <b>descargar o borrar tus datos</b> cuando quieras.</li></ul>
+    <p><a href="/legal/terminos" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a></p></div>
+    <label class="ck"><input type="checkbox" id="obterms" ${legalOK()?'checked':''}> He leído y acepto los Términos y la Política de privacidad.</label>
+    <label class="ck"><input type="checkbox" id="obage13" ${d.consent&&d.consent.over13?'checked':''}> Confirmo que tengo 13 años o más, o que cuento con la autorización de mi padre, madre o tutor.</label><div class="lge" id="oberr" role="alert"></div>`;
+  if(st==='name'&&!ONE)h+=`<h2>¿Quién eres?</h2><p>Elige tu nombre entre los integrantes.</p><div class="mbs">${MEMBERS.map(m=>`<button type="button" class="mb ${d.member===m.id?'on':''}" data-mb="${m.id}"><span class="mba">${esc(m.icon||m.name[0])}</span><b>${esc(m.name)}</b><small>${esc(m.title)}</small></button>`).join('')}</div><div class="lge" id="oberr" role="alert"></div>`;
+  if(st==='name'&&ONE)h+=`<h2>¿Cómo te llamas?</h2><p>Así te saludará Nixel cada vez que empieces una charla.</p><input type="text" id="obn1" maxlength="30" placeholder="Tu nombre" value="${esc(d.name)}" ${d.anonymous?'disabled':''}><div class="cards" style="grid-template-columns:1fr;margin-top:14px"><div class="card ${d.anonymous?'on':''}" id="obanon" role="button" tabindex="0"><b>Prefiero ser anónimo</b><small>Nixel no te pedirá tu nombre y se adaptará según cómo le hables.</small></div></div>`;
+  if(st==='device'){const g=guessOS(d.device.brand||'');h+=`<h2>¿Qué dispositivo usas?</h2><p>Nixel adapta los comandos y los pasos a tu sistema operativo.</p>
+    <div class="chips">${OSL.map(o=>`<button type="button" class="ch ${d.device.os===o?'on':''}" data-os="${o}">${o}</button>`).join('')}</div>
+    ${ob.detected?`<p><small>Detectado automáticamente en este equipo: <b>${ob.detected}</b></small></p>`:''}
+    <input type="text" id="obbrand" maxlength="40" placeholder="¿No sabes cuál es? Escribe la marca o el modelo (Samsung, iPhone, Huawei…)" value="${esc(d.device.brand||'')}" style="font-size:15px">
+    <div id="obsug" class="sug" aria-live="polite">${g?`${esc(d.device.brand)} → <b>${g.os}</b>${g.note?`<br><small>${g.note}</small>`:''}`:''}</div>
+    <p><small>Nixel se está ejecutando en: <b>${esc(ob.host.name||'este equipo')}</b>. Sus herramientas de PC actúan allí.</small></p><div class="lge" id="oberr" role="alert"></div>`}
+  if(st==='safety')h+=`<h2>¿Cuánto puede hacer Nixel solo?</h2><p>Tú decides. Puedes cambiarlo después en Configuración.</p><div class="cards" style="grid-template-columns:1fr">${Object.entries(SAFE).map(([k,[n,t]])=>`<div class="card ${d.safe===k?'on':''}" data-safe="${k}" role="button" tabindex="0"><b>${n}</b><small>${t}</small></div>`).join('')}</div>
+    <div class="legal" style="margin-top:12px"><b>Límites que siempre se aplican</b><ul><li>Nunca toca Windows, Archivos de programa ni el registro sin que lo confirmes.</li><li>Borrar, formatear, apagar o cambiar la seguridad: <b>siempre pregunta</b>.</li><li>Escribe archivos sin preguntar solo en Documentos, Escritorio y Descargas.</li><li>Todo queda anotado en un registro local.</li></ul></div>`;
+  if(st==='tone')h+=`<h2>¿Cómo quieres que sea Nixel?</h2><p>Elige su forma de hablarte. Puedes cambiarlo cuando quieras.</p><div class="cards">${[...Object.keys(ob.tones),'custom'].map(k=>`<div class="card ${d.tone===k?'on':''}" data-tone="${k}"><b>${k==='custom'?'Personalizado':ob.tones[k]}</b><small>${TONEDESC[k]}</small></div>`).join('')}</div>${d.tone==='custom'?`<textarea id="obct" rows="3" maxlength="200" placeholder="Ej: háblame como un entrenador motivador, con frases cortas" style="margin-top:10px;font-size:15px">${esc(d.customTone)}</textarea>`:''}`;
+  if(st==='avatar')h+=`<h2>Elige tu personaje</h2><p>Mira cómo reacciona:</p><div class="big">${avatar(A,ob.mood,132)}</div>
+    <div style="display:flex;gap:6px;justify-content:center">${[['normal','Normal'],['effort','Esfuerzo'],['funny','Gracia']].map(([m,n])=>`<button type="button" class="ch ${ob.mood===m?'on':''}" data-mood="${m}">${n}</button>`).join('')}</div>
+    <div class="kinds">${AVK.map(k=>`<button type="button" class="kd ${A.kind===k?'on':''}" data-k="kind" data-v="${k}" title="${AVN[k]}" aria-label="${AVN[k]}">${avatar({...A,kind:k},'normal',58)}</button>`).join('')}</div>
+    <div class="bld"><div class="o"><label>Color</label>${sw('color',COLORS)}</div><div class="o"><label>Extra</label>${ch('acc',['Ninguno','Gafas','Gorro','Corbatín','Audífonos'])}</div></div><button type="button" id="obr" style="margin-top:12px">🎲 Aleatorio</button>`;
+  if(st==='theme')h+=`<h2>Elige tus colores</h2><p>Toca uno y mira cómo queda tu chat. Puedes cambiarlo cuando quieras.</p>${themeHTML()}`;
+  if(st==='done')h+=`<div class="big">${avatar(A,'funny',132)}</div><h2>${d.anonymous?'¡Listo!':'¡Listo, '+esc(d.name)+'!'}</h2><p>${d.anonymous?'Modo anónimo: Nixel se irá adaptando a ti según lo que le respondas y te hablará':'Nixel te hablará'} con tono <b>${d.tone==='custom'?'personalizado':ob.tones[d.tone].toLowerCase()}</b>.<br>Tu personaje reaccionará cuando Nixel trabaje a fondo o algo tenga gracia.</p>`;
+  const first=st==='welcome'||(st==='name'&&!isNew);
+  h+=`<div id="obnav"><button type="button" id="obb" ${st==='welcome'?'style="visibility:hidden"':''}>${first?'Cancelar':st==='legal'?'Rechazar':'Atrás'}</button><button type="button" class="pri" id="obx">${st==='welcome'?'Empezar':st==='legal'?'Aceptar':st==='done'?'Empezar a usar Nixel':'Siguiente'}</button></div>`;
+  c.innerHTML=h;bindThemes(c);
+  c.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;A[k]=k==='acc'?+b.dataset.v:b.dataset.v;drawOb()});
+  c.querySelectorAll('[data-mood]').forEach(b=>b.onclick=()=>{ob.mood=b.dataset.mood;drawOb()});
+  c.querySelectorAll('[data-tone]').forEach(b=>b.onclick=()=>{d.tone=b.dataset.tone;drawOb()});
+  c.querySelectorAll('[data-safe]').forEach(b=>{const f=()=>{d.safe=b.dataset.safe;drawOb()};b.onclick=f;b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}}});
+  c.querySelectorAll('[data-os]').forEach(b=>b.onclick=()=>{d.device.os=b.dataset.os;drawOb()});
+  const r=$('obr');if(r)r.onclick=()=>{const p=a=>a[Math.random()*a.length|0];Object.assign(A,{kind:p(AVK),color:p(COLORS),acc:Math.random()*5|0});drawOb()};
+  c.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>{const m=MEMBERS.find(x=>x.id===b.dataset.mb);if(!m)return;d.member=m.id;d.name=m.name;d.title=m.title;d.anonymous=false;drawOb()});
+  const n1=$('obn1');if(n1){n1.oninput=()=>d.name=n1.value;n1.onkeydown=e=>{if(e.key==='Enter')$('obx').click()};n1.focus()}
+  const ct=$('obct');if(ct)ct.oninput=()=>d.customTone=ct.value;
+  const an=$('obanon');if(an){const tg=()=>{d.anonymous=!d.anonymous;if(d.anonymous){d.name=''}drawOb()};an.onclick=tg;an.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tg()}}}
+  const bd=$('obbrand');if(bd)bd.oninput=()=>{d.device.brand=bd.value;const g=guessOS(bd.value);if(g)d.device.os=g.os;$('obsug').innerHTML=g?`${esc(bd.value)} → <b>${g.os}</b>${g.note?`<br><small>${g.note}</small>`:''}`:'';
+    c.querySelectorAll('[data-os]').forEach(x=>x.classList.toggle('on',x.dataset.os===d.device.os))};
+  $('obb').onclick=()=>{if(first){if(!isNew)$('ob').classList.remove('on');return}
+    if(st==='legal'){d.consent=null;ob.step=0;ob.note='Sin aceptar los términos y la política de privacidad no se puede usar Nixel.';drawOb();return}go(-1)};
+  $('obx').onclick=async()=>{const bad=(id,m)=>{const e=$(id);if(e){e.focus();e.style.borderColor='var(--bad)'}if(m&&$('oberr'))$('oberr').textContent=m};
+    if(st==='legal'){if(!$('obterms').checked){$('oberr').textContent='Marca la casilla para aceptar y continuar.';return}
+      if(!$('obage13').checked){$('oberr').textContent='Confirma que tienes 13 años o más, o la autorización de un tutor.';return}
+      d.consent={terms:ob.legalVersion,over13:true}}
+    if(st==='name'&&!ONE&&!d.member){$('oberr').textContent='Elige quién eres para continuar.';return}if(st==='name'&&ONE&&!d.anonymous&&!d.name.trim()){bad('obn1');return}
+    if(st==='device'&&!d.device.os){$('oberr').textContent='Elige tu sistema operativo o escribe tu marca o modelo.';return}
+    if(st==='safety'){try{await fetch('/config',{method:'POST',body:JSON.stringify({safety:d.safe})});SAFEDONE=true}catch{}}
+    if(st==='tone'&&d.tone==='custom'&&!d.customTone.trim()){bad('obct');return}
+    if(s<S.length-1){go(1);return}
+    const body={...d};delete body.safe;const rs=await fetch('/profile',{method:'POST',body:JSON.stringify(body)});const j=await rs.json();
+    if(!rs.ok){alert(j.error||'No se pudo guardar el perfil (solo se puede desde el PC).');return}
+    P=j.profile;$('ob').classList.remove('on');if(log.querySelector('.empty'))empty();else paintAv();setMood('funny',2500)}}
+$('hav').onclick=()=>openOb(ONE?'avatar':'name');
+let SAFEDONE=true;
+function nextMissing(){if(!P)return 'welcome';if(!P.anonymous&&!P.name)return 'name';if(!P.consent||P.consent.terms!==ob.legalVersion)return 'legal';return null}
+async function init(){try{if(!sessionStorage.getItem('dot-s')){localStorage.removeItem('dot-guest');sessionStorage.setItem('dot-s','1')}}catch{} // "invitado" dura una visita: el inicio de sesión sale al abrir Nixel
+  try{await loadAuth()}catch{}
+  const err=new URLSearchParams(location.search).get('auth_error');if(err)history.replaceState(null,'','/');
+  try{const j=await(await fetch('/profile')).json();P=j.profile;ob.tones=j.tones;ob.legalVersion=j.legalVersion;ob.host=j.host||{}}catch{}
+  try{SAFEDONE=!!(await(await fetch('/config')).json()).safetyChosen}catch{}
+  if(innerWidth<760)$('side').classList.add('hide');empty();loadHist();loadModels();loadModes();
+  if(err||!AUTH.user)return showLogin(err); // primero la sesión
+  afterLogin()}
+
+/* ---------- modo dueño: oculto para todos hasta escribir 81kl fuera de cualquier cuadro de texto ---------- */
+(()=>{const ADM=['Modelo','Seguridad','Permisos de herramientas','Acceso desde otros dispositivos','Cuentas (avanzado)','Nube opcional','Pasarela pública','PC remota'];
+  const stop=n=>!n||n.tagName==='H4'||(n.querySelector&&n.querySelector('#ss'));
+  document.querySelectorAll('#set h4').forEach(h=>{if(ADM.some(t=>h.textContent.trim().startsWith(t))){let n=h;do{n.classList.add('adm');n=n.nextElementSibling}while(!stop(n))}});
+  document.querySelectorAll('#set details,#se,#gpuc').forEach(e=>e.classList.add('adm'));
+  const st=document.createElement('style');st.textContent='body:not(.admin) .adm{display:none!important}#own{display:none;margin:0 0 8px;padding:6px 14px;border-radius:999px;font-size:12.5px;color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,transparent)}body.admin #own{display:block}';document.head.appendChild(st);
+  const own=document.createElement('div');own.id='own';own.textContent='Modo dueño activo · escribe 81kl otra vez para salir';$('set').prepend(own);
+  const setAdmin=on=>{document.body.classList.toggle('admin',on);try{sessionStorage.setItem('dot-admin',on?'1':'')}catch{}};
+  try{if(sessionStorage.getItem('dot-admin')==='1')setAdmin(true)}catch{}
+  let buf='',t=0;addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||e.key.length!==1)return;const el=e.target,tag=el&&el.tagName;
+    if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(el&&el.isContentEditable))return;
+    clearTimeout(t);t=setTimeout(()=>buf='',2500);buf=(buf+e.key.toLowerCase()).slice(-4);
+    if(buf==='81kl'){buf='';const on=!document.body.classList.contains('admin');setAdmin(on);if(on)openSet();else $('ov').classList.remove('on')}})})();
+/* ---------- cuentas / inicio de sesión ---------- */
+let AUTH={user:null,providers:{},redirects:{}};
+const guest=()=>{try{return localStorage.getItem('dot-guest')==='1'}catch{return false}};
+const loadAuth=async()=>{AUTH=await(await fetch('/auth/status')).json()};
+const OAB=[['google','Google','#ffffff','#3c4043','G'],['apple','Apple','#000000','#ffffff','A']];
+const afterLogin=()=>{const s=nextMissing();if(s)openOb(s);else{}};
+function showLogin(err){const c=$('lgc');let first=false;try{first=!localStorage.getItem('dot-welcomed');localStorage.setItem('dot-welcomed','1')}catch{} // primera vez en este dispositivo: bienvenida con el vínculo de cuenta desde el principio
+  c.innerHTML=`<svg viewBox="0 0 48 48" width="${first?76:56}" height="${first?76:56}" aria-hidden="true"><defs><linearGradient id="lgg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#lgg2)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg>
+  ${first?`<h2>Bienvenido a Nixel</h2><p>Su asistente personal: conversa, redacta, explica y analiza imágenes, también por voz.<br>Vincule su cuenta para guardar su perfil y sus conversaciones, o continúe como invitado.</p>
+  <ul class="wl"><li>Respuestas claras y sobrias, en su idioma</li><li>Usted decide qué puede hacer con sus datos</li><li>Se adapta a su forma de hablar</li></ul>`:`<h2>Inicia sesión</h2><p>Tus chats, perfil y memoria se guardan en tu cuenta.</p>`}
+  <div class="oa">${OAB.map(([k,n,bg,fg,g])=>`<button type="button" class="ob ${AUTH.providers[k]?.configured?'':'off'}" data-oa="${k}"><i style="background:${bg};color:${fg}">${g}</i>${first?'Vincular con':'Continuar con'} ${n}</button>`).join('')}</div>
+  <div class="lgh" id="lgh" role="status"></div>
+  <div class="or"><span>o con tu correo</span></div>
+  <form id="lgf"><input type="email" id="lge" placeholder="Correo" aria-label="Correo" autocomplete="email" required><input type="password" id="lgp" placeholder="Contraseña (mínimo 8 caracteres)" aria-label="Contraseña" autocomplete="current-password" required>
+  <div class="r2"><button class="pri" id="lgi">Entrar</button><button type="button" id="lgr">Crear cuenta</button></div></form>
+  <div class="lge" id="lgerr" role="alert"></div><button type="button" class="lnk" id="lgg">Entrar como invitado</button>`;
+  $('lgerr').textContent=err||'';
+  c.querySelectorAll('[data-oa]').forEach(b=>b.onclick=()=>{const k=b.dataset.oa,n=OAB.find(x=>x[0]===k)[1];
+    if(AUTH.providers[k]?.configured){ // pantalla de consentimiento (como al vincular una cuenta en un juego): Aceptar / Rechazar
+      c.innerHTML=`<div class="big">${avatar(P?P.avatar:DEF,'normal',96)}</div><h2>Vincular con ${n}</h2><p>Nixel recibirá tu <b>nombre y correo</b> de ${n} para crear o abrir tu cuenta. No recibe tu contraseña.</p>
+      <div class="legal"><ul><li>Tus chats y tu perfil se guardan en tu cuenta de Nixel (Cloudflare).</li><li>Puedes desvincular y borrar tus datos cuando quieras.</li></ul><p><a href="/legal/terminos" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/privacidad" target="_blank" rel="noopener">Política de privacidad</a></p></div>
+      <label class="ck"><input type="checkbox" id="lck"> Acepto los términos y la política de privacidad.</label><div class="lge" id="lce" role="alert"></div>
+      <div class="r2"><button type="button" id="lcr">Rechazar</button><button type="button" class="pri" id="lca">Aceptar</button></div>`;
+      $('lcr').onclick=()=>showLogin();$('lca').onclick=()=>{if(!$('lck').checked){$('lce').textContent='Marca la casilla para continuar.';return}location.href='/auth/start/'+k};return}
+    $('lgh').innerHTML=`El inicio con ${n} aún no está activado. Usa tu correo o entra como invitado. <button type="button" class="lnk adm" id="cfgn">Activarlo</button>`;
+    $('cfgn').onclick=()=>{$('lg').classList.remove('on');openSet()}});
+  const go=async path=>{$('lgerr').textContent='';const r=await fetch('/auth/'+path,{method:'POST',body:JSON.stringify({email:$('lge').value,password:$('lgp').value})});const j=await r.json().catch(()=>({}));
+    if(!r.ok){$('lgerr').textContent=j.error||'No se pudo completar';return}try{localStorage.removeItem('dot-guest')}catch{}location.reload()};
+  $('lgf').onsubmit=e=>{e.preventDefault();go('login')};
+  $('lgr').onclick=()=>{if($('lgf').reportValidity())go('register')};
+  $('lgg').onclick=async()=>{const r=await fetch('/auth/guest',{method:'POST'});if(!r.ok){$('lgerr').textContent='No se pudo entrar como invitado, inténtalo en un rato.';return}location.reload()};
+  $('lg').classList.add('on');$('lge').focus()}
+$('acb').onclick=async()=>{if(AUTH.user){await fetch('/auth/logout',{method:'POST'});location.reload()}else{$('ov').classList.remove('on');showLogin()}};
+const OAGUIDE={google:['Google Cloud Console → APIs y servicios → Credenciales → ID de cliente OAuth','https://console.cloud.google.com/apis/credentials'],facebook:['Meta para desarrolladores → tu app → Inicio de sesión con Facebook','https://developers.facebook.com/apps'],huawei:['AppGallery Connect → tu proyecto → Huawei ID','https://developer.huawei.com/consumer/en/service/josp/agc/index.html'],apple:['Apple Developer (requiere membresía de pago) → Identificadores → Services ID. Apple NO admite localhost: necesita una dirección https pública.','https://developer.apple.com/account/resources/identifiers/list/serviceId']};
+function renderOAuth(){const box=$('oas');box.innerHTML='';
+  OAB.forEach(([k,n])=>{const o=CFG.oauth[k]||{},d=document.createElement('details'),g=OAGUIDE[k],ap=k==='apple';
+    d.innerHTML=`<summary>${n} ${AUTH.providers[k]?.configured?'✔ activo':'· sin configurar'}</summary><div class="f"><small>Dónde: ${g[0]}</small><small>URL de redirección que debes registrar: <code>${esc(AUTH.redirects[k]||'')}</code></small>
+    <input type="text" data-p="${k}" data-f="id" placeholder="${ap?'Services ID':'Client ID'}" aria-label="${n} ID" value="${esc(o.id||'')}">
+    ${ap?`<input type="text" data-p="${k}" data-f="teamId" placeholder="Team ID" aria-label="Apple Team ID" value="${esc(o.teamId||'')}"><input type="text" data-p="${k}" data-f="keyId" placeholder="Key ID" aria-label="Apple Key ID" value="${esc(o.keyId||'')}"><textarea data-p="${k}" data-f="key" rows="3" placeholder="${o.hasKey?'(llave guardada — pega otra solo para cambiarla)':'Llave privada .p8 (-----BEGIN PRIVATE KEY-----…)'}" aria-label="Apple llave privada"></textarea>`
+    :`<input type="password" data-p="${k}" data-f="secret" placeholder="${o.hasSecret?'(secreto guardado — escribe otro solo para cambiarlo)':'Client secret'}" aria-label="${n} secreto" autocomplete="off">`}</div>`;
+    box.append(d)});$('opu').value=CFG.publicUrl||''}
+
+/* ---------- permisos, imágenes, dictado y modo Live ---------- */
+const needPerm=(k,title,txt)=>new Promise(ok=>{try{if(localStorage.getItem('dot-perm-'+k)==='1')return ok(true)}catch{}
+  const o=$('pm');o.innerHTML=`<div class="pmb" role="dialog" aria-label="${title}"><h3>${title}</h3><p>${txt}</p><div class="r2"><button type="button" id="pmn">Rechazar</button><button type="button" class="pri" id="pmy">Permitir</button></div></div>`;o.classList.add('on');
+  $('pmn').onclick=()=>{o.classList.remove('on');ok(false)};$('pmy').onclick=()=>{o.classList.remove('on');try{localStorage.setItem('dot-perm-'+k,'1')}catch{}ok(true)}});
+let IMGS=[],DOCS=[];
+const renderPrev=()=>{const p=$('prev');p.innerHTML='';DOCS.forEach((d,i)=>{const c=document.createElement('div');c.className='pi doc';c.innerHTML='<span></span><i title="Quitar" role="button">✕</i>';c.firstChild.textContent=d.name+(d.pages?' · '+d.pages+' pág.':'');c.querySelector('i').onclick=()=>{DOCS.splice(i,1);renderPrev()};p.append(c)});IMGS.forEach((s,i)=>{const d=document.createElement('div');d.className='pi';d.innerHTML=`<img src="${s}" alt="Imagen adjunta ${i+1}"><i title="Quitar" role="button">✕</i>`;d.querySelector('i').onclick=()=>{IMGS.splice(i,1);renderPrev()};p.append(d)})};
+async function addImage(f){if(!f||!/^image\//.test(f.type)||IMGS.length>=4)return;const bm=await createImageBitmap(f),k=Math.min(1,1024/Math.max(bm.width,bm.height)),cv=document.createElement('canvas');
+  cv.width=Math.round(bm.width*k);cv.height=Math.round(bm.height*k);cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);IMGS.push(cv.toDataURL('image/jpeg',.82));renderPrev()}
+const warm=k=>fetch('/warm',{method:'POST',body:JSON.stringify({kind:k})}).catch(()=>{});
+$('att').onclick=async()=>{warm('vision');if(await needPerm('files','Acceso a tus fotos y archivos','Nixel solo verá las imágenes que tú elijas. Se procesan en este equipo y no se suben a ningún servidor.'))$('fi').click()};
+/* PDF y archivos de texto: se leen en el navegador (pdf.js) y el texto viaja con el mensaje. Los PDF escaneados se envían como imágenes. */
+let PDFJS=null;const PDFV='3.11.174',PDFB='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+PDFV+'/';
+async function loadPdf(){if(PDFJS)return PDFJS;await new Promise((ok,no)=>{const s=document.createElement('script');s.src=PDFB+'pdf.min.js';s.onload=ok;s.onerror=()=>no(new Error('No se pudo cargar el lector de PDF (hace falta internet).'));document.head.appendChild(s)});
+  const w=await(await fetch(PDFB+'pdf.worker.min.js')).text();pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([w],{type:'text/javascript'}));return PDFJS=pdfjsLib}
+async function readPdf(file){const lib=await loadPdf(),doc=await lib.getDocument({data:await file.arrayBuffer()}).promise;let text='';
+  for(let i=1;i<=Math.min(doc.numPages,40)&&text.length<14000;i++){const pg=await doc.getPage(i),tc=await pg.getTextContent();text+='\n[Página '+i+']\n'+tc.items.map(x=>x.str).join(' ')}
+  if(text.replace(/\[Página \d+\]|\s/g,'').length<40){for(let i=1;i<=Math.min(doc.numPages,3)&&IMGS.length<4;i++){const pg=await doc.getPage(i),vp=pg.getViewport({scale:1.3}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;IMGS.push(cv.toDataURL('image/jpeg',.8))}
+    renderPrev();note('t','El PDF parece escaneado y no tiene texto: envío sus primeras páginas como imágenes.');return null}
+  return{name:file.name,text:text.trim().slice(0,14000),pages:doc.numPages}}
+async function addFile(f){if(!f)return;if(/^image\//.test(f.type))return addImage(f);if(DOCS.length>=3){note('t','Máximo 3 documentos por mensaje.');return}
+  const nt=note('pg','Leyendo «'+f.name+'»…');
+  try{let d=null;if(f.type==='application/pdf'||/\.pdf$/i.test(f.name))d=await readPdf(f);
+    else if(/\.(txt|md|csv|json|html?|xml|log|js|py|css|ts)$/i.test(f.name)||/^text\//.test(f.type))d={name:f.name,text:(await f.text()).slice(0,14000)};
+    else note('t','Formato no admitido: '+f.name+'. Puedo leer imágenes, PDF y archivos de texto.');
+    if(d){if(!d.text.trim())note('t','«'+f.name+'» no tiene texto que leer.');else{DOCS.push(d);renderPrev()}}}catch(e){note('t','No pude leer «'+f.name+'»: '+e.message)}
+  nt.remove()}
+$('fi').onchange=async e=>{for(const f of e.target.files)await addFile(f);e.target.value=''};
+$('q').addEventListener('paste',e=>{for(const it of e.clipboardData.items)if(it.type.startsWith('image/')){e.preventDefault();warm('vision');addImage(it.getAsFile())}});
+$('main').addEventListener('dragover',e=>e.preventDefault());$('main').addEventListener('drop',async e=>{e.preventDefault();for(const f of e.dataTransfer.files)await addFile(f)});
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let dict=null;
+$('mic').onclick=async()=>{if(dict){dict.stop();return}
+  if(!SR){alert('Tu navegador no admite dictado por voz. Usa Microsoft Edge o Google Chrome.');return}
+  if(!await needPerm('mic','Acceso al micrófono','Se usa solo mientras dictas. El dictado usa el reconocimiento de voz de tu navegador: en Edge y Chrome el audio puede enviarse a Microsoft o Google para transcribirlo.'))return;
+  const r=dict=new SR();r.lang='es-ES';r.interimResults=true;r.continuous=false;const base=$('q').value;$('mic').classList.add('on');
+  r.onresult=e=>{let t='';for(const x of e.results)t+=x[0].transcript;$('q').value=(base?base+' ':'')+t;$('q').oninput({target:$('q')})};
+  r.onend=r.onerror=()=>{$('mic').classList.remove('on');dict=null};r.start()};
+/* Modo Live: cámara + voz continua. Cada frase que dices se envía con un fotograma de la cámara y la respuesta se va hablando mientras se genera. */
+let LV=null,liveChat=null;
+const lvSay=t=>{$('lvs').textContent=t};
+const lvOpen=(msg,cam)=>{$('lva').innerHTML=avatar(P?P.avatar:DEF,'normal',cam?84:160);$('lv').classList.add('on');lvSay(msg)};
+const MICHELP='Haz clic en el candado de la barra de direcciones y elige «Permitir» para el micrófono. En Windows: Configuración → Privacidad y seguridad → Micrófono → «Permitir que las aplicaciones de escritorio accedan al micrófono».';
+async function startLive(){
+  warm('vision');
+  if(!window.isSecureContext){LV={on:true,mic:false,cam:false,rec:{stop(){}}};lvOpen('El modo Live necesita una conexión segura (https o localhost): el navegador no permite cámara ni micrófono desde una dirección http como esta. Úsalo desde el PC, o con https (por ejemplo con Tailscale).',false);return}
+  if(!SR){LV={on:true,mic:false,cam:false,rec:{stop(){}}};lvOpen('Este navegador no tiene reconocimiento de voz. Usa Microsoft Edge o Google Chrome.',false);return}
+  if(!await needPerm('live','Modo Live: cámara y micrófono','Nixel usará tu cámara y tu micrófono solo mientras este modo esté abierto. No se graba vídeo: se toman fotogramas sueltos para responderte. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google.'))return;
+  // pedimos los permisos reales del navegador por adelantado, para que aparezca su aviso y podamos explicar cualquier bloqueo
+  let stream=null,err='';
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:{width:640,height:480,facingMode:'user'}})}
+  catch(e1){try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e2){err=e2.name||'error'}}
+  LV={on:true,stream,cam:!!(stream&&stream.getVideoTracks().length),mic:true,ctl:null,speaking:false,rec:new SR(),q:[],busy:false,fail:false};
+  if(err){LV.mic=false;LV.fail=true;lvOpen(`El navegador no dejó usar el micrófono (${err}). ${MICHELP}`,false);return}
+  stream.getAudioTracks().forEach(t=>t.stop()); // el reconocimiento de voz abre el micrófono por su cuenta
+  $('lvv').srcObject=LV.cam?stream:null;$('lvv').style.display=LV.cam?'block':'none';
+  lvOpen(LV.cam?'Te escucho y te veo. Habla cuando quieras.':'No encontré cámara: solo voz. Habla cuando quieras.',LV.cam);
+  const r=LV.rec;r.lang='es-ES';r.continuous=true;r.interimResults=true;
+  /* Fin de frase rápido: no espera al "final" del navegador (~1 s); envía a los ~300 ms de silencio, salvo que la frase quede abierta (coma, "y", "pero", "porque"…): ahí espera ~1,1 s */
+  LV.base=0;LV.tm=0;
+  r.onstart=()=>{if(LV)LV.base=0};
+  r.onresult=e=>{let txt='';for(let i=LV.base;i<e.results.length;i++)txt+=e.results[i][0].transcript;txt=txt.trim();if(!txt)return;
+    if(LV.speaking)liveStop(); // interrumpes a Nixel: se calla
+    lvSay('🎤 '+txt);clearTimeout(LV.tm);
+    const open=/(,|\b(y|e|o|u|pero|que|porque|pues|como|si|aunque|entonces|qué|cómo|cuál|dónde|cuándo|con|para|por|de|en|a|el|la|los|las|un|una|mi|tu|su|este|eh|mmm|es que|o sea))$/i.test(txt),end=/[.?!]$/.test(txt);
+    LV.tm=setTimeout(()=>{LV.base=e.results.length;liveAsk(txt)},open?1100:end?120:300)};
+  r.onend=()=>{if(LV&&LV.on&&LV.mic&&!LV.fail)setTimeout(()=>{try{r.start()}catch{}},LV.retry||250)};
+  r.onerror=e=>{if(!LV)return;const c=e.error;if(c==='no-speech'||c==='aborted')return; // nunca cerramos solos: mostramos el motivo
+    if(c==='not-allowed'||c==='service-not-allowed'){LV.fail=true;lvSay(`El navegador bloqueó el reconocimiento de voz (${c}). ${MICHELP}`)}
+    else if(c==='network'){LV.retry=2000;lvSay('El reconocimiento de voz de tu navegador necesita internet (usa un servicio de Microsoft o Google) y no pudo conectar. Reintentando…')}
+    else if(c==='audio-capture'){LV.fail=true;lvSay('No encuentro ningún micrófono conectado.')}
+    else lvSay('Error de voz: '+c)};
+  try{r.start()}catch(e){lvSay('No se pudo iniciar el reconocimiento de voz: '+e.message)}}
+function liveStop(){speechSynthesis.cancel();LV&&LV.ctl&&LV.ctl.abort();if(LV){LV.speaking=false;LV.q=[]}}
+function frame(){const v=$('lvv');if(!LV.cam||!v.videoWidth)return null;const cv=document.createElement('canvas'),k=512/Math.max(v.videoWidth,v.videoHeight);cv.width=v.videoWidth*k;cv.height=v.videoHeight*k;cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);return cv.toDataURL('image/jpeg',.6)}
+function speak(t){if(!t.trim()||!LV)return;const u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=1.08;LV.speaking=true;u.onend=()=>{if(!speechSynthesis.speaking&&!speechSynthesis.pending&&LV){LV.speaking=false;setMood('normal');$('lva').innerHTML=avatar(P?P.avatar:DEF,'normal',LV.cam?84:160)}};speechSynthesis.speak(u)}
+async function liveAsk(text){if(!LV)return;liveStop();LV.said=0;const ctl=LV.ctl=new AbortController(),fr=frame();let buf='',all='';
+  setMood('effort');$('lva').innerHTML=avatar(P?P.avatar:DEF,'effort',LV.cam?84:160);
+  try{const r=await fetch('/chat',{method:'POST',signal:ctl.signal,body:JSON.stringify({message:text,chatId:liveChat,effort:'fast',live:true,images:fr?[fr]:[]})});
+    const rd=r.body.getReader(),dec=new TextDecoder();let b='';
+    for(;;){const{done,value}=await rd.read();if(done)break;b+=dec.decode(value,{stream:true});let i;
+      while((i=b.indexOf('\n\n'))>=0){const ev=JSON.parse(b.slice(5,i));b=b.slice(i+2);
+        if(ev.type==='chat')liveChat=ev.id;
+        if(ev.type==='token'){buf+=ev.text;all+=ev.text;lvSay(all);let m;
+          while((m=/^([\s\S]*?[.!?¿\n:;])\s/.exec(buf)||(!LV.said&&/^([\s\S]{14,}?,)\s/.exec(buf)))){speak(m[1]);LV.said=1;buf=buf.slice(m[0].length)}}}}
+    if(buf.trim())speak(buf);if(!all)lvSay('…');
+    const fun=/(ja){2,}|jeje|haha|😂|🤣/i.test(all);if(fun){setMood('funny',3000);$('lva').innerHTML=avatar(P?P.avatar:DEF,'funny',LV.cam?84:160)}
+  }catch(e){if(e.name!=='AbortError')lvSay('Error: '+e.message)}
+  loadHist()}
+function endLive(){if(!LV)return;const l=LV;l.on=false;liveStop();try{l.rec.stop()}catch{}if(l.stream)l.stream.getTracks().forEach(t=>t.stop());$('lvv').srcObject=null;$('lv').classList.remove('on');LV=null;setMood('normal');loadHist()}
+$('liv').onclick=startLive;$('lvx').onclick=endLive;
+$('lvc').onclick=()=>{if(!LV||!LV.stream)return;LV.cam=!LV.cam;LV.stream.getVideoTracks().forEach(t=>t.enabled=LV.cam);$('lvv').style.opacity=LV.cam?.9:.1;$('lvc').textContent=LV.cam?'📷 Cámara':'🚫 Cámara'};
+$('lvm').onclick=()=>{if(!LV)return;LV.mic=!LV.mic;if(LV.mic){try{LV.rec.start()}catch{}}else LV.rec.stop();$('lvm').textContent=LV.mic?'🎤 Micrófono':'🔇 Micrófono'};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&LV)endLive()});
+
+/* ---------- extras: acciones, novedades, apariencia, memoria, modos, atajos, GPU ---------- */
+const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
+function actions(el){if(!el||el.querySelector('.acts'))return;const raw=()=>el.dataset.raw||el.innerText,a=document.createElement('div');a.className='acts';
+  const mk=(t,title,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.title=title;b.setAttribute('aria-label',title);b.onclick=fn;a.append(b)};
+  mk('Copiar','Copiar',async e=>{try{await navigator.clipboard.writeText(raw());e.target.textContent='Copiado';setTimeout(()=>e.target.textContent='Copiar',1200)}catch{}});
+  mk('Escuchar','Leer en voz alta',()=>{if(speechSynthesis.speaking){speechSynthesis.cancel();return}const u=new SpeechSynthesisUtterance(raw().replace(/[*`#]/g,''));u.lang='es-ES';speechSynthesis.speak(u)});
+  mk('Repetir','Repetir la pregunta',()=>{if(busy)return;const us=[...log.querySelectorAll('.m.u')].pop();if(us)send(us.dataset.raw||us.innerText)});el.append(a)}
+const WB_VER='2026-11-formal';
+function whatsNew(force){if(!force&&lsGet('dot-seen','')===WB_VER)return;const nm=P&&P.name?', '+esc(P.name):'';
+  const T=[['','Autorización en cada acción','Nixel actúa sobre su dispositivo solo cuando usted lo autoriza.'],['','Agente de trabajo','Diseña sitios web, programa, edita archivos y busca información en la web.'],['','Técnico','Diagnostica y repara problemas del equipo con su permiso.'],['','Creación de imágenes','Describa lo que desea ver y Nixel lo crea.'],['','Tareas con fotografía','Envíe una foto de ejercicios y obtenga la resolución paso a paso.'],['','Conversación por voz','Respuesta inmediata con cámara y micrófono.'],['','Memoria editable','Consulte y borre lo que Nixel recuerda.'],['','Más control','Detener respuestas, exportar conversaciones y atajos de teclado.']];
+  $('wbc').innerHTML=`<div class="big">${avatar(P?P.avatar:DEF,'funny',104)}</div><h2 style="margin:6px 0 2px;font-size:28px;letter-spacing:-.01em">${greet()}${nm}</h2><p style="color:var(--mut);margin:0">Bienvenido de nuevo. Estas son las novedades de esta versión.</p>
+    <div class="tiles">${T.map((t,i)=>`<div class="tile" style="animation-delay:${90+i*60}ms"><b>${t[1]}</b><small>${t[2]}</small></div>`).join('')}</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button type="button" id="wbr">Rehacer la bienvenida</button><button type="button" class="pri" id="wbx">Entrar</button></div>`;
+  $('wb').classList.add('on');const close=()=>{$('wb').classList.remove('on');lsSet('dot-seen',WB_VER)};
+  $('wbx').onclick=close;$('wbr').onclick=()=>{close();openOb('welcome')};$('wbx').focus()}
+$('wbn').onclick=()=>{$('ov').classList.remove('on');whatsNew(true)};
+function applyLook(){const g=+lsGet('dot-glass','55'),r=document.documentElement.style;r.setProperty('--blur',(10+g*.34).toFixed(0)+'px');
+  r.setProperty('--gl',`color-mix(in srgb,var(--panel) ${Math.round(34+g*.4)}%,transparent)`);r.setProperty('--gl2',`color-mix(in srgb,var(--panel) ${Math.round(52+g*.4)}%,transparent)`);
+  document.body.style.fontSize=lsGet('dot-fs','15')+'px';document.body.classList.toggle('noanim',lsGet('dot-anim','1')!=='1')}
+function initAppearance(){$('gls').value=lsGet('dot-glass','55');$('fsz').value=lsGet('dot-fs','15');$('anm').checked=lsGet('dot-anim','1')==='1';
+  $('gls').oninput=e=>{lsSet('dot-glass',e.target.value);applyLook()};$('fsz').onchange=e=>{lsSet('dot-fs',e.target.value);applyLook()};$('anm').onchange=e=>{lsSet('dot-anim',e.target.checked?'1':'0');applyLook()}}
+applyLook();
+async function renderMem(){const j=await(await fetch('/memory')).json(),b=$('memlist');b.innerHTML='';
+  j.facts.forEach((f,i)=>{const d=document.createElement('div');d.className='mi';d.innerHTML='<span></span><button type="button" title="Olvidar este dato" aria-label="Olvidar este dato">✕</button>';d.firstChild.textContent=f;
+    d.querySelector('button').onclick=async()=>{await fetch('/memory?i='+i,{method:'DELETE'});renderMem()};b.append(d)});
+  $('mem').textContent=j.facts.length?`Nixel recuerda ${j.facts.length} dato(s) sobre ti:`:'Nixel aún no recuerda nada sobre ti.'}
+async function loadModes(){try{const j=await(await fetch('/modes')).json();fill($('sd'),Object.entries(j).map(([k,v])=>[k,v.label]),lsGet('dot-mode2','general'));$('sd').onchange=()=>{if($('sd').value!=='artist')lsSet('dot-mode2',$('sd').value)}}catch{}}
+setInterval(async()=>{if(document.hidden)return;try{const g=(await(await fetch('/gpu')).json()).gpu;$('gpuc').textContent=g?`GPU ${g.util}% · ${(g.used/1024).toFixed(1)}/${(g.total/1024).toFixed(1)} GB · ${g.temp}°C`:''}catch{}},3000);
+$('exp').onclick=()=>{if(chatId)location.href='/chats/'+chatId+'/export';else alert('Aún no hay ninguna charla que exportar: escribe algo primero.')};
+addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey))return;if(e.key==='k'){e.preventDefault();newChat()}else if(e.key==='/'){e.preventDefault();$('q').focus()}else if(e.key===','){e.preventDefault();openSet()}});
+
+/* ---------- guía paso a paso con foco: oscurece todo menos lo que explica, con flecha y texto (y voz si se quiere) ---------- */
+const openCfg=async()=>{if(!$('ov').classList.contains('on')){await openSet()}};
+const TOURS={
+  start:{t:'Primeros pasos',s:[
+    {sel:'#q',title:'Escriba aquí',text:'Escriba su pregunta o petición y pulse Enter. Con Shift+Enter baja de línea.'},
+    {sel:'#att',title:'Adjuntar archivos',text:'Con este botón adjunta imágenes, PDF o archivos de texto para que Nixel los lea.'},
+    {sel:'#mic',title:'Dictado por voz',text:'Dicte en lugar de escribir. El navegador le pedirá permiso para usar el micrófono.'},
+    {sel:'#liv',title:'Modo Live',text:'Conversación por voz con cámara. Nixel responde hablando y se calla si usted lo interrumpe.'},
+    {sel:'#sd',title:'Modos',text:'Cambie el papel de Nixel: Traductor, Profe, Programador, Agente, Técnico y más.'},
+    {sel:'#bs',title:'Configuración',text:'Aquí cambia el aspecto, su perfil, sus datos y la cuenta.'}]},
+  docs:{t:'Leer un PDF o una imagen',s:[
+    {sel:'#att',title:'1. Adjunte el archivo',text:'Pulse el clip y elija un PDF, una imagen o un archivo de texto. También puede arrastrarlo a la ventana.'},
+    {sel:'#q',title:'2. Haga su pregunta',text:'Escriba qué necesita: resumen, un dato concreto o resolver ejercicios. Si no escribe nada, Nixel hará un resumen.'}]},
+  account:{t:'Vincular una cuenta',s:[
+    {sel:'#bs',title:'Abra la Configuración',text:'Pulse este botón.'},
+    {sel:'#acb',before:openCfg,title:'Cuenta',text:'Con este botón inicia sesión o la vincula con Google, Facebook o Huawei, para guardar su perfil y sus conversaciones.'}]},
+  ai:{t:'Activar la IA con su clave gratis',s:[
+    {sel:'#cp',before:openCfg,title:'1. Proveedor',text:'Elija Gemini, Groq u OpenRouter. Debajo aparece el enlace para crear su clave gratuita.'},
+    {sel:'#ck2',title:'2. Pegue su clave',text:'La clave se guarda solo en este navegador y no se vuelve a mostrar.'},
+    {sel:'#cco',title:'3. Consentimiento',text:'Confirme que entiende que sus mensajes se envían a ese proveedor.'},
+    {sel:'#ctb',title:'4. Probar conexión',text:'Compruebe que funciona antes de guardar.'},
+    {sel:'#cen',title:'5. Activar',text:'Marque esta casilla y pulse Guardar al final.'}]},
+  privacy:{t:'Descargar o borrar sus datos',s:[
+    {sel:'#dlx',before:openCfg,title:'Descargar',text:'Guarda su perfil, memoria y conversaciones en un archivo.'},
+    {sel:'#dld',title:'Borrar',text:'Elimina su perfil, conversaciones y cuenta. No se puede deshacer.'}]},
+};
+let GD=null;const gdSleep=ms=>new Promise(r=>setTimeout(r,ms)),gdVisible=e=>e&&e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden';
+function closeTour(){if(!GD)return;const g=GD;GD=null;try{speechSynthesis.cancel()}catch{}$('gd')&&$('gd').remove();removeEventListener('keydown',gdKey,true);removeEventListener('resize',gdPlace);if(g.openedSettings)$('ov').classList.remove('on')}
+function gdKey(e){if(!GD)return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeTour()}else if(e.key==='ArrowRight'||e.key==='Enter'){e.preventDefault();e.stopPropagation();gdGo(1)}else if(e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();gdGo(-1)}}
+async function startTour(id){const T=TOURS[id];if(!T)return;closeTour();$('gdm').classList.remove('on');
+  const wasOpen=$('ov').classList.contains('on');GD={id,i:-1,steps:T.s,voice:false,openedSettings:!wasOpen&&T.s.some(s=>s.before)};
+  const r=document.createElement('div');r.id='gd';r.innerHTML='<div id="gdk"></div><div id="gdh"></div><div id="gdb" role="dialog" aria-live="polite" aria-label="Guía paso a paso"><i id="gda" class="up"></i><b id="gdt"></b><p id="gdx"></p><div class="gdn"><small id="gdc"></small><label class="gdv"><input type="checkbox" id="gdvv"> Voz</label><button type="button" id="gdp">Atrás</button><button type="button" class="pri" id="gdnx">Siguiente</button><button type="button" id="gdq">Salir</button></div></div>';
+  document.body.append(r);$('gdq').onclick=closeTour;$('gdnx').onclick=()=>gdGo(1);$('gdp').onclick=()=>gdGo(-1);$('gdvv').onchange=e=>{GD&&(GD.voice=e.target.checked);if(!e.target.checked)speechSynthesis.cancel();else gdSpeak()};
+  addEventListener('keydown',gdKey,true);addEventListener('resize',gdPlace);const ok=await gdGo(1);if(!ok&&GD){closeTour();note('t','Esta guía no está disponible en esta versión o pantalla.')}}
+async function gdGo(dir){if(!GD)return false;let i=GD.i;const g=GD;
+  for(;;){i+=dir;if(i<0)return GD===g&&GD.i>=0;if(i>=g.steps.length){if(g.i>=0){closeTour();return true}return false}
+    const st=g.steps[i];if(st.before){await st.before();await gdSleep(380)}if(GD!==g)return false;const el=document.querySelector(st.sel);if(gdVisible(el)){g.i=i;g.el=el;el.scrollIntoView({block:'center',inline:'center'});gdShow();return true}}}
+function gdShow(){const g=GD;if(!g)return;const st=g.steps[g.i],n=g.steps.length;$('gdt').textContent=st.title;$('gdx').textContent=st.text;$('gdc').textContent=(g.i+1)+' de '+n;
+  $('gdp').style.visibility=g.i===0?'hidden':'visible';$('gdnx').textContent=g.i===n-1?'Terminar':'Siguiente';gdPlace();$('gdnx').focus();gdSpeak()}
+function gdSpeak(){if(!GD||!GD.voice)return;try{speechSynthesis.cancel();const st=GD.steps[GD.i],u=new SpeechSynthesisUtterance(st.title+'. '+st.text);u.lang='es-ES';u.rate=1.05;speechSynthesis.speak(u)}catch{}}
+function gdPlace(){const g=GD;if(!g||!g.el)return;const r=g.el.getBoundingClientRect(),p=7,h=$('gdh'),b=$('gdb'),a=$('gda');
+  Object.assign(h.style,{left:(r.left-p)+'px',top:(r.top-p)+'px',width:(r.width+p*2)+'px',height:(r.height+p*2)+'px'});
+  const bw=b.offsetWidth,bh=b.offsetHeight;let top=r.bottom+p+16,up=true;if(top+bh>innerHeight-10){top=r.top-p-16-bh;up=false}if(top<10){top=Math.max(10,Math.min(innerHeight-bh-10,r.top+r.height/2-bh/2));}
+  const left=Math.max(10,Math.min(innerWidth-bw-10,r.left+r.width/2-bw/2));b.style.left=left+'px';b.style.top=top+'px';
+  a.className=up?'up':'dn';a.style.left=Math.max(14,Math.min(bw-28,r.left+r.width/2-left-7))+'px'}
+/* ---------- llamar por voz: se dice el nombre ("Nixel, ...") y responde hablando ---------- */
+const BRAND_LC='Nixel'.toLowerCase(),WAKE_ALT={dot:['dot','dod','doc','dots','dota','dort'],nixel:['nixel','nicsel','niksel','nixle','niquel','nixell']};
+const WAKE_RE=new RegExp('(?:^|[\\s,.])(?:oye\\s+|hey\\s+|hola\\s+|ok\\s+)?('+(WAKE_ALT[BRAND_LC]||[BRAND_LC]).join('|')+')\\b[\\s,:.!?]*(.*)$','i');
+let WK=null,WKSPEAK=false;
+const wakeSay=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=1.08;speechSynthesis.speak(u)}catch{}};
+const setWake=on=>{$('wake').classList.toggle('on',on);$('wake').setAttribute('aria-pressed',on?'true':'false');$('wake').textContent=on?'Escuchando…':'Llamar'};
+function wakeRun(cmd){WKSPEAK=true;send(cmd)}
+function wakeHear(t){if(!WK||busy||speechSynthesis.speaking)return;
+  if(WK.awaiting){WK.awaiting=false;wakeRun(t);return}
+  const m=WAKE_RE.exec(t);if(!m)return;const cmd=(m[2]||'').trim();
+  if(cmd.length<2){WK.awaiting=true;wakeSay('Dígame.');setTimeout(()=>{if(WK)WK.awaiting=false},8000);return}wakeRun(cmd)}
+async function toggleWake(){
+  if(WK){WK.on=false;try{WK.rec.stop()}catch{}WK=null;setWake(false);return}
+  if(!window.isSecureContext){alert('Llamar por voz necesita una conexión segura (https, o localhost en el propio equipo).');return}
+  if(!SR){alert('Este navegador no tiene reconocimiento de voz. Use Microsoft Edge o Google Chrome.');return}
+  if(!await needPerm('mic','Llamar por voz','Mientras esté activo, el micrófono escucha de forma continua solo para detectar su nombre. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google. Puede desactivarlo pulsando de nuevo el botón.'))return;
+  const rec=new SR();rec.lang='es-ES';rec.continuous=true;rec.interimResults=false;WK={on:true,rec,awaiting:false};setWake(true);
+  rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)wakeHear(e.results[i][0].transcript.trim())};
+  rec.onend=()=>{if(WK&&WK.on)setTimeout(()=>{try{rec.start()}catch{}},300)};
+  rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){if(WK)WK.on=false;WK=null;setWake(false);note('t','El navegador bloqueó el micrófono: no se puede llamar por voz.')}};
+  try{rec.start()}catch{}}
+$('wake').onclick=toggleWake;if(!SR)$('wake').style.display='none';
+/* ---------- tarjeta de pasos: «Guíame» aparece aquí cuando algo solo puede hacerlo el usuario ---------- */
+const fold=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const ACCT={gmail:{n:'Gmail (cuenta de Google)',u:'https://accounts.google.com/signup'},outlook:{n:'Outlook',u:'https://signup.live.com/'},hotmail:{n:'Outlook (Hotmail)',u:'https://signup.live.com/'},instagram:{n:'Instagram',u:'https://www.instagram.com/accounts/emailsignup/'},facebook:{n:'Facebook',u:'https://www.facebook.com/r.php'},tiktok:{n:'TikTok',u:'https://www.tiktok.com/signup'},discord:{n:'Discord',u:'https://discord.com/register'},spotify:{n:'Spotify',u:'https://www.spotify.com/signup'}};
+function needUser(text){const f=fold(text);
+  if(!/\b(crea\w*|haz\w*|hazme|abre\w*|abreme|necesito|quiero|sacame|saca\w*|registra\w*|armame|configura\w*)\b/.test(f))return null;
+  if(/\b(mand\w+|envi\w+|redact\w+|escrib\w+)\b/.test(f)&&!/\bcuenta\b/.test(f))return null;
+  const sv=(f.match(/\b(gmail|google|outlook|hotmail|instagram|facebook|tiktok|discord|spotify)\b/)||[])[1];
+  const noun=/\b(cuenta|gmail|perfil)\b/.test(f)||(/\b(correo|email)\b/.test(f)&&/\b(nuevo|propio)\b/.test(f));
+  if(!noun||(!sv&&!/\bcuenta de (correo|email)\b/.test(f)&&!/\bgmail\b/.test(f)))return null;
+  const k=ACCT[sv==='google'?'gmail':sv]||ACCT.gmail,nm=(P&&P.name?fold(P.name).split(/\s+/)[0]:'usuario').replace(/[^a-z0-9]/g,'')||'usuario',yr=new Date().getFullYear(),r=n=>Math.floor(Math.random()*n);
+  return{say:'Crear una cuenta no puedo hacerlo por usted: exige verificar un teléfono, resolver controles anti-robot y aceptar condiciones a su nombre. Le dejo los pasos y una plantilla con datos sugeridos; pulse «Guíame» y los seguimos juntos.',
+    card:{title:'Crear una cuenta de '+k.n,url:k.u,
+      steps:['Abra la página de registro (botón «Abrir página»).','Escriba su nombre y apellidos y su fecha de nacimiento reales.','Elija el nombre de usuario; puede usar una de las sugerencias de la plantilla.','Cree una contraseña larga (12 caracteres o más) y guárdela en un gestor de contraseñas. No la comparta con nadie, tampoco conmigo.','Añada un teléfono y un correo de recuperación que usted controle.','Complete la verificación (código por SMS o control anti-robot).','Lea y acepte las condiciones solo si está de acuerdo.','Compruebe que puede entrar y active la verificación en dos pasos.'],
+      template:'Nombre: '+((P&&P.name)||'(su nombre)')+'\nUsuario sugerido 1: '+nm+'.'+yr+'\nUsuario sugerido 2: '+nm+'.'+(100+r(900))+'\nUsuario sugerido 3: '+nm+(10+r(90))+'.'+(yr-2000)+'\nContraseña: 12 o más caracteres, con palabras y números (no la escriba en este chat)\nRecuperación: un teléfono suyo y otro correo suyo'}}}
+// Si el modelo responde «no puedo…» con una lista numerada de pasos, se muestra también la tarjeta con «Guíame» (sin depender de que el modelo llame a la herramienta)
+function stepsFromText(raw){if(!raw||!/\b(no puedo|no es posible|lo siento|no tengo (?:acceso|la capacidad)|tendr[aá]s? que|tiene que hacerlo|debe hacerlo|no estoy (?:en condiciones|autorizad))/i.test(raw))return null;
+  const items=[...raw.matchAll(/^\s*\d+[.)]\s+(.+)$/gm)].map(m=>m[1].replace(/[*`_]/g,'').trim()).filter(s=>s.length>3);if(items.length<3)return null;
+  const url=(raw.match(/https:\/\/[^\s)\]>"']+/)||[])[0]||'';return{title:'Pasos para hacerlo usted',steps:items.slice(0,10),url}}
+function stepCard(c){const d=document.createElement('div');d.className='m a stepcard';d.innerHTML='<b></b><p class="why"></p><ol></ol><pre class="tpl"></pre><div class="sbtn"></div>';
+  d.querySelector('b').textContent=c.title||'Pasos';const w=d.querySelector('.why');if(c.why)w.textContent=c.why;else w.remove();
+  (c.steps||[]).slice(0,10).forEach(s=>{const li=document.createElement('li');li.textContent=s;d.querySelector('ol').append(li)});
+  const pre=d.querySelector('pre');if(c.template)pre.textContent=c.template;else pre.remove();
+  const bx=d.querySelector('.sbtn'),mk=(t,cls,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=t;if(cls)b.className=cls;b.onclick=fn;bx.append(b);return b};
+  mk('Guíame','pri',()=>guideGo(c,false));mk('Guíame con voz','',()=>guideGo(c,true));
+  if(c.url&&/^https:\/\//.test(c.url))mk('Abrir página','',()=>window.open(c.url,'_blank','noopener'));
+  if(c.template)mk('Copiar plantilla','',async e=>{try{await navigator.clipboard.writeText(c.template);e.target.textContent='Copiada';setTimeout(()=>e.target.textContent='Copiar plantilla',1400)}catch{}});
+  log.append(d);scroll()}
+let SPN=null;
+function closeSteps(){if(!SPN)return;try{speechSynthesis.cancel()}catch{}const p=$('sp');if(p)p.remove();SPN=null}
+function startSteps(c,v){closeSteps();closeTour();SPN={c,i:0,voice:!!v};const p=document.createElement('div');p.id='sp';p.setAttribute('role','dialog');p.setAttribute('aria-label','Guía paso a paso');
+  p.innerHTML='<b id="spt"></b><p id="spx"></p><div class="gdn"><small id="spc"></small><label class="gdv"><input type="checkbox" id="spv"> Voz</label><button type="button" id="spo">Abrir página</button><button type="button" id="spp">Atrás</button><button type="button" class="pri" id="spnx">Siguiente</button><button type="button" id="spq" aria-label="Cerrar la guía">Cerrar</button></div>';
+  document.body.append(p);$('spq').onclick=closeSteps;$('spp').onclick=()=>spGo(-1);$('spnx').onclick=()=>spGo(1);$('spv').onchange=e=>{SPN.voice=e.target.checked;if(!e.target.checked)speechSynthesis.cancel();else spSay()};
+  if(c.url&&/^https:\/\//.test(c.url))$('spo').onclick=()=>window.open(c.url,'_blank','noopener');else $('spo').style.display='none';$('spv').checked=!!v;spShow()}
+function spGo(d){if(!SPN)return;const n=SPN.c.steps.length,i=SPN.i+d;if(i<0)return;if(i>=n){closeSteps();return}SPN.i=i;spShow()}
+function spShow(){const g=SPN;if(!g)return;const n=g.c.steps.length;$('spt').textContent=g.c.title||'Pasos';$('spx').textContent=(g.i+1)+'. '+g.c.steps[g.i];$('spc').textContent=(g.i+1)+' de '+n;$('spp').style.visibility=g.i===0?'hidden':'visible';$('spnx').textContent=g.i===n-1?'Terminar':'Siguiente';spSay()}
+function spSay(){if(!SPN||!SPN.voice)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(SPN.c.steps[SPN.i]);u.lang='es-ES';u.rate=1.05;speechSynthesis.speak(u)}catch{}}
+
+/* ---------- Guíame en vivo (en el PC donde corre Nixel): marco y flecha sobre tu pantalla real, que sigue al elemento y avanza cuando haces clic; con voz opcional ---------- */
+let LIVEOK,LIVEWHY=0,LG=null;
+async function liveOK(){if(LIVEOK===undefined){try{const r=await fetch('/guide/live/state');LIVEWHY=r.status;LIVEOK=r.ok&&!!(await r.json()).available}catch{LIVEOK=false}}return LIVEOK}
+async function guideGo(c,voice){
+  if(c.topic&&TOURS[c.topic]){startTour(c.topic);return}
+  if(await liveOK()){try{const r=await fetch('/guide/live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:c.title,steps:c.steps,voice:!!voice})});const j=await r.json();if(r.ok&&!j.error){liveWatch();return}}catch{}}
+  if(LIVEWHY===403)note('t','La guía sobre tu pantalla solo funciona abriendo Nixel en el propio PC (http://localhost:3000). Desde otro dispositivo o por un túnel te muestro el panel de pasos.');
+  startSteps(c,voice)}
+function liveStop(){if(!LG)return;clearInterval(LG.t);try{speechSynthesis.cancel()}catch{}LG.want=false;if(LG.rec){try{LG.rec.onend=null;LG.rec.stop()}catch{}}LG=null}
+function liveWatch(){liveStop();LG={t:setInterval(liveTick,600),t0:Date.now(),i:-1,say:-1,voice:false,rec:null,want:false,speaking:false,quiet:0,seen:false};liveTick()}
+function liveSay(t,end){if(!LG)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=1.05;LG.speaking=true;u.onend=u.onerror=()=>{if(LG){LG.speaking=false;LG.quiet=Date.now()+600}if(end)end()};speechSynthesis.speak(u)}catch{if(LG)LG.speaking=false;if(end)end()}}
+async function liveTick(){if(!LG)return;let s;try{s=await(await fetch('/guide/live/state')).json()}catch{return}
+  if(!s.active){if(LG.seen){const v=LG.voice,d=s.done;if(v&&d){const l=LG;liveSay('Listo, hemos terminado.',()=>{if(LG===l)liveStop()});clearInterval(l.t);if(l.rec){l.want=false;try{l.rec.onend=null;l.rec.stop()}catch{}}}else liveStop()}else if(Date.now()-LG.t0>5000)liveStop();return}
+  LG.seen=true;if(s.voice&&!LG.voice)liveListen(true);if(!s.voice&&LG.voice)liveListen(false);
+  if((s.i!==LG.i||s.say!==LG.say||s.voice!==LG.voice)&&s.voice&&(s.i!==LG.i||s.say!==LG.say||!LG.voice))liveSay('Paso '+(s.i+1)+'. '+s.text);
+  LG.i=s.i;LG.say=s.say;LG.voice=s.voice}
+async function liveListen(on){if(!LG)return;
+  if(!on){LG.want=false;if(LG.rec){try{LG.rec.onend=null;LG.rec.stop()}catch{}LG.rec=null}return}
+  if(!SR||LG.want)return;
+  if(!await needPerm('mic','Guíame con voz','Escucha solo órdenes cortas («siguiente», «atrás», «repite», «cierra») mientras la guía esté abierta. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google.'))return;
+  LG.want=true;const run=()=>{if(!LG||!LG.want)return;const r=LG.rec=new SR();r.lang='es-ES';r.continuous=true;r.interimResults=false;
+    r.onresult=e=>{if(!LG||LG.speaking||Date.now()<LG.quiet)return;liveCmdText((e.results[e.results.length-1][0].transcript||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''))};
+    r.onend=()=>{if(LG&&LG.want)setTimeout(run,250)};r.onerror=()=>{};try{r.start()}catch{}};run()}
+function liveCmdText(t){const c=/\b(siguiente|adelante|listo|hecho|ya esta|continua)\b/.test(t)?'next':/\b(atras|anterior|vuelve)\b/.test(t)?'back':/\b(repite|repetir|otra vez|de nuevo)\b/.test(t)?'repeat':/\b(cierra|cerrar|salir|termina|detener|basta)\b/.test(t)?'close':'';
+  if(c)fetch('/guide/live/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:c})}).catch(()=>{})}
+/* ---------- esfuerzo: una barra que se abre al tocar el botón (Rápido · Estándar · Profundo) ---------- */
+const EFF_LABEL=l=>l<34?'Rápido':l<67?'Estándar':'Profundo',EFF_TXT=l=>l<34?'Respuestas más rápidas y breves.':l<67?'Equilibrio entre velocidad y calidad.':'Piensa con más calma, verifica y da respuestas más completas. Tarda más.';
+let LEVEL=Math.max(0,Math.min(100,+lsGet('dot-level','50')||50));
+function applyLevel(l,save){LEVEL=Math.max(0,Math.min(100,Math.round(+l)));const se=$('se');if(se&&[...se.options].some(o=>o.value===(LEVEL<34?'fast':LEVEL<67?'balanced':'deep')))se.value=LEVEL<34?'fast':LEVEL<67?'balanced':'deep';
+  $('eb').textContent='Esfuerzo: '+EFF_LABEL(LEVEL);if(save)lsSet('dot-level',LEVEL);const r=$('er');if(r){r.value=LEVEL;$('ev').textContent=EFF_LABEL(LEVEL)+' · '+LEVEL;$('et').textContent=EFF_TXT(LEVEL)}}
+(()=>{const p=document.createElement('div');p.id='ep';p.setAttribute('role','dialog');p.setAttribute('aria-label','Esfuerzo');
+  p.innerHTML='<div class="eh"><b id="ev"></b></div><input type="range" id="er" min="0" max="100" step="1" aria-label="Nivel de esfuerzo"><div class="et3"><button type="button" data-l="15">Rápido</button><button type="button" data-l="50">Estándar</button><button type="button" data-l="85">Profundo</button></div><p id="et"></p>';document.body.append(p);
+  $('er').oninput=e=>applyLevel(e.target.value,true);p.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>applyLevel(+b.dataset.l,true));
+  const close=()=>{p.classList.remove('on');$('eb').setAttribute('aria-expanded','false')};
+  $('eb').onclick=e=>{e.stopPropagation();const rc=$('eb').getBoundingClientRect();p.style.top=(rc.bottom+10)+'px';p.style.left=Math.max(10,Math.min(innerWidth-310,rc.right-300))+'px';const on=p.classList.toggle('on');$('eb').setAttribute('aria-expanded',on?'true':'false')};
+  addEventListener('click',e=>{if(!p.contains(e.target)&&e.target!==$('eb'))close()});addEventListener('keydown',e=>{if(e.key==='Escape')close()});applyLevel(LEVEL)})();
+/* ---------- historial ---------- */
+let HIST=[],CTL=null;
+async function loadHist(){HIST=await(await fetch('/chats')).json();drawHist()}
+function drawHist(){const h=$('hist'),q=($('hs').value||'').toLowerCase();h.innerHTML='';
+  HIST.filter(c=>!q||c.title.toLowerCase().includes(q)).forEach(c=>{const d=document.createElement('div');d.className='h'+(c.id===chatId?' on':'')+(c.pinned?' pinned':'');
+    d.innerHTML='<i class="pin" role="button" title="Fijar arriba">📌</i><span></span><i role="button" title="Borrar">✕</i>';const sp=d.querySelector('span');sp.textContent=c.title;
+    d.onclick=()=>openChat(c.id);
+    d.querySelector('.pin').onclick=async e=>{e.stopPropagation();await fetch('/chats/'+c.id,{method:'PATCH',body:JSON.stringify({pinned:!c.pinned})});loadHist()};
+    sp.ondblclick=e=>{e.stopPropagation();const i=document.createElement('input');i.className='rn';i.value=c.title;sp.replaceWith(i);i.focus();i.select();
+      const done=async ok=>{i.onblur=null;if(ok&&i.value.trim()&&i.value.trim()!==c.title)await fetch('/chats/'+c.id,{method:'PATCH',body:JSON.stringify({title:i.value.trim()})});loadHist()};
+      i.onkeydown=ev=>{if(ev.key==='Enter')done(true);if(ev.key==='Escape')done(false)};i.onblur=()=>done(true);i.onclick=ev=>ev.stopPropagation()};
+    d.querySelectorAll('i')[1].onclick=async e=>{e.stopPropagation();if(!confirm('¿Borrar esta charla? No se puede deshacer.'))return;await fetch('/chats/'+c.id,{method:'DELETE'});if(chatId===c.id)newChat();loadHist()};
+    h.append(d)})}
+$('hs').oninput=drawHist;
+async function openChat(id){if(busy)return;const c=await(await fetch('/chats/'+id)).json();chatId=id;log.innerHTML='';c.messages.forEach(m=>add(m.role==='user'?'u':'a',m.content));log.querySelectorAll('.m.a').forEach(actions);if(!c.messages.length)empty();scroll();loadHist();if(innerWidth<760)$('side').classList.add('hide')}
+function newChat(){if(busy)return;chatId=null;empty();loadHist();$('q').focus()}
+$('bn').onclick=newChat;$('bt').onclick=()=>$('side').classList.toggle('hide');
+
+/* ---------- envío con streaming + temporizador ---------- */
+async function send(text){
+  const nu=needUser(text);if(nu&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',nu.say);a.dataset.raw=nu.say;actions(a);stepCard(nu.card);return}
+  busy=true;CTL=new AbortController();$('go').textContent='■ Detener';$('go').classList.add('stop');if(log.querySelector('.empty'))log.innerHTML='';setMood('effort');
+  const imgs=IMGS.slice(),docs=DOCS.slice();IMGS=[];DOCS=[];renderPrev();const ub=add('u',text);imgs.forEach(s=>{const im=document.createElement('img');im.src=s;im.alt='Imagen enviada';ub.prepend(im)});
+  docs.forEach(d=>{const t=document.createElement('div');t.className='dchip';t.textContent='Documento: '+d.name;ub.prepend(t)});
+  let cur=null,think=null,raw='',tk=0;
+  const t0=performance.now();let first=null;$('dt').classList.add('on');$('tf').textContent='–';$('tp').textContent='–';
+  const iv=setInterval(()=>$('tm').textContent=fmt(performance.now()-t0),100);
+  const ensure=()=>{if(!cur){cur=add('a','');cur.classList.add('cur');raw=''}};
+  let prog=null;
+  try{
+    const r=await fetch('/chat',{method:'POST',signal:CTL.signal,body:JSON.stringify({message:text,chatId,model:$('sm').value,effort:$('se').value,level:LEVEL,images:imgs,docs:docs.map(d=>({name:d.name,text:d.text})),mode:$('sd').value})});
+    const rd=r.body.getReader(),dec=new TextDecoder();let buf='';
+    for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
+      let i;while((i=buf.indexOf('\n\n'))>=0){const ev=JSON.parse(buf.slice(5,i));buf=buf.slice(i+2);
+        if(ev.type==='chat'){chatId=ev.id}
+        else if(ev.type==='model'){$('tmod').textContent=ev.model}
+        else if(ev.type==='thinking'){
+          if(!think){think=document.createElement('details');think.className='think';think.innerHTML='<summary>Pensando…</summary><div></div>';log.append(think);think.t0=performance.now()}
+          think.lastChild.textContent+=ev.text;tk++}
+        else if(ev.type==='token'){
+          if(think&&!think.done){think.done=1;think.firstChild.textContent='Ver razonamiento ('+fmt(performance.now()-think.t0)+')'}
+          if(first===null){first=performance.now()-t0;$('tf').textContent=fmt(first)}
+          ensure();raw+=ev.text;cur.innerHTML=md(raw);cur.classList.add('cur')}
+        else if(ev.type==='tool'){if(cur){cur.classList.remove('cur');cur=null}note('t','🔧 '+ev.name+' '+JSON.stringify(ev.args).slice(0,140))}
+        else if(ev.type==='progress'){if(!prog)prog=note('pg','');prog.textContent='⏳ '+ev.text}
+        else if(ev.type==='tool_result'){if(prog){prog.remove();prog=null}note('t','↳ '+ev.result.slice(0,160).replace(/\s+/g,' '))}
+        else if(ev.type==='stats'){$('tp').textContent=ev.tps.toFixed(0)}
+        else if(ev.type==='notice'){note('t',ev.text)}
+        else if(ev.type==='guide'){startTour(ev.topic)}
+        else if(ev.type==='steps'){if(cur){cur.classList.remove('cur');cur=null}stepCard(ev)}else if(ev.type==='liveguide'){liveWatch()}
+        else if(ev.type==='image'){if(cur){cur.classList.remove('cur');cur=null}const b=add('a',''),a=document.createElement('a');a.href=ev.url;a.target='_blank';a.rel='noopener';const im=document.createElement('img');im.src=ev.url;im.alt='Imagen creada por Nixel';im.className='gen';a.append(im);b.append(a);
+          const dl=document.createElement('a');dl.href=ev.url;dl.download='';dl.textContent='Descargar';dl.className='dl';b.append(dl)}
+        else if(ev.type==='confirm'){const box=add('a','');box.textContent=ev.text+'\n';
+          const mk=(l,ok)=>{const b=document.createElement('button');b.textContent=l;b.style.cssText='margin:8px 8px 0 0';if(ok)b.className='pri';
+            b.onclick=()=>{fetch('/confirm',{method:'POST',body:JSON.stringify({id:ev.id,ok})});box.querySelectorAll('button').forEach(x=>x.remove())};box.append(b)};
+          mk('Permitir',true);mk('Rechazar',false)}
+        else if(ev.type==='error'){ensure();cur.textContent='Error: '+ev.text}
+        scroll()}}
+  }catch(e){ensure();if(e.name==='AbortError')cur.textContent=(raw?raw+'\n':'')+'(detenido)';else cur.textContent='Error: '+e.message}
+  if(cur){cur.classList.remove('cur');if(raw){cur.dataset.raw=raw;actions(cur)}}{const sc=stepsFromText(raw);if(sc)stepCard(sc)}if(think&&!think.done)think.firstChild.textContent='Ver razonamiento';
+  clearInterval(iv);$('tm').textContent=fmt(performance.now()-t0);$('dt').classList.remove('on');
+  busy=false;CTL=null;$('go').textContent='Enviar';$('go').classList.remove('stop');$('q').focus();loadHist();if(WKSPEAK){WKSPEAK=false;if(raw)wakeSay(raw.replace(/[*`#_>|]/g,'').slice(0,500))}
+  setMood(/(ja){2,}|jeje|haha|😂|🤣|😆|chiste/i.test(raw+' '+text)?'funny':'normal',3500);
+}
+$('row').onsubmit=e=>{e.preventDefault();if(busy){if(CTL)CTL.abort();return}const t=$('q').value.trim();if(!t&&!IMGS.length&&!DOCS.length)return;$('q').value='';$('q').style.height='';send(t||(DOCS.length&&!IMGS.length?'Resume este documento y señala los puntos más importantes.':$('sd').value==='homework'?'Resuelve paso a paso todas las tareas o ejercicios que aparecen en la imagen.':'Describe esta imagen.'))};
+$('q').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('row').requestSubmit()}};
+$('q').oninput=e=>{e.target.style.height='auto';e.target.style.height=Math.min(160,e.target.scrollHeight)+'px'};
+
+/* ---------- modelos / configuración ---------- */
+const fill=(sel,opts,val)=>{sel.innerHTML='';opts.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.append(o)});sel.value=val};
+async function loadModels(){const m=await(await fetch('/models')).json();const nice=x=>{const r=[[/^qwen3/i,'Qwen 3'],[/^qwen2\.5vl/i,'Qwen 2.5 VL'],[/^qwen2\.5/i,'Qwen 2.5'],[/^gemma3/i,'Gemma 3'],[/^llama3\.2/i,'Llama 3.2'],[/^llama3/i,'Llama 3']].find(([re])=>re.test(x)),sz=(/:(\d+(?:\.\d+)?b)/i.exec(x)||[])[1];return r?r[1]+(sz?' · '+sz.toUpperCase():'')+(/instruct/i.test(x)?' Instruct':''):x},
+    bd=x=>{const c=(m.caps&&m.caps[x])||[];return c.includes('vision')?' · ve imágenes':''},mo=m.models.map(x=>[x,(m.labels&&m.labels[x])||nice(x)+bd(x)]),ef=Object.entries(m.efforts);
+  fill($('sm'),mo,m.current);fill($('se'),ef,m.effort);fill($('cm'),mo,m.current);fill($('ce'),ef,m.effort);$('tmod').textContent=m.current;applyLevel(LEVEL)}
+async function openSet(){await loadModels();CFG=await(await fetch('/config')).json();
+  $('pf').textContent=P?(P.anonymous?'Anónimo':P.name)+' · tono '+(P.tone==='custom'?'personalizado':(ob.tones[P.tone]||P.tone).toLowerCase()):'Aún sin perfil';paintMembers();
+  $('sl').value=CFG.safetyLevel;origLevel=CFG.safetyLevel;$('lgo').value=CFG.legal.owner;$('lgm').value=CFG.legal.email;$('lgc2').value=CFG.legal.country;
+  await loadAuth().catch(()=>{});renderOAuth();renderCloud();renderGw();
+  $('acl').textContent=AUTH.user?'Sesión iniciada: '+(AUTH.user.name||AUTH.user.email||(P&&P.name)||'')+' ('+({password:'correo',google:'Google',facebook:'Facebook',huawei:'Huawei',apple:'Apple',guest:'invitado: tus charlas solo están en este navegador; inicia sesión con Google, Facebook o Huawei para verlas en todos tus dispositivos'}[AUTH.user.provider]||AUTH.user.provider)+')':'Sin iniciar sesión: usas los datos locales de este PC';
+  $('acb').textContent=AUTH.user?'Cerrar sesión':'Iniciar sesión';
+  $('thset').innerHTML=themeHTML();bindThemes($('thset'));renderMem();initAppearance();
+  $('cr').value=CFG.researchSources;$('cx').value=CFG.extraPrompt||'';$('lo').checked=CFG.lan.enabled;$('lp').value=CFG.lan.pin;$('lt').checked=CFG.remoteTools;
+  $('rh').value=CFG.remote.host;$('ru').value=CFG.remote.user;$('rp').value=CFG.remote.port;$('rk').value=CFG.remote.key;$('rr').textContent='';
+  const p=$('perms');p.innerHTML='';Object.entries(CFG.tools).forEach(([k,d])=>{const l=document.createElement('div');l.innerHTML='<b></b><small></small>';l.firstChild.textContent=k;l.lastChild.textContent=d.slice(0,90);
+    const s=document.createElement('select');s.dataset.k=k;[['auto','Automático'],['ask','Preguntar'],['deny','Bloqueado']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;s.append(o)});s.value=CFG.perms[k]||'ask';p.append(l,s)});
+  const mem=await(await fetch('/memory')).json();$('mem').textContent='Nixel recuerda '+mem.facts.length+' dato(s) sobre ti'+(mem.facts.length?': '+mem.facts.join(' · ').slice(0,200):'.');
+  $('lurl').textContent=CFG.lan.enabled&&CFG.lan.ips.length?'Desde otro dispositivo abre: '+CFG.lan.ips.map(i=>'http://'+i+':'+CFG.lan.port).join('   '):'';
+  const ro=!CFG.isLocal;$('ro').textContent=ro?'Solo se puede cambiar desde el PC donde corre Nixel.':'';$('ss').style.display=ro?'none':'';
+  $('ov').classList.add('on')}
+$('bs').onclick=openSet;$('sc').onclick=()=>$('ov').classList.remove('on');$('ov').onclick=e=>{if(e.target===$('ov'))$('ov').classList.remove('on')};
+$('rt').onclick=async()=>{const r=$('rr');r.style.color='var(--mut)';r.textContent='Conectando…';
+  await fetch('/config',{method:'POST',body:JSON.stringify({remote:{host:$('rh').value,user:$('ru').value,port:+$('rp').value||22,key:$('rk').value}})});
+  try{const j=await(await fetch('/remote/test',{method:'POST'})).json();r.style.color=j.ok?'var(--ok)':'var(--bad)';r.textContent=(j.ok?'✔ ':'✘ ')+j.text}catch(e){r.style.color='var(--bad)';r.textContent='✘ '+e.message}};
+$('pe').onclick=()=>{$('ov').classList.remove('on');openOb('name')};
+$('cmem').onclick=async()=>{await fetch('/memory',{method:'DELETE'});$('mem').textContent='Memoria borrada.'};
+function renderCloud(){const C=CFG.cloud,PR=CFG.cloudPresets;fill($('cp'),Object.entries(PR).map(([k,v])=>[k,v.label]),C.provider);
+  const link=()=>{const p=PR[$('cp').value];$('cpl').innerHTML=p&&p.keyUrl?`Crea tu clave gratis aquí: <a href="${p.keyUrl}" target="_blank" rel="noopener" style="color:var(--acc)">${p.keyUrl}</a>`:''};
+  const pre=PR[C.provider];$('cu').value=C.baseUrl||(pre?pre.baseUrl:'');$('cm2').value=C.model||(pre?pre.model:'');$('ck2').value='';
+  $('ck2').placeholder=C.hasKey?'(clave guardada — escribe otra solo para cambiarla)':'Pega tu clave de API';$('cuf').value=C.useFor||'media';$('cco').checked=!!C.consent;$('cen').checked=!!C.enabled;$('ctr').textContent='';link();
+  $('cp').onchange=()=>{const p=PR[$('cp').value];if(p&&$('cp').value!=='custom'){$('cu').value=p.baseUrl;$('cm2').value=p.model}link()}}
+async function renderGw(){const G=CFG.gateway||{},m=await(await fetch('/models')).json();$('gwe').checked=!!G.enabled;$('gwo').value=(G.origins||[]).join(', ');$('gwh').value=G.perHour||40;
+  $('gws').textContent=G.enabled?'Activa en 127.0.0.1:'+G.port+'. Publíquela con un túnel apuntando a ese puerto.':'Apagada.';
+  const b=$('gwm');b.innerHTML='';m.models.forEach(x=>{const l=document.createElement('label');l.className='ck';l.innerHTML='<input type="checkbox"> <span></span>';l.firstChild.value=x;l.firstChild.checked=(G.models||[]).includes(x);l.lastChild.textContent=x;b.append(l)})}
+const gwForm=()=>({enabled:$('gwe').checked,origins:$('gwo').value.split(/[,\s]+/).filter(Boolean),perHour:+$('gwh').value||40,models:[...document.querySelectorAll('#gwm input:checked')].map(i=>i.value)});
+const cloudForm=()=>({provider:$('cp').value,baseUrl:$('cu').value,model:$('cm2').value,key:$('ck2').value,useFor:$('cuf').value,consent:$('cco').checked,enabled:$('cen').checked});
+$('ctb').onclick=async()=>{const r=$('ctr');r.style.color='var(--mut)';r.textContent='Probando…';
+  await fetch('/config',{method:'POST',body:JSON.stringify({cloud:cloudForm()})});$('ck2').value='';
+  try{const j=await(await fetch('/cloud/test',{method:'POST'})).json();r.style.color=j.ok?'var(--ok)':'var(--bad)';r.textContent=j.ok?`✔ Responde en ${(j.ms/1000).toFixed(1)} s («${j.text}»)`:'✘ '+j.error}catch(e){r.style.color='var(--bad)';r.textContent='✘ '+e.message}};
+let origLevel='balanced';
+$('dlx').onclick=()=>{location.href='/account/export'};
+$('dld').onclick=async()=>{const t=prompt('Esto BORRA tu perfil, chats y memoria (y tu cuenta, si iniciaste sesión). No se puede deshacer.\n\nEscribe BORRAR para confirmar:');if(t!=='BORRAR')return;
+  const r=await fetch('/account/delete',{method:'POST',body:JSON.stringify({confirm:'BORRAR'})});if(!r.ok){alert((await r.json().catch(()=>({}))).error||'No se pudo borrar');return}
+  try{localStorage.removeItem('dot-guest')}catch{}location.reload()};
+$('ss').onclick=async()=>{if($('cen').checked&&!$('cco').checked){alert('Para activar la nube marca primero la casilla de consentimiento.');return}const lvl=$('sl').value,lvlChanged=lvl!==origLevel&&lvl!=='custom';const oauth={};document.querySelectorAll('#oas [data-p]').forEach(i=>{(oauth[i.dataset.p]||={})[i.dataset.f]=i.value});const perms={};document.querySelectorAll('#perms select').forEach(s=>perms[s.dataset.k]=s.value);
+  if($('lo').checked&&!$('lp').value.trim()){alert('Pon un código de acceso para activar el acceso remoto.');return}
+  await fetch('/config',{method:'POST',body:JSON.stringify({model:$('cm').value,effort:$('ce').value,researchSources:+$('cr').value||40,extraPrompt:$('cx').value,cloud:cloudForm(),gateway:gwForm(),perms:lvlChanged?undefined:perms,safety:lvlChanged?lvl:undefined,legal:{owner:$('lgo').value,email:$('lgm').value,country:$('lgc2').value},remoteTools:$('lt').checked,remote:{host:$('rh').value,user:$('ru').value,port:+$('rp').value||22,key:$('rk').value},oauth,publicUrl:$('opu').value,lan:{enabled:$('lo').checked,pin:$('lp').value.trim()}})});
+  $('ov').classList.remove('on');loadModels()};
+addEventListener('keydown',e=>{if(e.key==='Escape')$('ov').classList.remove('on')});
+
+init();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script><script>
+/* Edición web (Cloudflare): oculta lo que solo tiene sentido en el PC */
+(()=>{const stop=n=>!n||n.tagName==='H4'||(n.querySelector&&n.querySelector('#ss'));
+ const hide=t=>document.querySelectorAll('#set h4').forEach(h=>{if(h.textContent.trim().startsWith(t)){let n=h;do{n.style.display='none';n=n.nextElementSibling}while(!stop(n))}});
+ ['Modelo','Seguridad','Permisos de herramientas','Memoria','Acceso desde otros dispositivos','Cuentas (avanzado)','Nube opcional','PC remota'].forEach(hide);
+ document.querySelectorAll('#set details').forEach(d=>d.style.display='none');
+ const w=document.getElementById('wbn');if(w&&w.closest('.r'))w.closest('.r').style.display='none';
+ const s=document.createElement('style');s.textContent='#eb,#se,#gpuc,#lgf,.or{display:none!important}';document.head.appendChild(s)})();
+</script></body></html>

@@ -1,0 +1,36 @@
+# Nixel Cloud · configuración de Cloudflare Workers
+name = "nixel"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+# La interfaz web (carpeta public). El Worker atiende primero todas las peticiones.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+# Modelos de IA de Cloudflare (Workers AI): tiene un cupo diario gratuito.
+[ai]
+binding = "AI"
+
+# Base de datos (D1). Ejecuta:  npx wrangler d1 create dot-db   y pega aquí el database_id que te da.
+[[d1_databases]]
+binding = "DB"
+database_name = "dot-db"
+database_id = "da640542-ea23-4e12-a55e-06dd30762541"
+
+[vars]
+# Límite diario por persona, en PUNTOS: los modelos grandes gastan más (ver LEEME.md). Protege tu cupo.
+DAILY_LIMIT = "80"
+LEGAL_OWNER = ""              # tu nombre o empresa (aparece en los términos y la privacidad)
+LEGAL_EMAIL = ""              # correo de contacto
+LEGAL_COUNTRY = ""            # país o jurisdicción
+
+# Catálogo de modelos que se ofrecen en el botón de modelos. Si no pones nada, se usa el de por defecto
+# (Llama 3.2 3B, Mistral Small 24B, Llama 3.3 70B; Mistral Small también lee imágenes).
+# Los nombres cambian con el tiempo: confírmalos en https://developers.cloudflare.com/workers-ai/models/
+# Ejemplo (w = peso en el límite diario; def = modelo predeterminado; vision = se usa solo con imágenes):
+# MODELS = '[{"id":"@cf/meta/llama-3.2-3b-instruct","label":"Rápido","w":1},{"id":"@cf/meta/llama-3.3-70b-instruct-fp8-fast","label":"Potente","w":3,"def":true},{"id":"@cf/mistralai/mistral-small-3.1-24b-instruct","label":"Imágenes","w":2,"vision":true}]'
+
+# PUBLIC_URL = "https://nixel.tudominio.com"   # solo si usas un dominio propio
+# Las claves de inicio de sesión NO van aquí: se guardan como secretos (ver LEEME.md).

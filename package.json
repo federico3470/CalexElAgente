@@ -1,0 +1,11 @@
+{
+  "name": "dot-cloud",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/worker-check.mjs",
+    "preview": "node test/dev-server.mjs",
+    "deploy": "npx wrangler deploy"
+  }
+}
