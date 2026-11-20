@@ -43,7 +43,8 @@ rep("recorte para web", "</body>", `<script>
 h = h.replace(/\bDot\b/g, "Nixel").replace(/\bDOT\b/g, "NIXEL");
 fs.mkdirSync(path.join(HERE, "public"), { recursive: true });
 fs.writeFileSync(path.join(HERE, "public", "index.html"), h);
-for (const f of ["manifest.json", "sw.js", "icon.svg"]) fs.copyFileSync(path.join(LOCAL, f), path.join(HERE, "public", f));
+for (const f of ["sw.js", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png"]) fs.copyFileSync(path.join(LOCAL, f), path.join(HERE, "public", f));
+fs.writeFileSync(path.join(HERE, "public", "manifest.json"), fs.readFileSync(path.join(LOCAL, "manifest.json"), "utf8").replace(/\bDot\b/g, "Nixel")); // la app instalada se llama Nixel
 const L = (n) => fs.readFileSync(path.join(HERE, "legal", n + ".html"), "utf8");
 fs.writeFileSync(path.join(HERE, "src", "legal.js"), "// Generado por build.mjs desde legal/*.html. No editar a mano.\nexport const LEGAL = " + JSON.stringify({ terminos: L("terminos"), privacidad: L("privacidad") }) + ";\n");
 console.log("OK · public/index.html", (h.length / 1024).toFixed(0), "KB · src/legal.js");
