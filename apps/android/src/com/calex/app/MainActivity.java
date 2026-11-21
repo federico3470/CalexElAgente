@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -55,7 +56,7 @@ public class MainActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.3");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.4");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
       @Override public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {
@@ -101,6 +102,7 @@ public class MainActivity extends Activity {
       web.loadUrl(HOST + "/auth/app?code=" + Uri.encode(d.getQueryParameter("code")));
       return true;
     }
+    if (d != null && "calex".equals(d.getScheme()) && "connected".equals(d.getHost())) { js("window.dispatchEvent(new Event('calex-connected'))"); return true; } // volvió de vincular un conector
     return false;
   }
 
@@ -117,6 +119,15 @@ public class MainActivity extends Activity {
         listen();
       } });
     }
+    /** Abre un enlace https en el navegador (la vinculación de conectores no puede hacerse dentro del WebView). */
+    @JavascriptInterface public void openExternal(final String url) {
+      runOnUiThread(new Runnable() { public void run() { try { Uri u = Uri.parse(url); if ("https".equals(u.getScheme())) startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) { } } });
+    }
+    /** Música del celular: la isla dinámica de la interfaz la lee y la controla (ver Media.java). */
+    @JavascriptInterface public boolean mediaAccess() { return Media.hasAccess(MainActivity.this); }
+    @JavascriptInterface public void mediaSettings() { runOnUiThread(new Runnable() { public void run() { try { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); } catch (Exception e) { } } }); }
+    @JavascriptInterface public String mediaState() { return Media.state(MainActivity.this); }
+    @JavascriptInterface public void mediaCmd(String c) { Media.cmd(MainActivity.this, c); }
     @JavascriptInterface public void stop() { runOnUiThread(new Runnable() { public void run() { if (sr != null) sr.stopListening(); } }); }
   }
 

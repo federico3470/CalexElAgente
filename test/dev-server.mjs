@@ -9,7 +9,7 @@ const AI = { async run(model, input) { const last = input.messages.at(-1), img =
   return new ReadableStream({ async start(c) { for (const w of txt.split(" ")) { c.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ response: w + " " })}\n\n`)); await new Promise((r) => setTimeout(r, 40)); } c.enqueue(new TextEncoder().encode("data: [DONE]\n\n")); c.close(); } }); } };
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml" };
 const ASSETS = { fetch: async (req) => { const p = new URL(req.url).pathname, f = path.join(ROOT, "public", p === "/" ? "index.html" : p.slice(1)); return fs.existsSync(f) && fs.statSync(f).isFile() ? new Response(fs.readFileSync(f), { headers: { "Content-Type": MIME[path.extname(f)] || "application/octet-stream" } }) : new Response("no encontrado", { status: 404 }); } };
-const env = { DB, AI, ASSETS, DAILY_LIMIT: "500", LEGAL_OWNER: "(vista previa)", LEGAL_EMAIL: "tu@correo.com", LEGAL_COUNTRY: "(tu país)" };
+const env = { DB, AI, ASSETS, DAILY_LIMIT: "500", LEGAL_OWNER: "(vista previa)", LEGAL_EMAIL: "tu@correo.com", LEGAL_COUNTRY: "(tu país)", STATS_KEY: "vista-previa-clave-1", SPOTIFY_CLIENT_ID: "demo", GOOGLE_CLIENT_ID: "demo", GOOGLE_CLIENT_SECRET: "demo" };
 http.createServer(async (rq, rs) => {
   const chunks = []; for await (const c of rq) chunks.push(c); const body = Buffer.concat(chunks);
   const url = `http://${rq.headers.host}${rq.url}`, req = new Request(url, { method: rq.method, headers: rq.headers, body: ["GET", "HEAD"].includes(rq.method) ? undefined : body });

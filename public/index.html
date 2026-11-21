@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr0tblh">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr1t6ev">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -400,10 +400,41 @@ body.tv #kp .kpc{width:min(22em,92vw);padding:1.2em 1.5em}body.tv #kp .kpd{font-
 #tva p{margin:.3em 0;color:var(--mut);line-height:1.45;font-size:.85em}#tva .tvcode{font:700 2.6em Georgia,serif;letter-spacing:.22em;color:var(--acc);margin:.15em 0 .1em;padding-left:.22em}
 #tva .tvcta2{display:flex;gap:.8em;justify-content:center;margin-top:.8em}
 body.tv #tvlrow{display:none}
+/* conectores, isla de música y easter eggs */
+#cnov{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:16px;z-index:9}#cnov.on{display:flex}
+#cnp{width:min(720px,100%);max-height:90vh;overflow:auto;padding:20px 22px;border-radius:28px;background-color:var(--gl2);border:1px solid var(--glb);box-shadow:var(--spec),var(--sh);-webkit-backdrop-filter:blur(var(--blur)) saturate(150%);backdrop-filter:blur(var(--blur)) saturate(150%)}
+#cnp h3{margin:0 0 2px;font-weight:600}#cnp>small{color:var(--mut);display:block;margin-bottom:8px;line-height:1.4}
+#cnp h4{margin:16px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.cnc{display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:20px;border:1px solid var(--glb);background:color-mix(in srgb,var(--panel) 50%,transparent);margin:6px 0;flex-wrap:wrap}
+.cnc .cni{font-size:24px;width:34px;text-align:center}.cnc .cnt{flex:1;min-width:160px}.cnc .cnt b{display:block}.cnc .cnt small{color:var(--mut);display:block;line-height:1.35}
+.cnc.on{border-color:color-mix(in srgb,var(--ok) 50%,var(--glb))}.cnc .st{color:var(--ok);font-size:12.5px}
+.cnf{flex-basis:100%;display:grid;gap:8px}.cnf[hidden]{display:none}.cnf label{font-size:12.5px;color:var(--mut)}.cnf input{width:100%;padding:9px 14px}.cnf .sbtn{justify-content:flex-end}
+.cnk{display:grid;gap:6px;margin:8px 0 10px}.cnk div{padding:8px 12px;border-radius:14px;background:color-mix(in srgb,var(--panel) 60%,transparent);border:1px solid var(--glb);white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.45}.cnk span{display:block;font-size:11.5px;color:var(--mut);letter-spacing:.05em;text-transform:uppercase}
+#isl{line-height:1.3;position:fixed;top:7px;left:50%;transform:translateX(-50%);z-index:8;display:none;color:#fff;font-size:13px;-webkit-tap-highlight-color:transparent}#isl.on{display:block}
+#isl .islp{background:#000;border-radius:24px;box-shadow:0 6px 24px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.08);display:flex;align-items:center;gap:8px;height:34px;padding:4px 12px 4px 4px;cursor:pointer;max-width:min(260px,46vw);transition:transform .2s var(--spring)}
+#isl .islp:active{transform:scale(.95)}
+#isl .isla,#isl .isla2{border-radius:50%;object-fit:cover;background:#26262b;flex:none;display:inline-grid;place-items:center;color:#9aa;font-size:13px}#isl .isla{width:26px;height:26px}#isl .isla2{width:52px;height:52px;border-radius:14px;font-size:22px}
+#isl .isla[hidden],#isl .isla2[hidden]{display:none}
+#isl .istt{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:140px;font-weight:500}
+#isl .islq{display:flex;gap:2px;align-items:flex-end;height:14px}#isl .islq i{width:3px;height:100%;background:var(--acc);border-radius:2px;transform-origin:bottom;animation:eqb .9s ease-in-out infinite}#isl .islq i:nth-child(2){animation-delay:-.3s}#isl .islq i:nth-child(3){animation-delay:-.6s}#isl .islq i:nth-child(4){animation-delay:-.15s}
+#isl.pause .islq i{animation:none;transform:scaleY(.25)}
+@keyframes eqb{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+#isl .islb{display:none;background:#000;border-radius:30px;width:min(360px,92vw);padding:14px 16px 12px;box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.08);transform-origin:top center}
+#isl.open .islp{display:none}#isl.open .islb{display:block;animation:islin .38s var(--spring) both}
+@keyframes islin{from{transform:scale(.55,.35);opacity:.2}to{transform:none;opacity:1}}
+#isl .islt{display:flex;gap:12px;align-items:center}#isl .islm{flex:1;min-width:0}#isl .islm b,#isl .islm small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#isl .islm small{color:#a9a9b3;margin-top:2px}
+#isl .islx{background:transparent;border:0;color:#9a9aa5;font-size:15px;padding:4px 8px}
+#isl .islr{height:4px;border-radius:2px;background:#2b2b31;margin:12px 0 8px;overflow:hidden}#isl .islr i{display:block;height:100%;width:0;background:#fff;border-radius:2px;transition:width 1s linear}
+#isl .islc{display:flex;justify-content:center;gap:10px}#isl .islc button{background:#1c1c21;border:0;color:#fff;border-radius:50%;width:48px;height:48px;font-size:18px;padding:0;display:inline-grid;place-items:center}#isl .islc button:hover{background:#2a2a31;transform:none}
+.rain{position:fixed;inset:0;pointer-events:none;z-index:97;overflow:hidden}.rain span{position:absolute;top:-8%;animation:rainf 2.8s linear forwards}@keyframes rainf{to{transform:translateY(118vh) rotate(380deg)}}
+body.tv #isl,body.tv #bcn,body.tv #cnov{display:none!important}
+@media(prefers-reduced-motion:reduce){#isl *{animation:none!important}.rain{display:none}}
+@media(max-width:760px){#isl .tt{max-width:80px}#isl .pill{max-width:42vw}}
 </style></head><body>
 <aside id="side">
   <div class="sh"><button class="pri" id="bn">+ Nueva charla</button></div>
   <div class="hl">Historial</div><div style="padding:0 14px 6px"><input type="search" id="hs" placeholder="Buscar charlas…" aria-label="Buscar en el historial" style="width:100%;padding:8px 14px"></div><div id="hist"></div>
+  <div class="sh" style="padding-bottom:0"><button id="bcn">🔌 Conectores</button></div>
   <div class="sh"><button id="bs">⚙ Configuración</button></div>
   <div id="credit">hecho en casa</div>
 </aside>
@@ -433,12 +464,15 @@ body.tv #tvlrow{display:none}
   <div id="lvb"><button type="button" id="lvc">📷 Cámara</button><button type="button" id="lvm">🎤 Micrófono</button><button type="button" class="x" id="lvx">Salir</button></div></div>
 <div id="lg"><div id="lgc"></div></div>
 <div id="ob"><div id="obc"></div></div>
+<div id="cnov"><div id="cnp" role="dialog" aria-label="Conectores"></div></div>
+<div id="isl" aria-live="polite"></div>
 <div id="ov"><div id="set" role="dialog" aria-label="Configuración">
   <h3>Configuración</h3><small style="color:var(--mut)" id="ro"></small>
   <h4>Cuenta</h4>
   <div class="r"><label id="acl">…</label><button id="acb">Iniciar sesión</button></div>
   <h4>Apariencia</h4>
   <div id="thset"></div>
+  <div class="r" id="a3r" style="display:none"><label>Personas realistas en 3D (beta)<small>Prueba experimental. Por defecto se usan las personas de siempre.</small></label><input type="checkbox" id="a3t"></div>
   <div class="r"><label>Intensidad del cristal<small>Más desenfoque y transparencia, o más sólido.</small></label><input type="range" id="gls" min="0" max="100" style="width:150px"></div>
   <div class="r"><label>Tamaño del texto</label><select id="fsz"><option value="14">Pequeño</option><option value="15">Normal</option><option value="17">Grande</option><option value="19">Muy grande</option></select></div>
   <div class="r"><label><input type="checkbox" id="anm"> Animaciones y fondo en movimiento</label></div>
@@ -509,6 +543,7 @@ body.tv #tvlrow{display:none}
   <div class="r" style="justify-content:flex-end;margin-top:12px"><button id="sc">Cerrar</button><button class="pri" id="ss">Guardar</button></div>
 </div></div>
 
+<script src="/avatar3d.js"></script>
 <script>
 const $=id=>document.getElementById(id);let chatId=null,busy=false,CFG=null;
 const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -544,7 +579,9 @@ const AVK=Object.keys(PEOPLE),AVN=Object.fromEntries(AVK.map(k=>[k,PEOPLE[k].n])
 const DEF={kind:'mateo',color:'#4fc3f7',acc:0};
 const COLORS=['#4fc3f7','#ef6b6b','#5ad19a','#f5b342','#9b7cf4','#ff8fb1','#8b93a5','#2b2f3a'];
 const shade=(h,k)=>{const n=parseInt(h.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(k<0?v*(1+k):v+(255-v)*k)));return '#'+[n>>16&255,n>>8&255,n&255].map(f).map(v=>v.toString(16).padStart(2,'0')).join('')};
-function avatar(a,m='normal',size=48){a={...DEF,...a};const K=PEOPLE[a.kind]?a.kind:'mateo',p=PEOPLE[K],c=/^#[0-9a-f]{6}$/i.test(a.color||a.shirt||'')?(a.color||a.shirt):DEF.color,skin=/^#[0-9a-f]{6}$/i.test(a.skin||'')?a.skin:p.skin,hc=p.hair;
+const A3on=()=>{try{return localStorage.getItem('calex-a3d')==='on'}catch{return false}};
+function avatar(a,m='normal',size=48){a={...DEF,...a};
+  if(window.A3D&&A3D.ok&&A3on()){const u=A3D.url({kind:PEOPLE[a.kind]?a.kind:'mateo',skin:a.skin,color:a.color||a.shirt,acc:a.acc},m,size);if(u)return '<img class="av m-'+m+'" src="'+u+'" width="'+size+'" height="'+size+'" alt="" style="border-radius:50%;object-fit:cover">'} // versión Cloudflare: persona 3D realista (avatar3d.js)const K=PEOPLE[a.kind]?a.kind:'mateo',p=PEOPLE[K],c=/^#[0-9a-f]{6}$/i.test(a.color||a.shirt||'')?(a.color||a.shirt):DEF.color,skin=/^#[0-9a-f]{6}$/i.test(a.skin||'')?a.skin:p.skin,hc=p.hair;
   const id='c'+(++uid),sk1=shade(skin,.3),sk2=shade(skin,-.18),sk3=shade(skin,-.34),sh1=shade(c,.28),sh2=shade(c,-.3),h1=shade(hc,.25),h2=shade(hc,-.35),old=!!p.old,fem=p.g==='mujer',DARK='#2b2320',MOUTH='#8a3a3a';
   const defs=`<defs><clipPath id="${id}"><circle cx="50" cy="50" r="50"/></clipPath>
 <radialGradient id="${id}b" cx="35%" cy="22%" r="95%"><stop offset="0" stop-color="#f7f2e8"/><stop offset="1" stop-color="#c9d3dd"/></radialGradient>
@@ -1039,7 +1076,7 @@ function drawHist(){const h=$('hist'),q=($('hs').value||'').toLowerCase();h.inne
     d.querySelectorAll('i')[1].onclick=async e=>{e.stopPropagation();if(!confirm('¿Borrar esta charla? No se puede deshacer.'))return;await fetch('/chats/'+c.id,{method:'DELETE'});if(chatId===c.id)newChat();loadHist()};
     h.append(d)})}
 $('hs').oninput=drawHist;
-async function openChat(id){if(busy)return;const c=await(await fetch('/chats/'+id)).json();chatId=id;log.innerHTML='';c.messages.forEach(m=>add(m.role==='user'?'u':'a',m.content));log.querySelectorAll('.m.a').forEach(actions);if(!c.messages.length)empty();scroll();loadHist();if(innerWidth<760)$('side').classList.add('hide')}
+async function openChat(id){if(busy)return;const c=await(await fetch('/chats/'+id)).json();chatId=id;log.innerHTML='';c.messages.forEach(m=>{const u=m.role==='user';if(u&&String(m.content).startsWith('⟦resultado⟧')){note('t','🔌 Datos de un conector');return}const v=u?m.content:vis(m.content);if(v)add(u?'u':'a',v)});log.querySelectorAll('.m.a').forEach(actions);if(!c.messages.length)empty();scroll();loadHist();if(innerWidth<760)$('side').classList.add('hide')}
 function newChat(){if(busy)return;chatId=null;empty();loadHist();$('q').focus()}
 $('bn').onclick=newChat;$('bt').onclick=()=>$('side').classList.toggle('hide');
 /* ---------- móvil: menú «⋯» del encabezado y cierre del historial al tocar fuera ---------- */
@@ -1183,22 +1220,122 @@ function secretMode(){const on=document.body.classList.toggle('maquina');trot();
   let seq='';addEventListener('keydown',e=>{if(!$('ov').classList.contains('on')||kp.classList.contains('on'))return;if(/^\d$/.test(e.key)){seq=(seq+e.key).slice(-SECRET.length);if(seq===SECRET){seq='';$('sc').click();secretMode()}}else if(!['Shift','Control','Alt'].includes(e.key))seq=''});
   addEventListener('keydown',e=>{if(kp.classList.contains('on')&&/^\d$/.test(e.key)){e.preventDefault();press(e.key)}else if(kp.classList.contains('on')&&e.key==='Backspace'){e.preventDefault();press('⌫')}},true)})();
 const plain=s=>String(s).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const VERS=['Jehová es mi pastor; nada me faltará. — Salmos 23:1','Todo lo puedo en Cristo que me fortalece. — Filipenses 4:13','Fíate de Jehová de todo tu corazón, y no te apoyes en tu propia prudencia. — Proverbios 3:5','Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas. — Josué 1:9','Dios es nuestro amparo y fortaleza, nuestro pronto auxilio en las tribulaciones. — Salmos 46:1','Y la paz de Dios, que sobrepasa todo entendimiento, guardará vuestros corazones y vuestros pensamientos en Cristo Jesús. — Filipenses 4:7'];
+function rain(list,n=26){const box=document.createElement('div');box.className='rain';for(let i=0;i<n;i++){const s=document.createElement('span');s.textContent=list[i%list.length];s.style.cssText='left:'+(Math.random()*96)+'%;animation-delay:'+(Math.random()*1.2)+'s;font-size:'+(18+Math.random()*22)+'px';box.append(s)}document.body.append(box);setTimeout(()=>box.remove(),4400)}
+const pick=a=>a[Math.floor(Math.random()*a.length)];
 function eggReply(t){const s=plain(t);
   if(/^(guau|woof|\/perro)$/.test(s))return{say:'Guau. El guardián del hogar está de ronda.',fx:()=>trot()};
   if(s==='/familia'||s==='/integrantes')return{say:MEMBERS.map(m=>m.name+' — '+m.title).join('\n')};
   if(/^(quien te (hizo|creo|programo)|\/fede)\??$/.test(s))return{say:'Lo programó Fede. Lo probó la familia. Lo vigila el perro.'};
+  if(s==='/asado')return{say:'Asado en marcha: chorizo, morcilla y vacío. Sal gruesa y paciencia: el fuego se cuida, no se apura.',fx:()=>rain(['🥩','🔥','🌭','🧉'])};
+  if(s==='/mate'||s==='mate')return{say:'Cebando… el primero siempre sale amargo. Se comparte y no se revuelve la bombilla.',fx:()=>rain(['🧉'],18)};
+  if(s==='/gol'||s==='gol')return{say:'¡Goooool de Argentina! Dale campeón, dale campeón.',fx:()=>rain(['⚽','🇦🇷','⭐'])};
+  if(s==='/versiculo')return{say:pick(VERS)};
+  if(s==='/paz')return{say:VERS[5]};
+  if(s==='/dado')return{say:'Salió el '+(1+Math.floor(Math.random()*6))+'.'};
+  if(s==='/moneda')return{say:Math.random()<.5?'Cara.':'Ceca.'};
+  if(s==='/truco')return{say:'Truco. … Quiero retruco. … Quiero vale cuatro. Cuidado: acá juega el perro.',fx:()=>trot()};
+  if(/^(cual es el sentido de la vida|sentido de la vida)\??$/.test(s))return{say:'Para las computadoras, 42. Para esta casa: amar a Dios y cuidar a la familia.'};
+  if(s==='/konami')return{say:'Arriba, arriba, abajo, abajo, izquierda, derecha, izquierda, derecha, B, A. Probalo con un teclado.'};
+  if(s==='/calex')return{say:'Calex: el que ayuda a la familia. Hecho en casa, con paciencia y mate.'};
   const m=!ONE&&MEMBERS.find(x=>plain(x.name)===s);
   if(m)return{say:m.name+': '+m.title+'.'+(m.id==='fede'?' Quien lo programó. Se le agradece, y se le pide que duerma.':m.id==='perro'?' Guau.':''),fx:m.id==='perro'?()=>trot():null};
   return null}
 
 
+(()=>{const K=['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a'];let i=0;addEventListener('keydown',e=>{const k=(e.key||'').toLowerCase();i=k===K[i]?i+1:(k===K[0]?1:0);if(i===K.length){i=0;rain(['⭐','✨','🕹️','🎮']);tip('Código Konami: +30 vidas')}});
+  const lg=document.querySelector('header svg');let n=0,t0=0;if(lg)lg.addEventListener('click',()=>{const now=Date.now();n=now-t0<900?n+1:1;t0=now;if(n>=7){n=0;rain(['🥩','🔥','🧉','🇦🇷']);tip('Modo asado: ¡a la parrilla!')}})})();
+/* ---------- conectores (Gmail, Spotify, …) y música ---------- */
+let CONN=[];const CNW={'music.now':0,'music.play':1,'music.pause':1,'music.next':1,'music.prev':1,'music.volume':1};
+const connOn=id=>CONN.some(c=>c.id===id&&c.connected);
+const NAT=()=>window.CalexNative&&typeof CalexNative.mediaAccess==='function';
+const ACTRE=/```calex-action\s*([\s\S]*?)```/,vis=t=>String(t||'').replace(/```calex-action[\s\S]*?(```|$)/g,'').trim();
+const CNL={'gmail.send':'Enviar un correo','calendar.create':'Crear un evento','github.issue_create':'Crear una incidencia','telegram.send':'Mandar un mensaje por Telegram','discord.send':'Publicar en Discord','slack.send':'Publicar en Slack'};
+const CNK={to:'Para',subject:'Asunto',body:'Mensaje',text:'Mensaje',title:'Título',start:'Inicio',end:'Fin',repo:'Repositorio',description:'Descripción',content:'Tarea'};
+const actLabel=n=>CNL[n]||({'music.next':'Siguiente canción','music.prev':'Canción anterior','music.pause':'Pausar','music.play':'Reproducir','music.volume':'Volumen','music.now':'Qué suena'}[n])||n.replace('.',' · ');
+async function loadConn(){try{const r=await fetch('/connectors');CONN=r.ok?((await r.json()).list||[]):[];CONN.forEach(c=>Object.assign(CNW,c.actions))}catch{CONN=[]}musicInit();if($('cnov').classList.contains('on'))cnRender();return CONN}
+/* --- panel --- */
+const CNCAT=['Música','Correo','Agenda','Archivos','Código','Tareas','Mensajes','Avisos'];
+function cnCard(c){return '<div class="cnc'+(c.connected?' on':'')+'" data-id="'+c.id+'"><span class="cni">'+c.icon+'</span><div class="cnt"><b>'+esc(c.name)+'</b><small>'+esc(c.desc)+'</small>'+(c.connected?'<span class="st">● Vinculado</span>':'')+(!c.ready?'<small>Todavía no está activado en este servidor.</small>':'')+'</div>'
+  +(c.connected?'<button data-a="off">Desvincular</button>':c.ready?'<button class="pri" data-a="on">Vincular</button>':'<button disabled>No disponible</button>')+'<div class="cnf" hidden></div></div>'}
+function cnRender(){const by={};CONN.forEach(c=>(by[c.cat]=by[c.cat]||[]).push(c));
+  let h='<h3>Conectores</h3><small>Vincula tus apps para que Calex las use cuando se lo pidas, por ejemplo: «mandale un mail a Lorenzo» o «adelantá esta canción». Lo que envía o crea algo te lo muestra y te pide confirmación antes. Puedes desvincular cuando quieras.</small>';
+  CNCAT.forEach(cat=>{const l=by[cat];if(!l&&!(cat==='Música'&&NAT()))return;h+='<h4>'+cat+'</h4>';
+    if(cat==='Música'&&NAT()){const ok=CalexNative.mediaAccess();h+='<div class="cnc'+(ok?' on':'')+'"><span class="cni">📱</span><div class="cnt"><b>Música del celular</b><small>Controla cualquier app de música (YouTube Music, Spotify, Deezer…) desde la isla de arriba. Solo lee qué suena y usa los botones de reproducción.</small>'+(ok?'<span class="st">● Permitido</span>':'')+'</div><button data-a="nat" class="'+(ok?'':'pri')+'">'+(ok?'Ajustes':'Permitir acceso')+'</button></div>'}
+    (l||[]).forEach(c=>h+=cnCard(c))});
+  h+='<div class="r" style="justify-content:flex-end;margin-top:14px"><button id="cnx">Cerrar</button></div>';$('cnp').innerHTML=h}
+async function cnOpen(){$('cnov').classList.add('on');$('cnp').innerHTML='<h3>Conectores</h3><small>Cargando…</small>';await loadConn();cnRender()}
+async function cnConnect(id){let j={};try{const r=await fetch('/connectors/connect',{method:'POST',body:JSON.stringify({id,app:!!window.CalexNative})});j=await r.json()}catch{}
+  if(!j.url){tip(j.error||'No se pudo iniciar la vinculación');return}
+  if(window.CalexNative&&typeof CalexNative.openExternal==='function')CalexNative.openExternal(j.url);else location.href=j.url}
+$('cnp').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='cnx'){$('cnov').classList.remove('on');return}
+  const card=b.closest('.cnc'),id=card&&card.dataset.id,a=b.dataset.a,c=CONN.find(x=>x.id===id);
+  if(a==='nat'){try{CalexNative.mediaSettings()}catch{}return}
+  if(a==='on'&&c){if(c.kind==='oauth')return cnConnect(id);const f=card.querySelector('.cnf');f.hidden=false;
+    f.innerHTML=c.fields.map(x=>'<label>'+esc(x.l)+'<input type="text" data-k="'+x.k+'" autocomplete="off" spellcheck="false"></label>').join('')+'<div class="sbtn"><button data-a="x">Cancelar</button><button class="pri" data-a="save">Guardar</button></div><small class="er" style="color:var(--bad)"></small>';b.hidden=true;return}
+  if(a==='x'){card.querySelector('.cnf').hidden=true;card.querySelector('[data-a=on]').hidden=false;return}
+  if(a==='save'){const fields={};card.querySelectorAll('input[data-k]').forEach(i=>fields[i.dataset.k]=i.value);const r=await fetch('/connectors/save',{method:'POST',body:JSON.stringify({id,fields})}),j=await r.json();
+    if(!j.ok){card.querySelector('.er').textContent=j.error||'No se pudo guardar';return}tip(c.name+' vinculado');await loadConn();return}
+  if(a==='off'){await fetch('/connectors/disconnect',{method:'POST',body:JSON.stringify({id})});tip(c.name+' desvinculado');await loadConn()}});
+$('cnov').addEventListener('click',e=>{if(e.target===$('cnov'))$('cnov').classList.remove('on')});$('bcn').onclick=()=>{cnOpen();if(innerWidth<760)$('side').classList.add('hide')};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('cnov').classList.contains('on'))$('cnov').classList.remove('on')});
+{const _b=window.calexBack;window.calexBack=()=>{if($('cnov')&&$('cnov').classList.contains('on')){$('cnov').classList.remove('on');return true}if($('isl')&&$('isl').classList.contains('open')){$('isl').classList.remove('open');return true}return _b?_b():false}}
+/* --- ejecutar acciones --- */
+async function runAct(name,args,confirm){if(name.startsWith('music.'))return musicAct(name,args||{});
+  const r=await fetch('/connectors/run',{method:'POST',body:JSON.stringify({action:name,args:args||{},confirm:!!confirm})}),j=await r.json().catch(()=>({}));if(!j.ok)throw new Error(j.error||'No se pudo');return j.data}
+async function connAct(raw,depth){const m=ACTRE.exec(raw);if(!m)return;let a;try{a=JSON.parse(m[1])}catch{return}
+  const name=String(a.action||''),args=a.args&&typeof a.args==='object'?a.args:{},w=CNW[name];
+  if(w===undefined){note('t','🔌 Esa acción no existe: '+name);return}
+  if(w===2){const box=document.createElement('div');box.className='stepcard';box.innerHTML='<b></b><p class="why">Calex preparó esto. Revísalo y confirma para hacerlo.</p><div class="cnk"></div><div class="sbtn"></div>';box.firstChild.textContent=actLabel(name);
+    const k=box.querySelector('.cnk');Object.entries(args).slice(0,8).forEach(([key,v])=>{const d=document.createElement('div'),s=document.createElement('span');s.textContent=CNK[key]||key;d.append(s,document.createTextNode(String(v).slice(0,1200)));k.append(d)});
+    const bt=box.querySelector('.sbtn'),ok=document.createElement('button'),no=document.createElement('button');ok.className='pri';ok.textContent='Confirmar';no.textContent='Cancelar';bt.append(ok,no);
+    ok.onclick=async()=>{ok.disabled=no.disabled=true;ok.textContent='Haciendo…';try{await runAct(name,args,true);box.remove();note('t','🔌 '+actLabel(name)+': listo')}catch(e){ok.disabled=no.disabled=false;ok.textContent='Reintentar';note('t','🔌 '+e.message)}};
+    no.onclick=()=>{box.remove();note('t','🔌 Cancelado')};log.append(box);scroll();return}
+  try{const res=await runAct(name,args,false);note('t','🔌 '+actLabel(name)+(w===0?': consultado':': listo'));
+    if(w===0&&depth<2)await send('⟦resultado⟧ '+name+': '+JSON.stringify(res).slice(0,3200),{hidden:true,depth:depth+1})}
+  catch(e){note('t','🔌 '+actLabel(name)+': '+e.message)}}
+/* --- música: isla dinámica --- */
+const ISL={st:null,src:'',timer:0,tick:0};
+const musicSrc=()=>NAT()&&CalexNative.mediaAccess()?'native':connOn('spotify')?'spotify':'';
+async function musicPoll(){if(document.hidden)return;const src=musicSrc();ISL.src=src;let st=null;
+  if(src==='native'){try{st=JSON.parse(CalexNative.mediaState()||'{}')}catch{}}
+  else if(src==='spotify'){try{const r=await fetch('/connectors/music');if(r.ok){const j=await r.json();if(j.activo)st={title:j.titulo,artist:j.artista,art:j.imagen,playing:j.sonando,pos:j.progreso,dur:j.duracion}}}catch{}}
+  ISL.st=st&&st.title?{...st,t:performance.now()}:null;islPaint()}
+function musicInit(){clearInterval(ISL.timer);ISL.timer=0;if(document.body.classList.contains('tv'))return;if(!musicSrc()){ISL.st=null;islPaint();return}musicPoll();ISL.timer=setInterval(musicPoll,musicSrc()==='native'?2500:6000)}
+async function musicCmd(c){const src=musicSrc();if(!src)return{ok:false,error:'No hay música vinculada'};
+  try{if(src==='native'){CalexNative.mediaCmd(c==='toggle'?(ISL.st&&ISL.st.playing?'pause':'play'):c);return{ok:true}}
+    const a={toggle:ISL.st&&ISL.st.playing?'spotify.pause':'spotify.play',next:'spotify.next',prev:'spotify.prev',play:'spotify.play',pause:'spotify.pause'}[c];await runAct(a,{},false);return{ok:true}}
+  catch(e){return{ok:false,error:e.message}}finally{setTimeout(musicPoll,700)}}
+async function musicAct(name,args){
+  if(name==='music.now')return ISL.st?{titulo:ISL.st.title,artista:ISL.st.artist,sonando:!!ISL.st.playing}:{activo:false,aviso:'No hay música sonando'};
+  if((name==='music.play'&&args.query)||name==='music.volume'){if(musicSrc()!=='spotify')throw new Error('Eso solo se puede con Spotify vinculado');
+    const r=await fetch('/connectors/run',{method:'POST',body:JSON.stringify({action:name==='music.volume'?'spotify.volume':'spotify.play',args})}),j=await r.json();if(!j.ok)throw new Error(j.error);setTimeout(musicPoll,900);return j.data}
+  const r=await musicCmd({'music.next':'next','music.prev':'prev','music.pause':'pause','music.play':'play'}[name]);if(!r.ok)throw new Error(r.error);return{ok:true}}
+function islBuild(){const el=$('isl');if($('isp'))return;
+  el.innerHTML='<div class="islp" id="isp" role="button" tabindex="0" aria-label="Música: abrir controles"><img class="isla" id="isa" alt="" hidden><span class="isla" id="isph">♪</span><span class="islq"><i></i><i></i><i></i><i></i></span><span class="istt" id="ist"></span></div>'
+   +'<div class="islb" id="isb"><div class="islt"><img class="isla2" id="isa2" alt="" hidden><span class="isla2" id="isph2">♪</span><div class="islm"><b id="ist2"></b><small id="isar"></small></div><button type="button" class="islx" id="isx" aria-label="Cerrar">✕</button></div><div class="islr"><i id="isbar"></i></div><div class="islc"><button type="button" data-m="prev" aria-label="Anterior">⏮</button><button type="button" data-m="toggle" id="isplay" aria-label="Pausar o reproducir">⏸</button><button type="button" data-m="next" aria-label="Siguiente">⏭</button></div></div>';
+  const op=()=>el.classList.add('open'),cl=()=>el.classList.remove('open');$('isp').onclick=op;$('isp').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();op()}};$('isx').onclick=cl;
+  $('isb').addEventListener('click',async e=>{const b=e.target.closest('[data-m]');if(!b)return;const m=b.dataset.m;if(m==='toggle'&&ISL.st){ISL.st.playing=!ISL.st.playing;islPaint()}const r=await musicCmd(m);if(!r.ok)tip(r.error)});
+  document.addEventListener('click',e=>{if(el.classList.contains('open')&&!el.contains(e.target))cl()})}
+function islPaint(){const el=$('isl'),s=ISL.st;if(!s){el.classList.remove('on','open');clearInterval(ISL.tick);ISL.tick=0;return}islBuild();el.classList.add('on');el.classList.toggle('pause',!s.playing);
+  const t=s.title+(s.artist?' · '+s.artist:'');$('ist').textContent=s.title;$('ist2').textContent=s.title;$('isar').textContent=s.artist||'';$('isp').title=t;
+  for(const [a,p] of [['isa','isph'],['isa2','isph2']]){const im=$(a);if(s.art){if(im.dataset.u!==s.art){im.dataset.u=s.art;im.src=s.art}im.hidden=false;$(p).hidden=true}else{im.hidden=true;$(p).hidden=false}}
+  $('isplay').textContent=s.playing?'⏸':'▶';
+  const bar=()=>{const x=ISL.st;if(!x||!x.dur)return;const pos=Math.min(x.dur,(x.pos||0)+(x.playing?performance.now()-x.t:0));$('isbar').style.width=(pos/x.dur*100).toFixed(1)+'%'};bar();
+  if(!ISL.tick)ISL.tick=setInterval(()=>{if(el.classList.contains('open'))bar()},1000)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.CalexNative)loadConn()});addEventListener('calex-connected',()=>{loadConn();cnOpen()});
+/* volver de vincular: ?conn=ok|err */
+setTimeout(()=>{const q=new URLSearchParams(location.search),c=q.get('conn');if(!c)return;history.replaceState(null,'',location.pathname);
+  if(c==='ok'){tip('¡Listo! Conector vinculado');cnOpen()}else tip(q.get('msg')||'No se pudo vincular')},1500);
+setTimeout(()=>{if(!document.body.classList.contains('tv'))loadConn()},2500);
+
 /* ---------- envío con streaming + temporizador ---------- */
-async function send(text){
+async function send(text,o={}){
   if(!navigator.onLine&&!IS_LOCAL){queueMsg(text);return}
-  {const egg=eggReply(text);if(egg&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',egg.say);a.dataset.raw=egg.say;actions(a);if(egg.fx)egg.fx();return}}
-  const nu=needUser(text);if(nu&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',nu.say);a.dataset.raw=nu.say;actions(a);stepCard(nu.card);return}
+  {const egg=o.hidden?null:eggReply(text);if(egg&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',egg.say);a.dataset.raw=egg.say;actions(a);if(egg.fx)egg.fx();return}}
+  const nu=o.hidden?null:needUser(text);if(nu&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',nu.say);a.dataset.raw=nu.say;actions(a);stepCard(nu.card);return}
   busy=true;CTL=new AbortController();$('go').textContent='■ Detener';$('go').classList.add('stop');if(log.querySelector('.empty'))log.innerHTML='';setMood('effort');
-  const imgs=IMGS.slice(),docs=DOCS.slice();IMGS=[];DOCS=[];renderPrev();const ub=add('u',text);imgs.forEach(s=>{const im=document.createElement('img');im.src=s;im.alt='Imagen enviada';ub.prepend(im)});
+  const imgs=IMGS.slice(),docs=DOCS.slice();IMGS=[];DOCS=[];renderPrev();const ub=o.hidden?document.createElement('div'):add('u',text);imgs.forEach(s=>{const im=document.createElement('img');im.src=s;im.alt='Imagen enviada';ub.prepend(im)});
   docs.forEach(d=>{const t=document.createElement('div');t.className='dchip';t.textContent='Documento: '+d.name;ub.prepend(t)});
   let cur=null,think=null,raw='',tk=0;
   const t0=performance.now();let first=null;$('dt').classList.add('on');$('tf').textContent='–';$('tp').textContent='–';
@@ -1206,7 +1343,7 @@ async function send(text){
   const ensure=()=>{if(!cur){cur=add('a','');cur.classList.add('cur');raw=''}};
   let prog=null;
   try{
-    const r=await fetch('/chat',{method:'POST',signal:CTL.signal,body:JSON.stringify({message:text,chatId,model:$('sm').value,effort:$('se').value,level:LEVEL,images:imgs,docs:docs.map(d=>({name:d.name,text:d.text})),mode:$('sd').value})});
+    const r=await fetch('/chat',{method:'POST',signal:CTL.signal,body:JSON.stringify({message:text,chatId,model:$('sm').value,effort:$('se').value,level:LEVEL,images:imgs,docs:docs.map(d=>({name:d.name,text:d.text})),mode:$('sd').value,music:!!musicSrc()})});
     const rd=r.body.getReader(),dec=new TextDecoder();let buf='';
     for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
       let i;while((i=buf.indexOf('\n\n'))>=0){const ev=JSON.parse(buf.slice(5,i));buf=buf.slice(i+2);
@@ -1218,7 +1355,7 @@ async function send(text){
         else if(ev.type==='token'){
           if(think&&!think.done){think.done=1;think.firstChild.textContent='Ver razonamiento ('+fmt(performance.now()-think.t0)+')'}
           if(first===null){first=performance.now()-t0;$('tf').textContent=fmt(first)}
-          ensure();raw+=ev.text;cur.innerHTML=md(raw);cur.classList.add('cur')}
+          ensure();raw+=ev.text;const vv=vis(raw);cur.innerHTML=md(vv);cur.style.display=vv?'':'none';cur.classList.add('cur')}
         else if(ev.type==='tool'){if(cur){cur.classList.remove('cur');cur=null}note('t','🔧 '+ev.name+' '+JSON.stringify(ev.args).slice(0,140))}
         else if(ev.type==='progress'){if(!prog)prog=note('pg','');prog.textContent='⏳ '+ev.text}
         else if(ev.type==='tool_result'){if(prog){prog.remove();prog=null}note('t','↳ '+ev.result.slice(0,160).replace(/\s+/g,' '))}
@@ -1235,10 +1372,11 @@ async function send(text){
         else if(ev.type==='error'){ensure();cur.textContent='Error: '+ev.text}
         scroll()}}
   }catch(e){ensure();if(e.name==='AbortError')cur.textContent=(raw?raw+'\n':'')+'(detenido)';else cur.textContent='Error: '+e.message}
-  if(cur){cur.classList.remove('cur');if(raw){cur.dataset.raw=raw;actions(cur)}}{const sc=stepsFromText(raw);if(sc)stepCard(sc)}if(think&&!think.done)think.firstChild.textContent='Ver razonamiento';
+  if(cur){cur.classList.remove('cur');if(raw){const vv=vis(raw);if(vv){cur.dataset.raw=vv;actions(cur)}else cur.remove()}}{const sc=stepsFromText(raw);if(sc)stepCard(sc)}if(think&&!think.done)think.firstChild.textContent='Ver razonamiento';
   clearInterval(iv);$('tm').textContent=fmt(performance.now()-t0);$('dt').classList.remove('on');
   busy=false;CTL=null;$('go').textContent='Enviar';$('go').classList.remove('stop');$('q').focus();loadHist();if(WKSPEAK){WKSPEAK=false;if(raw)wakeSay(raw.replace(/[*`#_>|]/g,'').slice(0,500))}
   setMood(/(ja){2,}|jeje|haha|😂|🤣|😆|chiste/i.test(raw+' '+text)?'funny':'normal',3500);
+  if(raw&&ACTRE.test(raw))await connAct(raw,o.depth||0);
 }
 $('row').onsubmit=e=>{e.preventDefault();if(busy){if(CTL)CTL.abort();return}const t=$('q').value.trim();if(!t&&!IMGS.length&&!DOCS.length)return;$('q').value='';$('q').style.height='';send(t||(DOCS.length&&!IMGS.length?'Resume este documento y señala los puntos más importantes.':$('sd').value==='homework'?'Resuelve paso a paso todas las tareas o ejercicios que aparecen en la imagen.':'Describe esta imagen.'))};
 $('q').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('row').requestSubmit()}};
@@ -1249,6 +1387,7 @@ const fill=(sel,opts,val)=>{sel.innerHTML='';opts.forEach(([v,l])=>{const o=docu
 async function loadModels(){const m=await(await fetch('/models')).json();const nice=x=>{const r=[[/^qwen3/i,'Qwen 3'],[/^qwen2\.5vl/i,'Qwen 2.5 VL'],[/^qwen2\.5/i,'Qwen 2.5'],[/^gemma3/i,'Gemma 3'],[/^llama3\.2/i,'Llama 3.2'],[/^llama3/i,'Llama 3']].find(([re])=>re.test(x)),sz=(/:(\d+(?:\.\d+)?b)/i.exec(x)||[])[1];return r?r[1]+(sz?' · '+sz.toUpperCase():'')+(/instruct/i.test(x)?' Instruct':''):x},
     bd=x=>{const c=(m.caps&&m.caps[x])||[];return c.includes('vision')?' · ve imágenes':''},mo=m.models.map(x=>[x,(m.labels&&m.labels[x])||nice(x)+bd(x)]),ef=Object.entries(m.efforts);
   fill($('sm'),mo,m.current);fill($('se'),ef,m.effort);fill($('cm'),mo,m.current);fill($('ce'),ef,m.effort);$('tmod').textContent=m.current;applyLevel(LEVEL)}
+(()=>{if(!(window.A3D&&A3D.ok))return;const r=$('a3r'),t=$('a3t');r.style.display='';t.checked=A3on();t.onchange=()=>{try{localStorage.setItem('calex-a3d',t.checked?'on':'off')}catch{}paintAv()}})();
 async function openSet(){await loadModels();CFG=await(await fetch('/config')).json();
   $('pf').textContent=P?(P.anonymous?'Anónimo':P.name)+' · tono '+(P.tone==='custom'?'personalizado':(ob.tones[P.tone]||P.tone).toLowerCase()):'Aún sin perfil';paintMembers();paintAcc();
   $('sl').value=CFG.safetyLevel;origLevel=CFG.safetyLevel;$('lgo').value=CFG.legal.owner;$('lgm').value=CFG.legal.email;$('lgc2').value=CFG.legal.country;

@@ -1,5 +1,11 @@
 # Calex · historial de versiones
 
+## 1.4 (21/11/2026)
+- **Conectores**: Gmail, Calendar, Drive, Spotify, GitHub, Telegram, Discord, Slack, ntfy y Todoist, con confirmación antes de enviar o crear algo.
+- **Isla dinámica de música** (Spotify o cualquier app de música del celular) y control por chat.
+- Easter eggs nuevos y personas 3D realistas (beta, opcional).
+- Android 1.4: vinculación en el navegador y control de la música del celular.
+
 ## 1.3 (21/11/2026)
 - Interfaz de TV nueva: inicio por filas, navegación espacial con el mando, Atrás que vuelve al inicio, optimizada y con letras centradas.
 - Modo sin conexión: interfaz y charlas vistas, mensajes en espera.

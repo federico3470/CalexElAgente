@@ -2,6 +2,7 @@
 // Mantiene la MISMA API que el Calex local, para reutilizar la misma interfaz.
 import { LEGAL } from "./legal.js";
 import { SCROLLY } from "./templates.js";
+import * as CN from "./connectors.js";
 
 const LEGAL_VERSION = "2026-11";
 const enc = new TextEncoder();
@@ -12,7 +13,7 @@ const json = (v, code = 200, headers = {}) => new Response(JSON.stringify(v), { 
 const cookie = (req, k) => (req.headers.get("cookie") || "").split(/;\s*/).map((s) => s.split("=")).find(([n]) => n === k)?.[1];
 const esc = (s, d = "") => String(s || d).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const SEC = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin", "X-Frame-Options": "DENY",
-  "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://cdnjs.cloudflare.com https://api.github.com; worker-src 'self' blob:; media-src 'self' blob:; frame-ancestors 'none'" };
+  "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob: https://i.scdn.co; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://cdnjs.cloudflare.com https://api.github.com; worker-src 'self' blob:; media-src 'self' blob:; frame-ancestors 'none'" };
 
 // ---------- base de datos (se crea sola la primera vez) ----------
 const SCHEMA = [
@@ -24,6 +25,7 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS oauth_states(state TEXT PRIMARY KEY, provider TEXT, verifier TEXT, exp INTEGER)",
   "CREATE TABLE IF NOT EXISTS usage(user_id TEXT, day TEXT, n INTEGER, PRIMARY KEY(user_id, day))",
   "CREATE TABLE IF NOT EXISTS hits(k TEXT, bucket INTEGER, n INTEGER, PRIMARY KEY(k, bucket))",
+  "CREATE TABLE IF NOT EXISTS connections(user_id TEXT, id TEXT, data TEXT, updated INTEGER, PRIMARY KEY(user_id, id))", // conectores vinculados (tokens cifrados)
   "CREATE TABLE IF NOT EXISTS visits(day TEXT, country TEXT, n INTEGER, PRIMARY KEY(day, country))", // recuento de visitas por día y país: sin IP, sin ciudad y sin relación con ninguna cuenta
 ];
 let ready = false;
@@ -33,6 +35,18 @@ const q = (env, sql, ...a) => env.DB.prepare(sql).bind(...a);
 async function hit(env, k, limit, windowSec) { const bucket = Math.floor(Date.now() / 1000 / windowSec);
   await q(env, "INSERT INTO hits(k,bucket,n) VALUES(?,?,1) ON CONFLICT(k,bucket) DO UPDATE SET n=n+1", k, bucket).run();
   const r = await q(env, "SELECT n FROM hits WHERE k=? AND bucket=?", k, bucket).first(); return (r?.n || 1) <= limit; }
+
+// ---------- conectores (Gmail, Spotify…): los tokens se guardan cifrados con una clave derivada de STATS_KEY ----------
+async function connCtx(env, user, req) {
+  const secret = String(env.STATS_KEY || ""); if (secret.length < 8) return null;
+  const vault = await CN.makeVault(secret);
+  const store = { async all(uid) { const o = {}; for (const r of (await q(env, "SELECT id,data FROM connections WHERE user_id=?", uid).all()).results) { try { o[r.id] = await vault.open(r.data); } catch {} } return o; },
+    async put(uid, id, obj) { await q(env, "INSERT INTO connections(user_id,id,data,updated) VALUES(?,?,?,?) ON CONFLICT(user_id,id) DO UPDATE SET data=excluded.data, updated=excluded.updated", uid, id, await vault.seal(obj), Date.now()).run(); },
+    async del(uid, id) { await q(env, "DELETE FROM connections WHERE user_id=? AND id=?", uid, id).run(); },
+    async putState(k, o, ttl) { await q(env, "DELETE FROM oauth_states WHERE exp<?", Date.now()).run(); await q(env, "INSERT INTO oauth_states(state,provider,verifier,exp) VALUES(?,?,?,?)", "cn." + k, "conn", JSON.stringify(o), Date.now() + ttl).run(); },
+    async takeState(k) { const r = await q(env, "SELECT * FROM oauth_states WHERE state=? AND provider='conn'", "cn." + k).first(); await q(env, "DELETE FROM oauth_states WHERE state=?", "cn." + k).run(); return r && r.exp > Date.now() ? JSON.parse(r.verifier) : null; } };
+  return { env, uid: user?.id || null, store, base: baseUrl(req, env), limit: (k, n, s) => hit(env, k, n, s) };
+}
 
 // ---------- perfil, modos, tonos ----------
 const TONES = { friendly: ["Amigable", "Tono cercano, cálido y natural."], formal: ["Formal", "Tono formal y profesional, trato respetuoso, sin bromas."],
@@ -194,7 +208,8 @@ async function chatRoute(req, env, user) {
   const docs = (Array.isArray(b.docs) ? b.docs : []).slice(0, 3).map((d) => ({ name: String(d?.name || "documento").replace(/[\r\n]/g, " ").slice(0, 80), text: String(d?.text || "").slice(0, 14000) })).filter((d) => d.text.trim());
   msgs.push({ role: "user", content: message, ...(docs.length && { docs: docs.map((d) => ({ name: d.name, text: d.text.slice(0, 9000) })) }) });
   const model = images.length ? PM.vis.id : picked.id;
-  const sys = `Eres Calex, un asistente personal. Responde SIEMPRE en el idioma del usuario (normalmente español), breve y directo, sin relleno. Estilo: registro formal y profesional, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes hacerlo tú y entrega de inmediato los pasos numerados y cortos para que los haga él, sin preguntarle si los quiere. ${persona(profile)}${b.mode === "translator" ? "" : FAMILY}${MODES[b.mode]?.[2] ? " " + MODES[b.mode][2] : ""}${b.mode === "coder" && /scroll|historia visual|universo|animad|p[aá]gina|web\b|landing|sitio/i.test(message) ? "\n\nPLANTILLA PROBADA (funciona): adáptala al tema pedido cambiando título, textos, colores y número de secciones, y respeta su estructura; entrégala completa en UN solo bloque ```html:\n```html\n" + SCROLLY + "\n```" : ""}${b.mode === "coder" && /\bgb\b|giga|mega|enorme|gigante|pesad|muy grande|hiperreal|\b[48]k\b/i.test(message) ? " PÁGINA GRANDE: el usuario quiere algo enorme y espectacular. Escribe como mínimo 8 secciones, un fondo con WebGL (fragment shader con ruido fractal fbm), texturas procedurales de 2048 px en canvas, parallax, partículas y animaciones al hacer scroll. Usa todo el espacio de respuesta que necesites (más de 6000 tokens) y no preguntes si quieres que continúe: escribe la página completa." : ""}${b.live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`.trim();
+  const cids = (await q(env, "SELECT id FROM connections WHERE user_id=?", user.id).all()).results.map((r) => r.id);
+  const sys = `Eres Calex, un asistente personal. Responde SIEMPRE en el idioma del usuario (normalmente español), breve y directo, sin relleno. Estilo: registro formal y profesional, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes hacerlo tú y entrega de inmediato los pasos numerados y cortos para que los haga él, sin preguntarle si los quiere. ${persona(profile)}${b.mode === "translator" ? "" : FAMILY}${MODES[b.mode]?.[2] ? " " + MODES[b.mode][2] : ""}${b.mode === "coder" && /scroll|historia visual|universo|animad|p[aá]gina|web\b|landing|sitio/i.test(message) ? "\n\nPLANTILLA PROBADA (funciona): adáptala al tema pedido cambiando título, textos, colores y número de secciones, y respeta su estructura; entrégala completa en UN solo bloque ```html:\n```html\n" + SCROLLY + "\n```" : ""}${b.mode === "coder" && /\bgb\b|giga|mega|enorme|gigante|pesad|muy grande|hiperreal|\b[48]k\b/i.test(message) ? " PÁGINA GRANDE: el usuario quiere algo enorme y espectacular. Escribe como mínimo 8 secciones, un fondo con WebGL (fragment shader con ruido fractal fbm), texturas procedurales de 2048 px en canvas, parallax, partículas y animaciones al hacer scroll. Usa todo el espacio de respuesta que necesites (más de 6000 tokens) y no preguntes si quieres que continúe: escribe la página completa." : ""}${CN.promptFor(cids, { music: b.music === true })}${b.live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`.trim();
   const hist = msgs.filter((m) => m.content).slice(-20).map((m) => ({ role: m.role, content: m.docs?.length ? m.docs.map((d) => `[Documento adjunto: ${d.name}]\n${d.text}`).join("\n\n") + "\n\n" + m.content : m.content }));
   if (images.length) hist[hist.length - 1].content = [{ type: "text", text: message }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))];
   const stream = new ReadableStream({ async start(ctrl) {
@@ -279,6 +294,7 @@ export default {
       if (req.method === "GET" && url.pathname === "/auth/status") { try { await q(env, "INSERT INTO visits(day,country,n) VALUES(?,?,1) ON CONFLICT(day,country) DO UPDATE SET n=n+1", new Date().toISOString().slice(0, 10), String(req.cf?.country || "??").slice(0, 2)).run(); } catch {} }
       const user = await getUser(req, env);
       if (url.pathname.startsWith("/auth/")) return await authRoutes(req, env, url, user);
+      if (url.pathname.startsWith("/connectors")) { const cc = await connCtx(env, user, req); if (!cc) return json({ error: "Los conectores no están activados en este servidor" }, 503); const r = await CN.handle(req, url, cc, SEC); if (r) return r; }
       const apiPaths = /^\/(config|warm|gpu|modes|models|profile|chats|memory|chat|account|remote|cloud)(\/|$)/;
       if (apiPaths.test(url.pathname)) return await api(req, env, url, user);
       const r = await env.ASSETS.fetch(req); const h = new Headers(r.headers); for (const [k, v] of Object.entries(SEC)) h.set(k, v);

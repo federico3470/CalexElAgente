@@ -40,11 +40,13 @@ rep("recorte para web", "</body>", `<script>
  const s=document.createElement('style');s.textContent='#eb,#se,#gpuc,#lgf,.or{display:none!important}';document.head.appendChild(s)})();
 </script></body>`);
 
+rep("personas 3D", "<script>\nconst $=id=>document.getElementById(id);", "<script src=\"/avatar3d.js\"></script>\n<script>\nconst $=id=>document.getElementById(id);"); // solo en Calex (Cloudflare): personas 3D con WebGL
 // --- marca pública: la interfaz del PC se llama Dot; las versiones públicas se llaman Nixel ---
 { const mem = JSON.parse(fs.readFileSync(path.resolve(LOCAL, "..", "members-nixel.json"), "utf8")); const re = /\/\*MEMBERS\*\/[\s\S]*?\/\*\/MEMBERS\*\//; if (!re.test(h)) throw new Error("No encuentro la lista de integrantes"); h = h.replace(re, () => "/*MEMBERS*/const MEMBERS=" + JSON.stringify(mem) + ";/*/MEMBERS*/"); } // integrantes de la familia (solo en Nixel)
 h = h.replace(/\bDot\b/g, "Calex").replace(/\bDOT\b/g, "CALEX").replace(/__BUILD__/g, BUILD);
 fs.mkdirSync(path.join(HERE, "public"), { recursive: true });
 fs.writeFileSync(path.join(HERE, "public", "index.html"), h);
+fs.copyFileSync(path.resolve(LOCAL, "..", "connectors.js"), path.join(HERE, "src", "connectors.js")); // conectores: el mismo código que usa Dot
 for (const f of ["sw.js", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png"]) fs.copyFileSync(path.join(LOCAL, f), path.join(HERE, "public", f));
 fs.writeFileSync(path.join(HERE, "public", "manifest.json"), fs.readFileSync(path.join(LOCAL, "manifest.json"), "utf8").replace(/\bDot\b/g, "Calex")); // la app instalada se llama Calex
 const L = (n) => fs.readFileSync(path.join(HERE, "legal", n + ".html"), "utf8");
