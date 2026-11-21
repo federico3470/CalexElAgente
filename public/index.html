@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr0hq9j">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr0kp8d">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -1025,7 +1025,7 @@ async function checkUpdate(manual){const st=$('updt'),bt=$('updb'),say=t=>{if(st
   try{const t=await(await fetch('/?_='+Date.now(),{cache:'no-store'})).text();const m=t.match(/<meta name="build" content="([^"]*)"/),nb=m?m[1]:'';
     if(nb&&BUILD_NOW&&nb!==BUILD_NOW){UPD=nb;state='new';say('Hay una versión nueva de la interfaz.');if(bt)bt.textContent='Actualizar ahora';showUpd()}}catch{state='err'}
   const ua=/CalexApp\/([\d.]+)/.exec(navigator.userAgent);
-  if(ua){try{const j=await(await fetch('https://api.github.com/repos/federico3470/CalexTheAgent/releases/latest')).json();if(j&&j.tag_name&&verNewer(j.tag_name,ua[1])){const l=$('updl');if(l){l.href=j.html_url;l.textContent='Hay una versión nueva de la app ('+j.tag_name+'): descargar';l.hidden=false}state='new'}}catch{}}
+  if(ua){try{const j=await(await fetch('https://api.github.com/repos/federico3470/CalexElAgente/releases/latest')).json();if(j&&j.tag_name&&verNewer(j.tag_name,ua[1])){const l=$('updl');if(l){l.href=j.html_url;l.textContent='Hay una versión nueva de la app ('+j.tag_name+'): descargar';l.hidden=false}state='new'}}catch{}}
   if(manual&&state==='ok')say('Estás al día.');if(manual&&state==='err')say('No se pudo comprobar. Revisa tu conexión.')}
 $('updb').onclick=()=>UPD?applyUpdate():checkUpdate(true);
 /* ---------- sin conexión: la interfaz y las charlas ya vistas se abren; lo que escribas se envía al volver (la IA necesita internet) ---------- */
