@@ -123,6 +123,16 @@ try {
     const ex3 = await call("/auth/app?code=inventado");
     t("app: un código inventado se rechaza", (ex3.headers.get("location") || "").includes("auth_error") && !sess(ex3));
   }
+  { // estadística privada por país
+    env.STATS_KEY = "clave-de-prueba-123"; const withCf = (p, cc) => { const rq = new Request(B + p); rq.cf = { country: cc }; return worker.fetch(rq, env, {}); };
+    await withCf("/auth/status", "AR"); await withCf("/auth/status", "AR"); await withCf("/auth/status", "UY");
+    const ok = await (await call("/owner/paises?key=clave-de-prueba-123")).json();
+    t("estadística por país: cuenta por país y por día, sin IP ni ciudad", ok.paises.find((x) => x.pais === "AR")?.visitas >= 2 && ok.paises.find((x) => x.pais === "UY")?.visitas >= 1 && JSON.stringify(ok).indexOf("ip") === -1 && !/city|ciudad/i.test(JSON.stringify(ok)), JSON.stringify(ok));
+    t("sin clave o con clave mala → 404 (ni se sabe que existe)", (await call("/owner/paises")).status === 404 && (await call("/owner/paises?key=mala")).status === 404);
+    const sch = db.prepare("SELECT sql FROM sqlite_master WHERE name='visits'").get()?.sql || "";
+    t("la tabla de visitas no guarda IP ni usuario", !/ip|user/i.test(sch.replace(/country/gi, "")), sch);
+    delete env.STATS_KEY; t("sin STATS_KEY configurada la ruta no responde", (await call("/owner/paises?key=clave-de-prueba-123")).status === 404);
+  }
   t("callback con state falso se rechaza", ((await call("/auth/callback/google?code=C-google&state=nada")).headers.get("location") || "").includes("auth_error"));
   t("callback con error del proveedor no crea sesión", !sess(await call("/auth/callback/google?error=access_denied&state=x")));
   t("Facebook y Huawei ya no existen", ["facebook", "huawei"].every(async () => true) && ((await call("/auth/start/facebook")).headers.get("location") || "").includes("auth_error") && ((await call("/auth/start/huawei")).headers.get("location") || "").includes("auth_error"));

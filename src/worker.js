@@ -24,6 +24,7 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS oauth_states(state TEXT PRIMARY KEY, provider TEXT, verifier TEXT, exp INTEGER)",
   "CREATE TABLE IF NOT EXISTS usage(user_id TEXT, day TEXT, n INTEGER, PRIMARY KEY(user_id, day))",
   "CREATE TABLE IF NOT EXISTS hits(k TEXT, bucket INTEGER, n INTEGER, PRIMARY KEY(k, bucket))",
+  "CREATE TABLE IF NOT EXISTS visits(day TEXT, country TEXT, n INTEGER, PRIMARY KEY(day, country))", // recuento de visitas por día y país: sin IP, sin ciudad y sin relación con ninguna cuenta
 ];
 let ready = false;
 const init = async (env) => { if (ready) return; await env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s))); ready = true; };
@@ -241,6 +242,15 @@ export default {
       const lg = /^\/legal\/(terminos|privacidad)$/.exec(url.pathname);
       if (lg) return new Response(LEGAL[lg[1]].replace(/\{\{VERSION\}\}/g, LEGAL_VERSION).replace(/\{\{OWNER\}\}/g, esc(env.LEGAL_OWNER, "(sin completar)")).replace(/\{\{EMAIL\}\}/g, esc(env.LEGAL_EMAIL, "(sin completar)")).replace(/\{\{COUNTRY\}\}/g, esc(env.LEGAL_COUNTRY, "(sin completar)")), { headers: { "Content-Type": "text/html; charset=utf-8", ...SEC } });
       if (url.pathname === "/.well-known/apple-developer-domain-association.txt") return env.APPLE_DOMAIN_ASSOCIATION ? new Response(String(env.APPLE_DOMAIN_ASSOCIATION), { headers: { "Content-Type": "text/plain; charset=utf-8", ...SEC } }) : json({}, 404); // verificación de dominio de Apple (se guarda como secreto)
+      // estadística privada del responsable: solo el PAÍS aproximado de cada visita, agregado por día (sin IP, sin ciudad, sin cuenta). Nada de esto aparece en la interfaz.
+      if (url.pathname === "/owner/paises") {
+        const k = String(url.searchParams.get("key") || ""), want = String(env.STATS_KEY || "");
+        let same = want.length >= 8 && k.length === want.length; if (same) { let d = 0; for (let i = 0; i < k.length; i++) d |= k.charCodeAt(i) ^ want.charCodeAt(i); same = d === 0; }
+        if (!same) return json({}, 404); // sin clave correcta ni siquiera se sabe que existe
+        const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10), rows = (await q(env, "SELECT country, SUM(n) n FROM visits WHERE day>=? GROUP BY country ORDER BY n DESC", since).all()).results;
+        return json({ desde: since, total: rows.reduce((a, r) => a + r.n, 0), paises: rows.map((r) => ({ pais: r.country, visitas: r.n })) }, 200, { "Cache-Control": "no-store" });
+      }
+      if (req.method === "GET" && url.pathname === "/auth/status") { try { await q(env, "INSERT INTO visits(day,country,n) VALUES(?,?,1) ON CONFLICT(day,country) DO UPDATE SET n=n+1", new Date().toISOString().slice(0, 10), String(req.cf?.country || "??").slice(0, 2)).run(); } catch {} }
       const user = await getUser(req, env);
       if (url.pathname.startsWith("/auth/")) return await authRoutes(req, env, url, user);
       const apiPaths = /^\/(config|warm|gpu|modes|models|profile|chats|memory|chat|account|remote|cloud)(\/|$)/;
