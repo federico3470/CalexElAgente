@@ -1,5 +1,10 @@
 # Calex · historial de versiones
 
+## 1.3 (21/11/2026)
+- Interfaz de TV nueva: inicio por filas, navegación espacial con el mando, Atrás que vuelve al inicio, optimizada y con letras centradas.
+- Modo sin conexión: interfaz y charlas vistas, mensajes en espera.
+- Atrás en Android cierra menús y diálogos antes de salir.
+
 ## 1.2 (20/11/2026)
 - Nuevo integrante **Invitado** («Visita de la casa»).
 - Versiones 1.2 de las apps (Android, Android/Google TV 1.2v GTV y Windows).

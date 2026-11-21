@@ -12,7 +12,7 @@ const json = (v, code = 200, headers = {}) => new Response(JSON.stringify(v), { 
 const cookie = (req, k) => (req.headers.get("cookie") || "").split(/;\s*/).map((s) => s.split("=")).find(([n]) => n === k)?.[1];
 const esc = (s, d = "") => String(s || d).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const SEC = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin", "X-Frame-Options": "DENY",
-  "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://cdnjs.cloudflare.com; worker-src blob:; media-src 'self' blob:; frame-ancestors 'none'" };
+  "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src 'self' https://cdnjs.cloudflare.com https://api.github.com; worker-src 'self' blob:; media-src 'self' blob:; frame-ancestors 'none'" };
 
 // ---------- base de datos (se crea sola la primera vez) ----------
 const SCHEMA = [

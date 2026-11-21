@@ -21,6 +21,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -32,6 +33,8 @@ import java.util.ArrayList;
 public class MainActivity extends Activity {
   static final String HOST = "https://calex.federicoreta773.workers.dev";
   static final int REQ_MIC = 7, REQ_FILE = 9;
+  static final String OFFLINE = "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><body style='margin:0;height:100vh;display:grid;place-items:center;background:#15140f;color:#ece7db;font:20px Georgia,serif;text-align:center'><div><h1 style='font-weight:600;letter-spacing:.12em'>CALEX</h1><p>Sin conexión.<br>Cuando vuelva internet, toca para reintentar.</p><p><a href='" + HOST + "' style='display:inline-block;background:#d4a35f;color:#15140f;padding:.6em 1.6em;border-radius:2em;text-decoration:none;font:600 18px sans-serif'>Reintentar</a></p></div></body>";
+  long lastBack = 0;
   WebView web;
   ValueCallback<Uri[]> chooser;
   PermissionRequest pendingPerm;
@@ -52,9 +55,12 @@ public class MainActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.2");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.3");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
+      @Override public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {
+        if (r.isForMainFrame()) v.loadDataWithBaseURL(HOST, OFFLINE, "text/html", "UTF-8", null); // sin conexión y sin copia guardada
+      }
       @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
         Uri u = r.getUrl();
         String path = u.getPath() == null ? "" : u.getPath();
@@ -159,6 +165,16 @@ public class MainActivity extends Activity {
     }
   }
 
-  @Override public void onBackPressed() { if (web != null && web.canGoBack()) web.goBack(); else super.onBackPressed(); }
+  @Override public void onBackPressed() {
+    if (web == null) { super.onBackPressed(); return; }
+    web.evaluateJavascript("(function(){try{return !!(window.calexBack&&window.calexBack())}catch(e){return false}})()", new ValueCallback<String>() {
+      public void onReceiveValue(String v) {
+        if ("true".equals(v)) return; // la página cerró algo (menú, historial, charla…)
+        if (web.canGoBack()) { web.goBack(); return; }
+        long now = System.currentTimeMillis();
+        if (now - lastBack < 2000) finish(); else { lastBack = now; Toast.makeText(MainActivity.this, "Pulsa Atrás otra vez para salir", Toast.LENGTH_SHORT).show(); }
+      }
+    });
+  }
   @Override protected void onDestroy() { if (sr != null) sr.destroy(); super.onDestroy(); }
 }

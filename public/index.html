@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwpnkmdq">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr0hq9j">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -333,6 +333,62 @@ body.tv #set{width:min(38em,100%)}
 body.tv :focus,body.tv :focus-visible{outline:none!important;box-shadow:0 0 0 .2em var(--acc),0 0 1.6em .3em color-mix(in srgb,var(--acc) 55%,transparent)!important}
 body.tv button:focus,body.tv .sg:focus,body.tv .mb:focus,body.tv .card:focus,body.tv #hist .h:focus{transform:scale(1.045)}
 body.tv #log:focus{box-shadow:inset 0 0 0 .14em color-mix(in srgb,var(--acc) 55%,transparent)!important}
+
+/* sin conexión */
+#offb{position:fixed;top:0;left:0;right:0;z-index:99;display:none;padding:6px 14px;text-align:center;font-size:13px;background:color-mix(in srgb,var(--bad) 70%,#000);color:#fff}#offb.on{display:block}
+body.tv #offb{font-size:.6em;padding:.5em var(--safe)}
+/* ===== TV real: inicio por filas, rail lateral y manejo con el mando; sin desenfoques ni animaciones para que vaya fluido en la tele ===== */
+#tvh{display:none}
+body.tv #side,body.tv #bt,body.tv #hav,body.tv #hist{display:none!important}
+body.tv.tvhome #main{display:none}
+body.tv.tvhome #tvh{display:flex;position:fixed;inset:0;z-index:5}
+body.tv:not(.tvhome) #tvh{display:none}
+body.tv::before,body.tv::after{display:none!important}
+body.tv,body.tv *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;text-shadow:none!important}
+body.tv *,body.tv *::before,body.tv *::after{animation:none!important;transition:transform .12s,border-color .12s,background-color .12s!important}
+body.tv header,body.tv #side{background:var(--side)!important;background-image:none!important;box-shadow:none!important}
+body.tv #row,body.tv .m.a,body.tv #set,body.tv #obc,body.tv #lgc,body.tv .pmb,body.tv .card,body.tv .legal,body.tv .stepcard,body.tv details.think,body.tv .t{background:var(--panel)!important;background-image:none!important;box-shadow:none!important}
+body.tv .m.u{background:color-mix(in srgb,var(--acc) 38%,var(--panel))!important;background-image:none!important;box-shadow:none!important}
+body.tv #ov,body.tv #pm,body.tv #wb{background:rgba(0,0,0,.72)!important}
+body.tv .m,body.tv .tile{contain:content}
+body.tv #side,body.tv header,body.tv #row,body.tv .pmb,body.tv #set,body.tv #obc,body.tv #lgc,body.tv .card,body.tv .legal,body.tv .m.a,body.tv .t,body.tv details.think,body.tv #lvs,body.tv #lvb button,body.tv #oas details,body.tv .sug,body.tv .stepcard,body.tv #ep,body.tv #gdb,body.tv #sp,body.tv .tile,body.tv #wbc,body.tv #gdm,body.tv #updbn,body.tv .tip,body.tv #ov,body.tv #pm,body.tv #wb,body.tv #offb{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+body.tv button,body.tv select,body.tv input,body.tv textarea{background-image:none!important;box-shadow:none!important}
+/* letras bien centradas dentro de cada caja (botones, tarjetas, rail, barra de escribir) */
+body.tv button{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.15}
+body.tv #tvrail button{flex-direction:column}
+body.tv .tile{align-items:center;justify-content:center;text-align:center;gap:.5em}
+body.tv .tile b,body.tv .tile small{text-align:center;width:100%}
+body.tv select{text-align-last:center;text-align:center;padding-block:.5em}
+body.tv #row{align-items:center}
+body.tv #q{padding-top:.5em;padding-bottom:.5em;line-height:1.3;min-height:2.4em}
+body.tv #row #mic::after{line-height:1}
+body.tv .empty,body.tv .empty b,body.tv .empty small{text-align:center}
+#tvrail{width:9.4vw;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:1.6vh;padding:4vh 0;background:var(--side);border-right:1px solid var(--line)}
+#tvrail .tvlogo{width:3.2em;height:3.2em;border-radius:1em;background:var(--acc);color:var(--onacc,#fff);display:grid;place-items:center;font-size:.9em;margin-bottom:2vh}
+#tvrail button{width:86%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.2em;padding:.55em .2em;min-height:0;border-radius:1.1em;background:transparent;border:2px solid transparent;color:var(--mut)}
+#tvrail button i{font-style:normal;font-size:1.5em;line-height:1}#tvrail button span{font-size:.5em;letter-spacing:.1em;text-transform:uppercase}
+#tvrail button.on{color:var(--txt);background:var(--panel)}
+#tvmain{flex:1;min-width:0;padding:3.4vh 3.6vw 2vh;display:flex;flex-direction:column;gap:1.6vh;overflow:hidden}
+#tvmain .tvtop{display:flex;justify-content:flex-end;font:600 1.15em Georgia,serif;letter-spacing:.06em;color:var(--mut)}
+#tvmain .tvhero{display:flex;align-items:flex-end;justify-content:space-between;gap:3vw;margin-bottom:1vh}
+#tvmain .tvhero h1{font:600 2.5em/1.1 Georgia,"Iowan Old Style",serif;margin:0;text-wrap:balance}
+#tvmain .tvhero .ttl{margin:.3em 0 0;color:var(--acc);letter-spacing:.16em;font-size:.6em;text-transform:uppercase;min-height:1em}
+#tvmain .tvcta{display:flex;gap:1.2vw;flex-shrink:0}
+#tvmain .tvcta button{font-size:.88em;padding:.75em 1.5em;min-height:0;border-radius:2em;white-space:nowrap}
+#tvtalk{background:var(--accd)!important;color:var(--onacc,#fff);border-color:var(--accd)!important;font-weight:600}
+#tvmain h2{margin:1vh 0 0;font:600 .6em Georgia,serif;letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+.tvrow{display:flex;gap:1.3vw;overflow-x:auto;overflow-y:hidden;padding:1.4vh .8vw 2vh;margin:0 -.8vw;scrollbar-width:none}
+.tvrow::-webkit-scrollbar{display:none}
+.tile{flex:0 0 20.5vw;min-height:13vh;text-align:left;display:flex;flex-direction:column;justify-content:space-between;gap:.6em;padding:1em 1.2em;border-radius:1.2em;background:var(--panel);border:2px solid var(--line);line-height:1.25;white-space:normal}
+.tile b{font-weight:600;font-size:.8em;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tile small{color:var(--mut);font-size:.52em;letter-spacing:.08em;text-transform:uppercase}
+.tile.alt{background:color-mix(in srgb,var(--acc) 10%,var(--panel))}
+body.tv .tile:focus,body.tv #tvrail button:focus,body.tv #tvmain .tvcta button:focus{border-color:var(--acc)!important;transform:scale(1.06);box-shadow:0 .6em 1.6em rgba(0,0,0,.45),0 0 0 .14em var(--acc)!important}
+#tvhint2{margin-top:auto;display:flex;justify-content:center;flex-wrap:wrap;gap:.4em 1.6em;font-size:.48em;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+#tvhint2 b{color:var(--acc);font-weight:600;margin-right:.4em}
+body.tv #tvback{display:inline-flex;align-items:center;gap:.4em;padding:.4em 1.2em;font-size:.82em}
+body.tv #log .empty .gav,body.tv #log .empty .sugs{display:none}
+body.tv #log .empty{margin:auto}
 </style></head><body>
 <aside id="side">
   <div class="sh"><button class="pri" id="bn">+ Nueva charla</button></div>
@@ -661,7 +717,7 @@ function showLogin(err){const c=$('lgc');let first=false;try{first=!localStorage
   $('lgr').onclick=()=>{if($('lgf').reportValidity())go('register')};
   $('lgg').onclick=async()=>{const r=await fetch('/auth/guest',{method:'POST'});if(!r.ok){$('lgerr').textContent='No se pudo entrar como invitado, inténtalo en un rato.';return}location.reload()};
   $('lg').classList.add('on');$('lge').focus()}
-$('acb').onclick=async()=>{if(AUTH.user){await fetch('/auth/logout',{method:'POST'});location.reload()}else{$('ov').classList.remove('on');showLogin()}};
+$('acb').onclick=async()=>{if(AUTH.user){await fetch('/auth/logout',{method:'POST'});try{navigator.serviceWorker.controller&&navigator.serviceWorker.controller.postMessage('clear');localStorage.removeItem('calex-offq')}catch{}location.reload()}else{$('ov').classList.remove('on');showLogin()}};
 const OAGUIDE={google:['Google Cloud Console → APIs y servicios → Credenciales → ID de cliente OAuth','https://console.cloud.google.com/apis/credentials'],facebook:['Meta para desarrolladores → tu app → Inicio de sesión con Facebook','https://developers.facebook.com/apps'],huawei:['AppGallery Connect → tu proyecto → Huawei ID','https://developer.huawei.com/consumer/en/service/josp/agc/index.html'],apple:['Apple Developer (requiere membresía de pago) → Identificadores → Services ID. Apple NO admite localhost: necesita una dirección https pública.','https://developer.apple.com/account/resources/identifiers/list/serviceId']};
 function renderOAuth(){const box=$('oas');box.innerHTML='';
   OAB.forEach(([k,n])=>{const o=CFG.oauth[k]||{},d=document.createElement('details'),g=OAGUIDE[k],ap=k==='apple';
@@ -942,7 +998,7 @@ function applyLevel(l,save){LEVEL=Math.max(0,Math.min(100,Math.round(+l)));const
   addEventListener('click',e=>{if(!p.contains(e.target)&&e.target!==$('eb'))close()});addEventListener('keydown',e=>{if(e.key==='Escape')close()});applyLevel(LEVEL)})();
 /* ---------- historial ---------- */
 let HIST=[],CTL=null;
-async function loadHist(){HIST=await(await fetch('/chats')).json();drawHist()}
+async function loadHist(){HIST=await(await fetch('/chats')).json();drawHist();if(window.tvRender)window.tvRender()}
 function drawHist(){const h=$('hist'),q=($('hs').value||'').toLowerCase();h.innerHTML='';
   HIST.filter(c=>!q||c.title.toLowerCase().includes(q)).forEach(c=>{const d=document.createElement('div');d.className='h'+(c.id===chatId?' on':'')+(c.pinned?' pinned':'');
     d.innerHTML='<i class="pin" role="button" title="Fijar arriba">📌</i><span></span><i role="button" title="Borrar">✕</i>';const sp=d.querySelector('span');sp.textContent=c.title;
@@ -959,7 +1015,7 @@ function newChat(){if(busy)return;chatId=null;empty();loadHist();$('q').focus()}
 $('bn').onclick=newChat;$('bt').onclick=()=>$('side').classList.toggle('hide');
 /* ---------- móvil: menú «⋯» del encabezado y cierre del historial al tocar fuera ---------- */
 $('hm').onclick=e=>{e.stopPropagation();const h=document.querySelector('header'),on=h.classList.toggle('open');$('hm').setAttribute('aria-expanded',on?'true':'false')};
-document.addEventListener('click',e=>{if(innerWidth>760)return;const s=$('side');if(s&&!s.classList.contains('hide')&&!s.contains(e.target)&&!$('bt').contains(e.target))s.classList.add('hide')});
+document.addEventListener('click',e=>{if(innerWidth>760||document.body.classList.contains('tv'))return;const s=$('side');if(s&&!s.classList.contains('hide')&&!s.contains(e.target)&&!$('bt').contains(e.target))s.classList.add('hide')});
 /* ---------- actualizaciones: busca una versión nueva de la interfaz (y, en la app Android, de la propia app) ---------- */
 const BUILD_NOW=(document.querySelector('meta[name=build]')||{}).content||'';let UPD=null;
 const verNewer=(a,b)=>{const x=String(a).replace(/^v/,'').split('.').map(Number),y=String(b).replace(/^v/,'').split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)>(y[i]||0))return true;if((x[i]||0)<(y[i]||0))return false}return false};
@@ -972,16 +1028,88 @@ async function checkUpdate(manual){const st=$('updt'),bt=$('updb'),say=t=>{if(st
   if(ua){try{const j=await(await fetch('https://api.github.com/repos/federico3470/CalexTheAgent/releases/latest')).json();if(j&&j.tag_name&&verNewer(j.tag_name,ua[1])){const l=$('updl');if(l){l.href=j.html_url;l.textContent='Hay una versión nueva de la app ('+j.tag_name+'): descargar';l.hidden=false}state='new'}}catch{}}
   if(manual&&state==='ok')say('Estás al día.');if(manual&&state==='err')say('No se pudo comprobar. Revisa tu conexión.')}
 $('updb').onclick=()=>UPD?applyUpdate():checkUpdate(true);
-/* ---------- modo TV: Google TV / Android TV (app «CalexTV»), ?tv=1 en cualquier navegador de tele o consola (también PS5) ---------- */
+/* ---------- sin conexión: la interfaz y las charlas ya vistas se abren; lo que escribas se envía al volver (la IA necesita internet) ---------- */
+let IS_LOCAL=['localhost','127.0.0.1','[::1]'].includes(location.hostname);try{if(localStorage.getItem('calex-remote')==='1')IS_LOCAL=false}catch{} // (la marca calex-remote solo sirve para probar el modo sin conexión en un servidor local) // Calex en el PC funciona sin internet con sus modelos locales
+let OFFQ=[];try{OFFQ=JSON.parse(localStorage.getItem('calex-offq')||'[]')}catch{}
+const saveQ=()=>{try{localStorage.setItem('calex-offq',JSON.stringify(OFFQ))}catch{}};
+function queueMsg(t){OFFQ.push(String(t).slice(0,4000));saveQ();note('t','Sin conexión: tu mensaje queda en espera ('+OFFQ.length+') y se enviará cuando vuelva internet.')}
+async function flushQ(){if(!OFFQ.length||!navigator.onLine||busy)return;const q=OFFQ.slice();OFFQ=[];saveQ();for(const t of q){if(!navigator.onLine){OFFQ.push(t);saveQ();continue}await send(t)}}
+(()=>{if(IS_LOCAL)return;const b=document.createElement('div');b.id='offb';b.setAttribute('role','status');b.textContent='Sin conexión: puedes leer tus charlas. Lo que escribas se enviará al volver internet.';document.body.append(b);
+  const up=()=>b.classList.toggle('on',!navigator.onLine);addEventListener('online',()=>{up();setTimeout(flushQ,800)});addEventListener('offline',up);up();setTimeout(flushQ,2500)})();
+/* botón Atrás del mando o del móvil: cierra lo que esté abierto antes de salir de la app (la app nativa lo llama) */
+window.calexBack=()=>{
+  if($('pvw')){$('pvw').remove();return true}
+  if($('sp')){closeSteps();return true}
+  if($('lv')&&$('lv').classList.contains('on')){$('lvx').click();return true}
+  if($('wb')&&$('wb').classList.contains('on')){$('wb').classList.remove('on');return true}
+  if($('ov')&&$('ov').classList.contains('on')){$('sc').click();return true}
+  if($('pm')&&$('pm').classList.contains('on'))return true;
+  if($('ob')&&$('ob').classList.contains('on')){if($('obb')&&$('obb').style.visibility!=='hidden')$('obb').click();return true}
+  if($('ep')&&$('ep').classList.contains('on')){$('ep').classList.remove('on');return true}
+  if($('gdm')&&$('gdm').classList.contains('on')){$('gdm').classList.remove('on');return true}
+  const hd=document.querySelector('header');if(hd&&hd.classList.contains('open')){hd.classList.remove('open');$('hm').setAttribute('aria-expanded','false');$('hm').focus();return true}
+  const sd=$('side');if(sd&&!sd.classList.contains('hide')){sd.classList.add('hide');$('bt').focus();return true}
+  if(document.body.classList.contains('tv')&&!document.body.classList.contains('tvhome')){if(busy&&CTL){try{CTL.abort()}catch{}}window.tvShow('home');return true} // en la TV, Atrás vuelve de la charla al inicio
+  if(busy&&CTL){try{CTL.abort()}catch{}return true}
+  return false};
+
+/* ---------- modo TV real: inicio por filas, navegación espacial con el mando y rendimiento cuidado (Google TV / Android TV; ?tv=1 en cualquier navegador de tele o consola) ---------- */
 (()=>{const q=new URLSearchParams(location.search);let on=/CalexTV/.test(navigator.userAgent)||q.get('tv')==='1';
   try{if(q.get('tv')==='1')localStorage.setItem('calex-tv','1');if(q.get('tv')==='0'){localStorage.removeItem('calex-tv');on=false}else if(!on&&localStorage.getItem('calex-tv')==='1')on=true}catch{}
-  if(!on)return;document.body.classList.add('tv');$('side').classList.add('hide');$('log').tabIndex=0;$('q').placeholder='Habla o escribe…';const hd=document.querySelector('header'),clk=document.createElement('span');clk.id='tvclock';hd.insertBefore(clk,$('hm'));const tick=()=>{clk.textContent=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})};tick();setInterval(tick,20000);
-  const hint=document.createElement('div');hint.id='tvhint';hint.innerHTML='<span><b>OK</b>seleccionar</span><span><b>◀ ▲ ▼ ▶</b>mover</span><span><b>Mic</b>hablar</span><span><b>Atrás</b>cerrar</span>';$('bar').after(hint);
+  if(!on)return;
+  const B=document.body,el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e};
+  B.classList.add('tv','tvhome');$('side').classList.add('hide');$('q').placeholder='Habla o escribe…';$('log').tabIndex=0;
+  const hd=document.querySelector('header');
+  const clk=el('span');clk.id='tvclock';hd.insertBefore(clk,$('hm'));
+  const bk=el('button','','◀  Inicio');bk.id='tvback';bk.type='button';bk.onclick=()=>window.tvShow('home');hd.insertBefore(bk,hd.firstChild);
+  const hint='<span><b>OK</b>seleccionar</span><span><b>◀ ▲ ▼ ▶</b>mover</span><span><b>Mic</b>hablar</span><span><b>Atrás</b>volver</span>';
+  const h2=el('div');h2.id='tvhint';h2.innerHTML=hint;$('bar').after(h2);
+  // ---- pantalla de inicio ----
+  const home=el('div');home.id='tvh';
+  home.innerHTML='<nav id="tvrail"><div class="tvlogo">◉</div><button type="button" data-go="home" class="on"><i>⌂</i><span>Inicio</span></button><button type="button" data-go="talk"><i>🎤</i><span>Hablar</span></button><button type="button" data-go="chats"><i>💬</i><span>Charlas</span></button><button type="button" data-go="set"><i>⚙</i><span>Ajustes</span></button></nav>'
+   +'<section id="tvmain"><div class="tvtop"><span id="tvclk"></span></div><div class="tvhero"><div><h1 id="tvgreet"></h1><p class="ttl" id="tvttl"></p></div><div class="tvcta"><button type="button" id="tvtalk">🎤  Hablar con Calex</button><button type="button" id="tvtype">⌨  Escribir</button></div></div><h2>Prueba preguntar</h2><div class="tvrow" id="tvr1"></div><h2>Charlas recientes</h2><div class="tvrow" id="tvr2"></div><div id="tvhint2">'+hint+'</div></section>';
+  document.body.append(home);
+  const tile=(t,sub,fn,alt)=>{const b=el('button','tile'+(alt?' alt':''),'<b></b><small></small>');b.type='button';b.firstChild.textContent=t;b.lastChild.textContent=sub;b.onclick=fn;return b};
+  const tick=()=>{const t=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});clk.textContent=t;const c=$('tvclk');if(c)c.textContent=t};tick();setInterval(tick,20000);
+  let SUGS=null;
+  window.tvRender=()=>{const nm=P&&P.name?', '+P.name:'';$('tvgreet').textContent=greet()+nm;$('tvttl').textContent=(P&&P.title&&!ONE)?P.title:'';
+    if(!SUGS){const s=[...document.querySelectorAll('#log .sg')].map(x=>x.textContent);if(s.length)SUGS=s}
+    const sg=SUGS||['Explíqueme qué es una VPN en dos frases','Proponga una cena con pollo y arroz','Ayúdeme a redactar un correo formal'];
+    const r1=$('tvr1');r1.textContent='';sg.forEach(t=>r1.append(tile(t,'Preguntar',()=>{window.tvShow('chat');newChat();send(t)})));
+    const r2=$('tvr2');r2.textContent='';(HIST||[]).slice(0,12).forEach(c=>r2.append(tile(c.title||'Charla','Charla'+(c.pinned?' · fijada':''),()=>{window.tvShow('chat');openChat(c.id)})));
+    if(!r2.children.length)r2.append(tile('Aún no hay charlas','Empieza una con «Hablar»',()=>$('tvtalk').click(),true))};
+  window.tvShow=v=>{B.classList.toggle('tvhome',v==='home');if(v==='home'){window.tvRender();setTimeout(()=>{const f=$('tvtalk');if(f)f.focus()},40)}else setTimeout(()=>{const f=$('mic');if(f)f.focus()},60)};
   window.tvMic=()=>{const m=$('mic');if(m&&!m.classList.contains('on'))m.click()};
-  addEventListener('keydown',e=>{if(e.key==='MediaPlayPause'||e.key==='ContextMenu'||e.key==='F2'){e.preventDefault();window.tvMic()}});
-  [...document.querySelectorAll('#side .h,.sg')].forEach(x=>{if(!x.tabIndex||x.tabIndex<0)x.tabIndex=0});
-  setTimeout(()=>{const m=$('mic');if(m)m.focus()},700);
-  new MutationObserver(()=>{document.querySelectorAll('.sg,#hist .h,.mb,.card').forEach(x=>{if(x.tabIndex<0)x.tabIndex=0});document.querySelectorAll('.sg,#hist .h,.mb,.card').forEach(x=>{if(!x._k){x._k=1;x.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();x.click()}})}})}).observe(document.body,{childList:true,subtree:true})})();
+  $('tvtalk').onclick=()=>{window.tvShow('chat');newChat();setTimeout(window.tvMic,200)};
+  $('tvtype').onclick=()=>{window.tvShow('chat');newChat();setTimeout(()=>$('q').focus(),80)};
+  home.querySelectorAll('#tvrail [data-go]').forEach(b=>b.onclick=()=>{const g=b.dataset.go;if(g==='talk')$('tvtalk').click();else if(g==='chats'){const t=document.querySelector('#tvr2 .tile');if(t)t.focus()}else if(g==='set')$('bs').click();else{const t=$('tvtalk');if(t)t.focus()}});
+  window.tvRender();setTimeout(window.tvRender,900);setTimeout(()=>{const f=$('tvtalk');if(f)f.focus()},700);
+  // ---- manejo con el mando: reproducir/pausar o menú = hablar; Escape/Atrás del navegador = volver ----
+  addEventListener('keydown',e=>{if(e.key==='MediaPlayPause'||e.key==='ContextMenu'||e.key==='F2'){e.preventDefault();window.tvMic()}else if((e.key==='Escape'||e.key==='BrowserBack'||e.key==='GoBack')&&window.calexBack()){e.preventDefault()}});
+  // ---- navegación espacial: elige el siguiente elemento según la dirección (no depende del WebView) ----
+  const SEL='button,input,select,textarea,a[href],[tabindex="0"],.card,.sg,.h,.sw,.kd,.th,.ch,.mb,.tile';
+  const vis=e=>{if(e.disabled||e.hidden||e.closest('[inert]'))return false;const r=e.getBoundingClientRect();if(r.width<2||r.height<2)return false;const cs=getComputedStyle(e);return cs.visibility!=='hidden'&&cs.display!=='none'};
+  const layer=()=>['pvw','pm','ov','wb','ob','lg','sp','lv'].map(i=>$(i)).find(e=>e&&(e.id==='pvw'||e.id==='sp'||e.classList.contains('on')))||B;
+  document.addEventListener('keydown',e=>{
+    if(!/^Arrow(Up|Down|Left|Right)$/.test(e.key)||e.ctrlKey||e.altKey||e.metaKey)return;const d=e.key,a=document.activeElement;
+    if(a&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT')&&(d==='ArrowLeft'||d==='ArrowRight')&&a.value&&a.selectionStart!==(d==='ArrowLeft'?0:a.value.length))return; // mover el cursor del texto
+    if(a===$('log')){const l=$('log');if(d==='ArrowDown'&&l.scrollTop+l.clientHeight<l.scrollHeight-4){e.preventDefault();l.scrollBy(0,l.clientHeight*.5);return}if(d==='ArrowUp'&&l.scrollTop>4){e.preventDefault();l.scrollBy(0,-l.clientHeight*.5);return}}
+    e.preventDefault();e.stopPropagation();
+    const root=layer(),cur=(a&&a!==B&&root.contains(a))?a:null,list=[...root.querySelectorAll(SEL)].filter(vis);
+    if(!cur){const f=list.find(x=>x.id==='tvtalk'||x.id==='mic')||list[0];if(f){f.tabIndex=Math.max(0,f.tabIndex);f.focus()}return}
+    const cr=cur.getBoundingClientRect(),cx=cr.left+cr.width/2,cy=cr.top+cr.height/2;let best=null,bs=1e9;
+    for(const c of list){if(c===cur||cur.contains(c)||c.contains(cur))continue;const r=c.getBoundingClientRect(),dx=r.left+r.width/2-cx,dy=r.top+r.height/2-cy;let main,off;
+      if(d==='ArrowRight'){if(dx<=0)continue;main=Math.max(0,r.left-cr.right);off=Math.abs(dy)}
+      else if(d==='ArrowLeft'){if(dx>=0)continue;main=Math.max(0,cr.left-r.right);off=Math.abs(dy)}
+      else if(d==='ArrowDown'){if(dy<=0)continue;main=Math.max(0,r.top-cr.bottom);off=Math.abs(dx)}
+      else{if(dy>=0)continue;main=Math.max(0,cr.top-r.bottom);off=Math.abs(dx)}
+      const sc=main+off*2.2;if(sc<bs){bs=sc;best=c}}
+    if(best){best.tabIndex=Math.max(0,best.tabIndex);best.focus({preventScroll:true});best.scrollIntoView({block:'nearest',inline:'center'})}
+  },true);
+  // OK sobre tarjetas que no son botones
+  document.addEventListener('keydown',e=>{const a=document.activeElement;if((e.key==='Enter'||e.key===' ')&&a&&a.tagName!=='BUTTON'&&a.matches&&a.matches('.card,.sg,.h,.sw,.kd,.th,.ch,.mb')){e.preventDefault();a.click()}});
+})();
+
 (()=>{const q=$('q');if(q&&innerWidth<=760)q.placeholder=q.placeholder.split('  (')[0]})();
 setTimeout(()=>checkUpdate(false),6000);setInterval(()=>checkUpdate(false),20*60*1000);
 /* ---------- detalles de la casa ---------- */
@@ -1003,6 +1131,7 @@ function eggReply(t){const s=plain(t);
 
 /* ---------- envío con streaming + temporizador ---------- */
 async function send(text){
+  if(!navigator.onLine&&!IS_LOCAL){queueMsg(text);return}
   {const egg=eggReply(text);if(egg&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',egg.say);a.dataset.raw=egg.say;actions(a);if(egg.fx)egg.fx();return}}
   const nu=needUser(text);if(nu&&!IMGS.length&&!DOCS.length){if(log.querySelector('.empty'))log.innerHTML='';add('u',text);const a=add('a',nu.say);a.dataset.raw=nu.say;actions(a);stepCard(nu.card);return}
   busy=true;CTL=new AbortController();$('go').textContent='■ Detener';$('go').classList.add('stop');if(log.querySelector('.empty'))log.innerHTML='';setMood('effort');
@@ -1094,7 +1223,7 @@ $('ctb').onclick=async()=>{const r=$('ctr');r.style.color='var(--mut)';r.textCon
 let origLevel='balanced';
 $('dlx').onclick=()=>{location.href='/account/export'};
 $('dld').onclick=async()=>{const t=prompt('Esto BORRA tu perfil, chats y memoria (y tu cuenta, si iniciaste sesión). No se puede deshacer.\n\nEscribe BORRAR para confirmar:');if(t!=='BORRAR')return;
-  const r=await fetch('/account/delete',{method:'POST',body:JSON.stringify({confirm:'BORRAR'})});if(!r.ok){alert((await r.json().catch(()=>({}))).error||'No se pudo borrar');return}
+  const r=await fetch('/account/delete',{method:'POST',body:JSON.stringify({confirm:'BORRAR'})});try{navigator.serviceWorker.controller&&navigator.serviceWorker.controller.postMessage('clear');localStorage.removeItem('calex-offq')}catch{}if(!r.ok){alert((await r.json().catch(()=>({}))).error||'No se pudo borrar');return}
   try{localStorage.removeItem('dot-guest')}catch{}location.reload()};
 $('ss').onclick=async()=>{if($('cen').checked&&!$('cco').checked){alert('Para activar la nube marca primero la casilla de consentimiento.');return}const lvl=$('sl').value,lvlChanged=lvl!==origLevel&&lvl!=='custom';const oauth={};document.querySelectorAll('#oas [data-p]').forEach(i=>{(oauth[i.dataset.p]||={})[i.dataset.f]=i.value});const perms={};document.querySelectorAll('#perms select').forEach(s=>perms[s.dataset.k]=s.value);
   if($('lo').checked&&!$('lp').value.trim()){alert('Pon un código de acceso para activar el acceso remoto.');return}
