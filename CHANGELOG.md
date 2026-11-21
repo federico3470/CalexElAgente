@@ -1,5 +1,9 @@
 # Calex · historial de versiones
 
+## 1.2 (20/11/2026)
+- Nuevo integrante **Invitado** («Visita de la casa»).
+- Versiones 1.2 de las apps (Android, Android/Google TV 1.2v GTV y Windows).
+
 ## 1.1 (20/11/2026)
 
 **Nombre y estilo**

@@ -17,7 +17,7 @@ $g.DrawImage($logo,28,42,96,96); $f = New-Object Drawing.Font "Segoe UI Semibold
 $bn.Save("$PSScriptRoot\res\drawable-xhdpi\banner.png",[Drawing.Imaging.ImageFormat]::Png); $bn.Dispose(); $logo.Dispose()
 
 Run "$bt\aapt2.exe" @("compile", "--dir", "res", "-o", "$b\res.zip")
-Run "$bt\aapt2.exe" @("link", "-o", "$b\base.apk", "-I", $jar, "--manifest", "AndroidManifest.xml", "--min-sdk-version", "23", "--target-sdk-version", "34", "--version-code", "2", "--version-name", "1.1", "$b\res.zip", "--java", "$b\gen")
+Run "$bt\aapt2.exe" @("link", "-o", "$b\base.apk", "-I", $jar, "--manifest", "AndroidManifest.xml", "--min-sdk-version", "23", "--target-sdk-version", "34", "--version-code", "4", "--version-name", "1.2", "$b\res.zip", "--java", "$b\gen")
 $src = @(Get-ChildItem src -Recurse -Filter *.java | ForEach-Object FullName) + @(Get-ChildItem "$b\gen" -Recurse -Filter *.java | ForEach-Object FullName)
 Run "javac" (@("-source", "8", "-target", "8", "-Xlint:-options", "-bootclasspath", $jar, "-d", "$b\classes") + $src)
 $cls = @(Get-ChildItem "$b\classes" -Recurse -Filter *.class | ForEach-Object FullName)

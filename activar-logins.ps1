@@ -1,11 +1,11 @@
-﻿# Activa el inicio de sesion de Calex (Google y Apple) guardando TUS claves como secretos de Cloudflare.
+# Activa el inicio de sesion de Calex (Google y Apple) guardando TUS claves como secretos de Cloudflare.
 # Uso:  powershell -ExecutionPolicy Bypass -File .\activar-logins.ps1
 # Las claves las escribes tu cuando wrangler las pide: no se guardan en ningun archivo ni se muestran en pantalla.
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 $url = "https://calex.federicoreta773.workers.dev"
 $host_ = ([uri]$url).Host
-Write-Host "`nNixel: $url`n"
+Write-Host "`nCalex: $url`n"
 
 function Poner($nombre) { npx wrangler secret put $nombre }
 

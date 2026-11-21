@@ -25,7 +25,7 @@ import android.webkit.WebViewClient;
 import java.util.ArrayList;
 
 /**
- * Calex 1.1v GTV (Google TV y Android TV): la interfaz de TV a pantalla completa, manejada con el mando a distancia.
+ * Calex 1.2v GTV (Google TV y Android TV): la interfaz de TV a pantalla completa, manejada con el mando a distancia.
  * - Iniciar sesión con Google/Apple se hace en el navegador (Google no lo permite dentro de un WebView) y se vuelve a la app con calex://login?code=…
  * - El dictado por voz usa el reconocedor de Android (el WebView no trae el del navegador).
  */
@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.1 CalexTV");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.2 CalexTV");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
       @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
