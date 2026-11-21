@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr25wdl">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr2jkux">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -1253,7 +1253,7 @@ const ACTRE=/```calex-action\s*([\s\S]*?)```/,vis=t=>String(t||'').replace(/```c
 const CNL={'gmail.send':'Enviar un correo','calendar.create':'Crear un evento','github.issue_create':'Crear una incidencia','telegram.send':'Mandar un mensaje por Telegram','discord.send':'Publicar en Discord','slack.send':'Publicar en Slack'};
 const CNK={to:'Para',subject:'Asunto',body:'Mensaje',text:'Mensaje',title:'Título',start:'Inicio',end:'Fin',repo:'Repositorio',description:'Descripción',content:'Tarea'};
 const actLabel=n=>CNL[n]||({'music.next':'Siguiente canción','music.prev':'Canción anterior','music.pause':'Pausar','music.play':'Reproducir','music.volume':'Volumen','music.now':'Qué suena'}[n])||n.replace('.',' · ');
-async function loadConn(){try{const r=await fetch('/connectors');CONN=r.ok?((await r.json()).list||[]):[];CONN.forEach(c=>Object.assign(CNW,c.actions))}catch{CONN=[]}musicInit();if($('cnov').classList.contains('on'))cnRender();return CONN}
+async function loadConn(){if(IS_LOCAL&&!NAT()&&!document.body.classList.contains('tv')){try{ISL.pc=(await fetch('/music/pc')).ok}catch{ISL.pc=false}}try{const r=await fetch('/connectors');CONN=r.ok?((await r.json()).list||[]):[];CONN.forEach(c=>Object.assign(CNW,c.actions))}catch{CONN=[]}musicInit();if($('cnov').classList.contains('on'))cnRender();return CONN}
 /* --- panel --- */
 const CNCAT=['Música','Correo','Agenda','Archivos','Código','Tareas','Mensajes','Avisos'];
 function cnCard(c){return '<div class="cnc'+(c.connected?' on':'')+'" data-id="'+c.id+'"><span class="cni">'+c.icon+'</span><div class="cnt"><b>'+esc(c.name)+'</b><small>'+esc(c.desc)+'</small>'+(c.connected?'<span class="st">● Vinculado</span>':'')+(!c.ready?'<small>Todavía no está activado en este servidor.</small>':'')+'</div>'
@@ -1262,6 +1262,7 @@ function cnRender(){const by={};CONN.forEach(c=>(by[c.cat]=by[c.cat]||[]).push(c
   let h='<h3>Conectores</h3><small>Vincula tus apps para que Calex las use cuando se lo pidas, por ejemplo: «mandale un mail a Lorenzo» o «adelantá esta canción». Lo que envía o crea algo te lo muestra y te pide confirmación antes. Puedes desvincular cuando quieras.</small>';
   CNCAT.forEach(cat=>{const l=by[cat];if(!l&&!(cat==='Música'&&NAT()))return;h+='<h4>'+cat+'</h4>';
     if(cat==='Música'&&NAT()){const ok=CalexNative.mediaAccess();h+='<div class="cnc'+(ok?' on':'')+'"><span class="cni">📱</span><div class="cnt"><b>Música del celular</b><small>Controla cualquier app de música (YouTube Music, Spotify, Deezer…) desde la isla de arriba. Solo lee qué suena y usa los botones de reproducción.</small>'+(ok?'<span class="st">● Permitido</span>':'')+'</div><button data-a="nat" class="'+(ok?'':'pri')+'">'+(ok?'Ajustes':'Permitir acceso')+'</button></div>'}
+    if(cat==='Música'&&ISL.pc)h+='<div class="cnc on"><span class="cni">🖥️</span><div class="cnt"><b>Música de este PC</b><small>Detecta solo lo que suena en Windows (Spotify, YouTube Music, YouTube en el navegador, VLC…) y lo controla desde la isla. No hace falta vincular nada.</small><span class="st">● Automático</span></div></div>';
     (l||[]).forEach(c=>h+=cnCard(c))});
   h+='<div class="r" style="justify-content:flex-end;margin-top:14px"><button id="cnx">Cerrar</button></div>';$('cnp').innerHTML=h}
 async function cnOpen(){$('cnov').classList.add('on');$('cnp').innerHTML='<h3>Conectores</h3><small>Cargando…</small>';await loadConn();cnRender()}
@@ -1295,15 +1296,17 @@ async function connAct(raw,depth){const m=ACTRE.exec(raw);if(!m)return;let a;try
     if(w===0&&depth<2)await send('⟦resultado⟧ '+name+': '+JSON.stringify(res).slice(0,3200),{hidden:true,depth:depth+1})}
   catch(e){note('t','🔌 '+actLabel(name)+': '+e.message)}}
 /* --- música: isla dinámica --- */
-const ISL={st:null,src:'',timer:0,tick:0};
-const musicSrc=()=>NAT()&&CalexNative.mediaAccess()?'native':connOn('spotify')?'spotify':'';
+const ISL={st:null,src:'',timer:0,tick:0,pc:false};
+const musicSrc=()=>NAT()&&CalexNative.mediaAccess()?'native':ISL.pc?'pc':connOn('spotify')?'spotify':'';
 async function musicPoll(){if(document.hidden)return;const src=musicSrc();ISL.src=src;let st=null;
   if(src==='native'){try{st=JSON.parse(CalexNative.mediaState()||'{}')}catch{}}
+  else if(src==='pc'){try{const j=await(await fetch('/music/pc')).json();if(j.title)st={title:j.title,artist:j.artist,art:'',playing:j.playing,pos:j.pos,dur:j.dur}}catch{}}
   else if(src==='spotify'){try{const r=await fetch('/connectors/music');if(r.ok){const j=await r.json();if(j.activo)st={title:j.titulo,artist:j.artista,art:j.imagen,playing:j.sonando,pos:j.progreso,dur:j.duracion}}}catch{}}
   ISL.st=st&&st.title?{...st,t:performance.now()}:null;islPaint()}
-function musicInit(){clearInterval(ISL.timer);ISL.timer=0;if(document.body.classList.contains('tv'))return;if(!musicSrc()){ISL.st=null;islPaint();return}musicPoll();ISL.timer=setInterval(musicPoll,musicSrc()==='native'?2500:6000)}
+function musicInit(){clearInterval(ISL.timer);ISL.timer=0;if(document.body.classList.contains('tv'))return;if(!musicSrc()){ISL.st=null;islPaint();return}musicPoll();ISL.timer=setInterval(musicPoll,musicSrc()==='native'?2500:musicSrc()==='pc'?3000:6000)}
 async function musicCmd(c){const src=musicSrc();if(!src)return{ok:false,error:'No hay música vinculada'};
   try{if(src==='native'){CalexNative.mediaCmd(c==='toggle'?(ISL.st&&ISL.st.playing?'pause':'play'):c);return{ok:true}}
+    if(src==='pc'){await fetch('/music/pc',{method:'POST',body:JSON.stringify({cmd:c})});return{ok:true}}
     const a={toggle:ISL.st&&ISL.st.playing?'spotify.pause':'spotify.play',next:'spotify.next',prev:'spotify.prev',play:'spotify.play',pause:'spotify.pause'}[c];await runAct(a,{},false);return{ok:true}}
   catch(e){return{ok:false,error:e.message}}finally{setTimeout(musicPoll,700)}}
 async function musicAct(name,args){
