@@ -77,6 +77,7 @@ try {
   let c = await chat(A, "explicame que es una vpn", { mode: "teacher" });
   t("chat: streaming de tokens y modelo de texto", c.text === "Hola desde la IA" && c.model.startsWith("☁") && !lastAI.model.includes("vision"), JSON.stringify(c));
   const sys = lastAI.input.messages[0].content;
+  t("el prompt lleva el contexto de la familia (argentina, cristiana evangélica)", /argentina/i.test(sys) && /evangélica/i.test(sys) && /Reina-Valera/.test(sys), sys.slice(-200));
   t("el prompt lleva nombre, tono y modo (sin edad)", /Zoe/.test(sys) && !/años/.test(sys) && /humor/.test(sys) && /MODO PROFE/.test(sys), sys);
   t("el historial se guarda y lista", (await (await call("/chats", {}, A)).json()).some((x) => x.id === c.id));
   const c2 = await chat(A, "y la ram?", { chatId: c.id }); const full = await (await call("/chats/" + c.id, {}, A)).json();
