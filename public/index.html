@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr0kp8d">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr0tblh">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -389,6 +389,17 @@ body.tv .tile:focus,body.tv #tvrail button:focus,body.tv #tvmain .tvcta button:f
 body.tv #tvback{display:inline-flex;align-items:center;gap:.4em;padding:.4em 1.2em;font-size:.82em}
 body.tv #log .empty .gav,body.tv #log .empty .sugs{display:none}
 body.tv #log .empty{margin:auto}
+#kp{position:fixed;inset:0;z-index:96;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72)}#kp.on{display:flex}
+#kp .kpc{background:var(--panel);border:1px solid var(--glb);border-radius:28px;padding:22px 26px;text-align:center;width:min(360px,92vw)}
+#kp .kpd{font:600 34px/1.2 Georgia,serif;letter-spacing:.35em;min-height:1.3em;margin:4px 0 14px;color:var(--acc)}#kp .kpd.err{color:var(--bad)}
+#kp .kpg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}#kp .kpg button{min-height:56px;font-size:22px;padding:0;border-radius:18px;display:inline-flex;align-items:center;justify-content:center}
+#kp small{display:block;color:var(--mut);margin-bottom:6px}
+body.tv #kp .kpc{width:min(22em,92vw);padding:1.2em 1.5em}body.tv #kp .kpd{font-size:1.7em}body.tv #kp .kpg button{min-height:2.7em;font-size:1.1em}
+#tva{position:fixed;inset:0;z-index:96;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.76)}#tva.on{display:flex}
+#tva .kpc{background:var(--panel);border:1px solid var(--glb);border-radius:28px;padding:1.2em 1.6em;text-align:center;width:min(34em,92vw)}#tva h2{margin:0 0 .4em;font:600 1.3em Georgia,serif}
+#tva p{margin:.3em 0;color:var(--mut);line-height:1.45;font-size:.85em}#tva .tvcode{font:700 2.6em Georgia,serif;letter-spacing:.22em;color:var(--acc);margin:.15em 0 .1em;padding-left:.22em}
+#tva .tvcta2{display:flex;gap:.8em;justify-content:center;margin-top:.8em}
+body.tv #tvlrow{display:none}
 </style></head><body>
 <aside id="side">
   <div class="sh"><button class="pri" id="bn">+ Nueva charla</button></div>
@@ -434,10 +445,13 @@ body.tv #log .empty{margin:auto}
   <div class="r"><label>Novedades<small>Atajos: Ctrl+K nueva charla · Ctrl+/ escribir · Ctrl+, configuración</small></label><button id="wbn">Ver novedades</button></div>
   <h4>Actualizaciones</h4>
   <div class="r"><label>Versión<small id="updt">Busca si hay una versión nueva.</small><a id="updl" hidden target="_blank" rel="noopener" style="color:var(--acc);font-size:13px"></a></label><button type="button" id="updb">Buscar actualizaciones</button></div>
+  <div class="r" id="tvlrow"><label>Vincular una TV<small>Escribe el código que muestra tu TV. Entra con tu cuenta de Google.</small></label><input type="text" id="tvc" maxlength="7" placeholder="ABC-DEF" autocomplete="off" style="width:8.5em;text-transform:uppercase;text-align:center"><button type="button" id="tvl">Vincular</button></div><div class="lge" id="tvm"></div>
+  <div class="r"><label>Código<small>¿Tienes uno?</small></label><button type="button" id="codb" aria-label="Introducir un código">••••</button></div>
   <h4>Integrantes</h4>
   <div id="mbl"></div>
   <h4>Perfil</h4>
   <div class="r"><label id="pf">…</label><button id="pe">Editar perfil y avatar</button></div>
+  <div class="r" id="pacc" style="display:none"><label id="paccl">…</label><button type="button" id="pagb">Vincular Google</button></div>
   <h4>Modelo</h4>
   <div class="r"><label>Modelo por defecto<small>Los 4B van rápido en tu GPU; el 8B es más listo pero más lento.</small></label><select id="cm"></select></div>
   <div class="r"><label>Esfuerzo por defecto<small>Rápido = respuestas cortas · Profundo = razona más.</small></label><select id="ce"></select></div>
@@ -515,57 +529,70 @@ const add=(c,t)=>{const d=document.createElement('div');d.className='m '+c;d.dat
 const note=(c,t)=>{const d=document.createElement('div');d.className=c;d.textContent=t;log.append(d);scroll();return d};
 /* ---------- perfil, avatar (estilo Mii) y saludo ---------- */
 let P=null,mood='normal',moodT=null,uid=0;
-const AVK=['robot','cat','fox','panda','owl','dragon','alien','ghost'],AVN={robot:'Robot',cat:'Gato',fox:'Zorro',panda:'Panda',owl:'Búho',dragon:'Dragón',alien:'Alien',ghost:'Fantasma'};
-const DEF={kind:'robot',color:'#4fc3f7',acc:0};
+/* Personas en 3D (estilo figura de arcilla): ligeras, solo SVG con luces y sombras (sin WebGL), con 3 reacciones: normal, esfuerzo y gracia */
+const SKINS=['#f3d2b3','#e8b98f','#cf9a6d','#a8703f','#7a4a2c','#4e2f1e'];
+const PEOPLE={
+  mateo:{n:'Mateo',g:'hombre',skin:'#e0ac80',hair:'#2a1c15',style:'short'},
+  lucas:{n:'Lucas',g:'hombre',skin:'#c58b5e',hair:'#3a2a1f',style:'short',beard:1},
+  tomas:{n:'Tomás',g:'hombre',skin:'#f3d2b3',hair:'#c8a04a',style:'messy'},
+  raul:{n:'Don Raúl',g:'hombre',skin:'#e6bd98',hair:'#e8e8ee',style:'sides',old:1},
+  sofia:{n:'Sofía',g:'mujer',skin:'#eebf9d',hair:'#4a2c1c',style:'long'},
+  valen:{n:'Valentina',g:'mujer',skin:'#8a583a',hair:'#17100d',style:'curly'},
+  camila:{n:'Camila',g:'mujer',skin:'#cf9a6d',hair:'#2b1b13',style:'pony'},
+  nora:{n:'Doña Nora',g:'mujer',skin:'#f0d0b2',hair:'#d9d9e0',style:'bun',old:1}};
+const AVK=Object.keys(PEOPLE),AVN=Object.fromEntries(AVK.map(k=>[k,PEOPLE[k].n]));
+const DEF={kind:'mateo',color:'#4fc3f7',acc:0};
 const COLORS=['#4fc3f7','#ef6b6b','#5ad19a','#f5b342','#9b7cf4','#ff8fb1','#8b93a5','#2b2f3a'];
 const shade=(h,k)=>{const n=parseInt(h.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(k<0?v*(1+k):v+(255-v)*k)));return '#'+[n>>16&255,n>>8&255,n&255].map(f).map(v=>v.toString(16).padStart(2,'0')).join('')};
-/* Avatares de personaje (no personas): cada uno con 3 reacciones: normal, esfuerzo y gracia */
-function avatar(a,m='normal',size=48){a={...DEF,...a};const K=AVK.includes(a.kind)?a.kind:'robot',c=a.color||a.shirt||DEF.color;
-  const id='c'+(++uid),dk=shade(c,-.25),lt=shade(c,.4),DARK='#2b2320';
-  let back='',head='',front='',eyeBg='',eyeInk=DARK,browInk=DARK,mouthInk=DARK,mouthFill='#7a1f2b',ex1=40,ex2=60,ey=54,mo=0,blush=true,body=true,beak='';
-  switch(K){
-  case 'robot':back=`<rect x="48" y="6" width="4" height="16" fill="${dk}"/><circle cx="50" cy="7" r="5" fill="#ef6b6b"/><circle cx="19" cy="50" r="6" fill="${dk}"/><circle cx="81" cy="50" r="6" fill="${dk}"/>`;
-    head=`<rect x="20" y="20" width="60" height="58" rx="14" fill="${c}"/><rect x="27" y="31" width="46" height="38" rx="9" fill="#1b2230"/>`;eyeInk=browInk=mouthInk=mouthFill='#7fe8ff';mo=-3;blush=false;break;
-  case 'cat':back=`<path d="M22 46L25 13L47 30Z M78 46L75 13L53 30Z" fill="${c}"/><path d="M29 38L30 21L41 30Z M71 38L70 21L59 30Z" fill="#ffb3c7"/>`;
-    head=`<ellipse cx="50" cy="55" rx="31" ry="27" fill="${c}"/>`;front=`<path d="M46.5 60.5L53.5 60.5L50 65Z" fill="#ff8fb1"/><path d="M30 62L15 59M30 67L15 69M70 62L85 59M70 67L85 69" stroke="${dk}" stroke-width="1.7" stroke-linecap="round"/>`;mo=2;break;
-  case 'fox':back=`<path d="M19 50L23 11L47 31Z M81 50L77 11L53 31Z" fill="${c}"/><path d="M23 11L31 25L20 27Z M77 11L69 25L80 27Z" fill="#2b2320"/>`;
-    head=`<ellipse cx="50" cy="55" rx="31" ry="27" fill="${c}"/>`;front=`<path d="M20 58Q36 52 50 67Q64 52 80 58Q74 83 50 83Q26 83 20 58Z" fill="#fff"/><ellipse cx="50" cy="64" rx="4.2" ry="3.2" fill="#2b2320"/>`;mo=4;break;
-  case 'panda':back=`<circle cx="25" cy="26" r="11" fill="#22252b"/><circle cx="75" cy="26" r="11" fill="#22252b"/>`;
-    head=`<ellipse cx="50" cy="55" rx="31" ry="28" fill="#f7f7f7"/>`;eyeBg=`<ellipse cx="37" cy="54" rx="9" ry="11.5" transform="rotate(22 37 54)" fill="#22252b"/><ellipse cx="63" cy="54" rx="9" ry="11.5" transform="rotate(-22 63 54)" fill="#22252b"/>`;
-    front=`<ellipse cx="50" cy="64" rx="4.5" ry="3.3" fill="#22252b"/>`;ex1=37;ex2=63;eyeInk='#fff';mouthInk='#22252b';mo=4;break;
-  case 'owl':back=`<path d="M22 36L25 11L45 26Z M78 36L75 11L55 26Z" fill="${dk}"/>`;
-    head=`<ellipse cx="50" cy="55" rx="32" ry="29" fill="${c}"/><ellipse cx="50" cy="70" rx="20" ry="11" fill="${lt}"/>`;eyeBg=`<circle cx="37" cy="52" r="13" fill="#fff"/><circle cx="63" cy="52" r="13" fill="#fff"/>`;
-    ex1=37;ex2=63;ey=52;blush=false;
-    beak=m==='funny'?`<path d="M44 62L56 62L50 66Z M45 67L55 67L50 73Z" fill="#f5a623"/>`:`<path d="M44 61L56 61L50 71Z" fill="#f5a623"/>`;break;
-  case 'dragon':back=`<path d="M33 30L37 13L44 27Z M46 25L50 7L54 25Z M56 27L63 13L67 30Z" fill="${dk}"/><path d="M27 38L21 16L40 31Z M73 38L79 16L60 31Z" fill="#f3e6c4"/>`;
-    head=`<ellipse cx="50" cy="55" rx="31" ry="27" fill="${c}"/><ellipse cx="50" cy="66" rx="17" ry="11" fill="${lt}"/>`;front=`<circle cx="44" cy="63" r="1.7" fill="${dk}"/><circle cx="56" cy="63" r="1.7" fill="${dk}"/>`;mo=5;break;
-  case 'alien':back=`<path d="M41 17L37 5M59 17L63 5" stroke="${dk}" stroke-width="3" stroke-linecap="round"/><circle cx="37" cy="5" r="4" fill="${lt}"/><circle cx="63" cy="5" r="4" fill="${lt}"/>`;
-    head=`<path d="M50 14Q83 16 81 52Q79 82 50 84Q21 82 19 52Q17 16 50 14Z" fill="${c}"/>`;eyeBg=`<ellipse cx="37" cy="52" rx="10" ry="13" transform="rotate(-14 37 52)" fill="#11151c"/><ellipse cx="63" cy="52" rx="10" ry="13" transform="rotate(14 63 52)" fill="#11151c"/>`;
-    ex1=37;ex2=63;ey=52;eyeInk='#fff';mo=7;break;
-  case 'ghost':head=`<path d="M19 56Q19 16 50 16Q81 16 81 56L81 94Q75 85 68.5 94Q62 85 56 94Q50 85 43.5 94Q37 85 31 94Q25 85 19 94Z" fill="${shade(c,.78)}" stroke="${shade(c,.2)}" stroke-width="1.5"/>`;body=false;break;
-  }
-  const torso=body?(K==='robot'?`<rect x="31" y="78" width="38" height="30" rx="8" fill="${dk}"/>`:`<path d="M17 106Q19 80 50 80Q81 80 83 106Z" fill="${dk}"/>`):'';
-  const sweat=m==='effort'?`<path d="M82 28Q86 36 82 40Q78 36 82 28Z" fill="#6ec6ff" stroke="#3b9ad6" stroke-width="1"/>`:'';
-  let eyes,brows,mouth,extra='';
-  if(m==='funny'){eyes=`<path d="M${ex1-6} ${ey+2}Q${ex1} ${ey-7} ${ex1+6} ${ey+2}M${ex2-6} ${ey+2}Q${ex2} ${ey-7} ${ex2+6} ${ey+2}" fill="none" stroke="${eyeInk}" stroke-width="3.2" stroke-linecap="round"/>`;
-    brows=`<path d="M${ex1-7} ${ey-12}Q${ex1} ${ey-17} ${ex1+7} ${ey-12}M${ex2-7} ${ey-12}Q${ex2} ${ey-17} ${ex2+7} ${ey-12}" fill="none" stroke="${browInk}" stroke-width="2.4" stroke-linecap="round"/>`;
-    mouth=K==='owl'?beak:`<path d="M36 64Q50 86 64 64Z" fill="${mouthFill}" stroke="${mouthInk}" stroke-width="2" stroke-linejoin="round"/><path d="M42 74Q50 80 58 74Q50 70 42 74Z" fill="#ef7a8a"/>`;
-    extra=`<circle cx="${ex1-8}" cy="${ey+10}" r="3" fill="#6ec6ff"/><circle cx="${ex2+8}" cy="${ey+10}" r="3" fill="#6ec6ff"/>`}
-  else if(m==='effort'){eyes=`<path d="M${ex1-7} ${ey-2}L${ex1+5} ${ey+3}M${ex2+7} ${ey-2}L${ex2-5} ${ey+3}" stroke="${eyeInk}" stroke-width="3.4" stroke-linecap="round"/>`;
-    brows=`<path d="M${ex1-9} ${ey-12}L${ex1+6} ${ey-7}M${ex2+9} ${ey-12}L${ex2-6} ${ey-7}" stroke="${browInk}" stroke-width="3" stroke-linecap="round"/>`;
-    mouth=K==='owl'?`<path d="M44 62L56 62L50 69Z" fill="#f5a623"/>`:`<rect x="38" y="64" width="24" height="9" rx="3" fill="#fff" stroke="${mouthInk}" stroke-width="2"/><path d="M44 64V73M50 64V73M56 64V73" stroke="${mouthInk}" stroke-width="1.5"/>`}
-  else{const r=[3.2,4.4];eyes=`<ellipse cx="${ex1}" cy="${ey}" rx="${r[0]}" ry="${r[1]}" fill="${eyeInk}"/><ellipse cx="${ex2}" cy="${ey}" rx="${r[0]}" ry="${r[1]}" fill="${eyeInk}"/>`+(eyeInk===DARK?`<circle cx="${ex1+1.4}" cy="${ey-1.8}" r="1.3" fill="#fff"/><circle cx="${ex2+1.4}" cy="${ey-1.8}" r="1.3" fill="#fff"/>`:'');
-    brows=`<path d="M${ex1-7} ${ey-10}Q${ex1} ${ey-13} ${ex1+7} ${ey-10}M${ex2-7} ${ey-10}Q${ex2} ${ey-13} ${ex2+7} ${ey-10}" fill="none" stroke="${browInk}" stroke-width="2.3" stroke-linecap="round"/>`;
-    mouth=K==='owl'?beak:`<path d="M43 67Q50 73 57 67" fill="none" stroke="${mouthInk}" stroke-width="2.6" stroke-linecap="round"/>`}
-  if(K==='owl'&&m!=='normal')mouth=m==='funny'?beak:mouth;
-  const mouthG=K==='owl'?mouth:`<g transform="translate(0 ${mo})">${mouth}</g>`;
-  const acc=[ '',
-    `<g fill="none" stroke="#2b2b33" stroke-width="2.4"><circle cx="${ex1}" cy="${ey}" r="9.5"/><circle cx="${ex2}" cy="${ey}" r="9.5"/><path d="M${ex1+9.5} ${ey}H${ex2-9.5}"/></g>`,
-    `<path d="M24 40Q24 11 50 11Q76 11 76 40Z" fill="#ef6b6b"/><rect x="22" y="35" width="56" height="9" rx="4.5" fill="#c94a4a"/><circle cx="50" cy="8" r="5.5" fill="#fff"/>`,
-    `<path d="M50 87L37 79L37 95Z M50 87L63 79L63 95Z" fill="#ef6b6b"/><circle cx="50" cy="87" r="4" fill="#c94a4a"/>`,
-    `<path d="M19 54Q19 13 50 13Q81 13 81 54" fill="none" stroke="#2b2f3a" stroke-width="5"/><rect x="12" y="47" width="12" height="22" rx="6" fill="#2b2f3a"/><rect x="76" y="47" width="12" height="22" rx="6" fill="#2b2f3a"/>`][a.acc|0]||'';
-  const bl=blush?`<circle cx="31" cy="64" r="4.5" fill="#ff8a8a" opacity=".28"/><circle cx="69" cy="64" r="4.5" fill="#ff8a8a" opacity=".28"/>`:'';
-  return `<svg class="av m-${m}" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true"><defs><clipPath id="${id}"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#${id})"><rect width="100" height="100" fill="#cfe8f7"/>${back}${torso}${head}${front}${bl}${eyeBg}${brows}${eyes}${mouthG}${extra}${acc}${sweat}</g></svg>`}
+function avatar(a,m='normal',size=48){a={...DEF,...a};const K=PEOPLE[a.kind]?a.kind:'mateo',p=PEOPLE[K],c=/^#[0-9a-f]{6}$/i.test(a.color||a.shirt||'')?(a.color||a.shirt):DEF.color,skin=/^#[0-9a-f]{6}$/i.test(a.skin||'')?a.skin:p.skin,hc=p.hair;
+  const id='c'+(++uid),sk1=shade(skin,.3),sk2=shade(skin,-.18),sk3=shade(skin,-.34),sh1=shade(c,.28),sh2=shade(c,-.3),h1=shade(hc,.25),h2=shade(hc,-.35),old=!!p.old,fem=p.g==='mujer',DARK='#2b2320',MOUTH='#8a3a3a';
+  const defs=`<defs><clipPath id="${id}"><circle cx="50" cy="50" r="50"/></clipPath>
+<radialGradient id="${id}b" cx="35%" cy="22%" r="95%"><stop offset="0" stop-color="#f7f2e8"/><stop offset="1" stop-color="#c9d3dd"/></radialGradient>
+<radialGradient id="${id}s" cx="38%" cy="30%" r="78%"><stop offset="0" stop-color="${sk1}"/><stop offset=".55" stop-color="${skin}"/><stop offset="1" stop-color="${sk2}"/></radialGradient>
+<linearGradient id="${id}n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sk3}"/><stop offset="1" stop-color="${sk2}"/></linearGradient>
+<linearGradient id="${id}c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${sh1}"/><stop offset="1" stop-color="${sh2}"/></linearGradient>
+<linearGradient id="${id}h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${h1}"/><stop offset="1" stop-color="${h2}"/></linearGradient>
+<radialGradient id="${id}i" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#9a7550"/><stop offset="1" stop-color="#34200f"/></radialGradient></defs>`;
+  const H=`url(#${id}h)`,S=`url(#${id}s)`;
+  // pelo que queda detrás de la cabeza
+  let back='';
+  if(p.style==='long')back=`<path d="M27 44C23 68 29 86 37 93L63 93C71 86 77 68 73 44C72 24 62 13 50 13C38 13 28 24 27 44Z" fill="${H}"/>`;
+  else if(p.style==='pony')back=`<path d="M63 21C87 16 92 52 78 68C83 51 79 36 66 31Z" fill="${H}"/><ellipse cx="66.5" cy="25" rx="3.2" ry="4.2" fill="${sh2}"/>`;
+  else if(p.style==='bun')back=`<circle cx="50" cy="12" r="8.6" fill="${H}"/><circle cx="47" cy="9.5" r="3" fill="#fff" opacity=".18"/>`;
+  else if(p.style==='curly'){for(let i=0;i<15;i++){const g=Math.PI*(0.88+1.24*i/14);back+=`<circle cx="${(50+28*Math.cos(g)).toFixed(1)}" cy="${(43+31*Math.sin(g)).toFixed(1)}" r="8.6" fill="${H}"/>`}back+=`<circle cx="23" cy="63" r="7" fill="${H}"/><circle cx="77" cy="63" r="7" fill="${H}"/>`}
+  const torso=`<path d="M8 101C8 80 27 73 50 73C73 73 92 80 92 101Z" fill="url(#${id}c)"/><path d="M36 73L50 88L64 73L58 72L50 80L42 72Z" fill="${sh2}" opacity=".5"/><ellipse cx="30" cy="84" rx="14" ry="6" fill="#fff" opacity=".12" transform="rotate(-18 30 84)"/>`;
+  const neck=`<path d="M42 57L42 75C42 81 58 81 58 75L58 57Z" fill="url(#${id}n)"/>`;
+  const ears=`<ellipse cx="29.6" cy="47" rx="3.6" ry="5.8" fill="${sk2}"/><ellipse cx="70.4" cy="47" rx="3.6" ry="5.8" fill="${sk2}"/>`;
+  const head=`<ellipse cx="50" cy="45" rx="20.5" ry="${old?24.5:23.5}" fill="${S}"/><ellipse cx="50" cy="67.5" rx="13" ry="3.6" fill="${sk3}" opacity=".12"/><ellipse cx="43.5" cy="32.5" rx="8" ry="4" fill="#fff" opacity=".15" transform="rotate(-18 43.5 32.5)"/>`;
+  const cheeks=`<circle cx="37.5" cy="55.5" r="4.6" fill="#ff6f6f" opacity="${m==='funny'?.26:.15}"/><circle cx="62.5" cy="55.5" r="4.6" fill="#ff6f6f" opacity="${m==='funny'?.26:.15}"/>`;
+  const nose=`<path d="M50 47Q48.4 53.5 47.2 54.6Q50 56.4 52.8 54.6Q51.6 53.5 50 47Z" fill="${sk2}" opacity=".4"/><ellipse cx="49.3" cy="51" rx="1.1" ry="2.4" fill="${sk1}" opacity=".55"/>`;
+  const wr=old?`<path d="M40 33Q50 31 60 33M41 36Q50 34.4 59 36" stroke="${sk3}" stroke-width=".9" fill="none" opacity=".3" stroke-linecap="round"/><path d="M33.5 52Q36 58 38 61M66.5 52Q64 58 62 61" stroke="${sk3}" stroke-width=".9" fill="none" opacity=".28" stroke-linecap="round"/>`:'';
+  // ojos y cejas según el ánimo
+  const eye=(cx,s)=>{if(m==='funny')return `<path d="M${cx-4.6} 47.3Q${cx} 41.8 ${cx+4.6} 47.3" stroke="${DARK}" stroke-width="2.1" fill="none" stroke-linecap="round"/>`;const ry=m==='effort'?2.3:3.7;
+    return `<ellipse cx="${cx}" cy="46.2" rx="4.6" ry="${ry}" fill="#fff"/><circle cx="${cx+s*.4}" cy="46.4" r="${m==='effort'?2.1:2.7}" fill="url(#${id}i)"/><circle cx="${cx+s*.4}" cy="46.4" r="1.15" fill="#111"/><circle cx="${cx+s*.4+.9}" cy="45.4" r=".85" fill="#fff"/><path d="M${cx-4.9} 45.2Q${cx} ${m==='effort'?43.2:41.4} ${cx+4.9} 45.2" stroke="${sk3}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`};
+  const brow=m==='effort'?`<path d="M35.5 38.2L46.2 41.2M64.5 38.2L53.8 41.2" stroke="${hc}" stroke-width="2.3" stroke-linecap="round"/>`:m==='funny'?`<path d="M36 38.2Q41 35.2 46 38M54 38Q59 35.2 64 38.2" stroke="${hc}" stroke-width="2" fill="none" stroke-linecap="round"/>`:`<path d="M35.8 40.4Q41 38.2 46.2 40.2M53.8 40.2Q59 38.2 64.2 40.4" stroke="${hc}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+  const eyes=eye(41,-1)+eye(59,-1);
+  const lip=fem?'#c85a63':'#c4686a';
+  let mouth=m==='funny'?`<path d="M41 57Q50 70.5 59 57Z" fill="#7a1f2b"/><path d="M42.4 57.5Q50 61.2 57.6 57.5L57.1 59.8Q50 62.8 42.9 59.8Z" fill="#fff"/><ellipse cx="50" cy="65" rx="4" ry="2" fill="#e0707a"/>`
+    :m==='effort'?`<rect x="43.5" y="58" width="13" height="4.2" rx="1.8" fill="#fff" stroke="${MOUTH}" stroke-width="1.2"/><path d="M50 58V62.2M46.7 58V62.2M53.3 58V62.2" stroke="${MOUTH}" stroke-width=".6" opacity=".7"/>`
+    :`<path d="M43.5 58.4Q50 63.4 56.5 58.4Q50 60.4 43.5 58.4Z" fill="${lip}"/><path d="M43.5 58.4Q50 63.4 56.5 58.4" stroke="${MOUTH}" stroke-width="1.7" fill="none" stroke-linecap="round"/>`;
+  const sweat=m==='effort'?`<path d="M72 26Q76.4 34.5 72 39Q67.6 34.5 72 26Z" fill="#8ed1ff" stroke="#4aa3e0" stroke-width=".8"/><path d="M71 31Q71.4 34 72.6 35" stroke="#fff" stroke-width=".9" fill="none" opacity=".8" stroke-linecap="round"/>`:'';
+  // barba (antes de la boca) y pelo de delante
+  const beard=p.beard?`<path d="M30 50C30 67 38 74 50 74C62 74 70 67 70 50C67 59.5 62 63 50 63C38 63 33 59.5 30 50Z" fill="${H}"/><path d="M41 57.2C44 55 47 56 50 57.6C53 56 56 55 59 57.2C56 59.4 53 58.8 50 58.4C47 58.8 44 59.4 41 57.2Z" fill="${h2}"/>`:'';
+  let hair='';
+  if(p.style==='short')hair=`<path d="M29.5 43C27 25 38 14.5 50 14.5C62 14.5 73 25 70.5 43C68.5 33.5 62 27.5 50 27.5C38 27.5 32 33.5 29.5 43Z" fill="${H}"/><path d="M39 20Q46 16 57 18.5" stroke="${h1}" stroke-width="1.7" fill="none" opacity=".6" stroke-linecap="round"/>`;
+  else if(p.style==='messy')hair=`<path d="M28 44C24 24 38 12 50 12C64 12 76 24 72 44C70.5 36 66.5 32 62.5 33L59 24.5L52.5 33L46.5 24L42 33L36.5 31.5C32 34 29.5 38 28 44Z" fill="${H}"/><path d="M38 19Q46 14 58 17" stroke="${h1}" stroke-width="1.7" fill="none" opacity=".6" stroke-linecap="round"/>`;
+  else if(p.style==='sides')hair=`<path d="M29.5 47C27 39 28.5 31 33 26.5C32.2 34 33 41 34.6 47.5Z" fill="${H}"/><path d="M70.5 47C73 39 71.5 31 67 26.5C67.8 34 67 41 65.4 47.5Z" fill="${H}"/><ellipse cx="45" cy="23" rx="9" ry="3.6" fill="#fff" opacity=".22" transform="rotate(-12 45 23)"/>`;
+  else if(p.style==='long'||p.style==='bun')hair=`<path d="M29 42C29.5 26 41 17.5 52 18.5C64 19.5 71.5 30 71 42C66.5 32 58 28.5 49 29C40 29.5 33 33 29 42Z" fill="${H}"/><path d="M38 24Q45 19.5 56 21" stroke="${h1}" stroke-width="1.6" fill="none" opacity=".55" stroke-linecap="round"/>`;
+  else if(p.style==='pony')hair=`<path d="M29.5 43C27 24 39 14 51 14.5C63 15 73 25 70.5 43C66 33 58 28.5 47 29.5C38 30.5 32 35 29.5 43Z" fill="${H}"/><path d="M40 19.5Q47 15.5 58 18" stroke="${h1}" stroke-width="1.6" fill="none" opacity=".55" stroke-linecap="round"/>`;
+  else if(p.style==='curly')hair=`<circle cx="39.5" cy="26" r="7.2" fill="${H}"/><circle cx="50" cy="23" r="7.8" fill="${H}"/><circle cx="60.5" cy="26" r="7.2" fill="${H}"/><circle cx="31.5" cy="34" r="5.6" fill="${H}"/><circle cx="68.5" cy="34" r="5.6" fill="${H}"/><path d="M42 20Q48 17 56 19" stroke="${h1}" stroke-width="1.6" fill="none" opacity=".5" stroke-linecap="round"/>`;
+  // extras
+  const A=+a.acc||0;let extra='';
+  if(A===1)extra=`<g fill="none" stroke="${DARK}" stroke-width="1.6"><circle cx="41" cy="46.2" r="6.7" fill="#9ad2ff" fill-opacity=".14"/><circle cx="59" cy="46.2" r="6.7" fill="#9ad2ff" fill-opacity=".14"/><path d="M47.6 45.4Q50 43.8 52.4 45.4"/><path d="M34.3 45L29.8 43.6M65.7 45L70.2 43.6"/></g><path d="M36.4 42.6Q40.6 40.6 45 42.4" stroke="#fff" stroke-width="1" fill="none" opacity=".4" stroke-linecap="round"/>`;
+  else if(A===2)extra=`<path d="M26.5 37C26.5 14.5 73.5 14.5 73.5 37C65.5 30.5 34.5 30.5 26.5 37Z" fill="url(#${id}c)"/><path d="M25.5 37C40 31.5 60 31.5 74.5 37C70.5 41.5 29.5 41.5 25.5 37Z" fill="${sh2}"/><ellipse cx="42" cy="22" rx="9" ry="3.4" fill="#fff" opacity=".2" transform="rotate(-14 42 22)"/>`;
+  else if(A===3)extra=`<path d="M50 78L39 71.5L39 84.5Z M50 78L61 71.5L61 84.5Z" fill="#c43a3a"/><path d="M50 78L39 71.5L39 74Z" fill="#fff" opacity=".18"/><circle cx="50" cy="78" r="3.2" fill="#9e2a2a"/>`;
+  else if(A===4)extra=`<path d="M27.5 44C26 14 74 14 72.5 44" fill="none" stroke="#2b2f3a" stroke-width="3.4" stroke-linecap="round"/><rect x="22.6" y="39" width="8" height="15" rx="4" fill="#2b2f3a"/><rect x="69.4" y="39" width="8" height="15" rx="4" fill="#2b2f3a"/><rect x="24.4" y="42" width="3" height="9" rx="1.5" fill="${c}"/><rect x="72.6" y="42" width="3" height="9" rx="1.5" fill="${c}"/>`;
+  return `<svg class="av m-${m}" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">${defs}<g clip-path="url(#${id})"><rect width="100" height="100" fill="url(#${id}b)"/>${back}${neck}${torso}${ears}${head}${wr}${cheeks}${eyes}${brow}${nose}${beard}${mouth}${hair}${extra}${sweat}</g></svg>`}
 const greet=()=>{const h=new Date().getHours();return h<5?'Qué tarde':h>=21||h<8?'Buenas noches':h>=14?'Buenas tardes':'Buenos días'};
 const clock=()=>new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
 function paintAv(){const a=P?P.avatar:DEF;$('hav').innerHTML=avatar(a,mood,36);const g=document.querySelector('.gav');if(g)g.innerHTML=avatar(a,mood,96)}
@@ -625,21 +652,23 @@ function drawOb(){const d=ob.d,A=d.avatar,S=seq(),s=ob.step,st=S[s],c=$('obc'),i
   if(st==='safety')h+=`<h2>¿Cuánto puede hacer Calex solo?</h2><p>Tú decides. Puedes cambiarlo después en Configuración.</p><div class="cards" style="grid-template-columns:1fr">${Object.entries(SAFE).map(([k,[n,t]])=>`<div class="card ${d.safe===k?'on':''}" data-safe="${k}" role="button" tabindex="0"><b>${n}</b><small>${t}</small></div>`).join('')}</div>
     <div class="legal" style="margin-top:12px"><b>Límites que siempre se aplican</b><ul><li>Nunca toca Windows, Archivos de programa ni el registro sin que lo confirmes.</li><li>Borrar, formatear, apagar o cambiar la seguridad: <b>siempre pregunta</b>.</li><li>Escribe archivos sin preguntar solo en Documentos, Escritorio y Descargas.</li><li>Todo queda anotado en un registro local.</li></ul></div>`;
   if(st==='tone')h+=`<h2>¿Cómo quieres que sea Calex?</h2><p>Elige su forma de hablarte. Puedes cambiarlo cuando quieras.</p><div class="cards">${[...Object.keys(ob.tones),'custom'].map(k=>`<div class="card ${d.tone===k?'on':''}" data-tone="${k}"><b>${k==='custom'?'Personalizado':ob.tones[k]}</b><small>${TONEDESC[k]}</small></div>`).join('')}</div>${d.tone==='custom'?`<textarea id="obct" rows="3" maxlength="200" placeholder="Ej: háblame como un entrenador motivador, con frases cortas" style="margin-top:10px;font-size:15px">${esc(d.customTone)}</textarea>`:''}`;
-  if(st==='avatar')h+=`<h2>Elige tu personaje</h2><p>Mira cómo reacciona:</p><div class="big">${avatar(A,ob.mood,132)}</div>
-    <div style="display:flex;gap:6px;justify-content:center">${[['normal','Normal'],['effort','Esfuerzo'],['funny','Gracia']].map(([m,n])=>`<button type="button" class="ch ${ob.mood===m?'on':''}" data-mood="${m}">${n}</button>`).join('')}</div>
-    <div class="kinds">${AVK.map(k=>`<button type="button" class="kd ${A.kind===k?'on':''}" data-k="kind" data-v="${k}" title="${AVN[k]}" aria-label="${AVN[k]}">${avatar({...A,kind:k},'normal',58)}</button>`).join('')}</div>
-    <div class="bld"><div class="o"><label>Color</label>${sw('color',COLORS)}</div><div class="o"><label>Extra</label>${ch('acc',['Ninguno','Gafas','Gorro','Corbatín','Audífonos'])}</div></div><button type="button" id="obr" style="margin-top:12px">🎲 Aleatorio</button>`;
+  if(st==='avatar'){const G=A.gender||(PEOPLE[A.kind]&&PEOPLE[A.kind].g)||'hombre',list=AVK.filter(k=>PEOPLE[k].g===G);h+=`<h2>Elige tu persona</h2><p>Mira cómo reacciona:</p><div class="big">${avatar(A,ob.mood,132)}</div>
+    <div class="chips" style="margin:4px 0">${[['normal','Normal'],['effort','Esfuerzo'],['funny','Gracia']].map(([m,n])=>`<button type="button" class="ch ${ob.mood===m?'on':''}" data-mood="${m}">${n}</button>`).join('')}</div>
+    <div class="chips" style="margin:4px 0">${[['hombre','Hombre'],['mujer','Mujer']].map(([g,n])=>`<button type="button" class="ch ${G===g?'on':''}" data-g="${g}">${n}</button>`).join('')}</div>
+    <div class="kinds">${list.map(k=>`<button type="button" class="kd ${A.kind===k?'on':''}" data-k="kind" data-v="${k}" title="${AVN[k]}" aria-label="${AVN[k]}">${avatar({...A,kind:k,skin:null},'normal',58)}</button>`).join('')}</div>
+    <div class="bld"><div class="o"><label>Piel</label>${sw('skin',SKINS)}</div><div class="o"><label>Camiseta</label>${sw('color',COLORS)}</div><div class="o"><label>Extra</label>${ch('acc',['Ninguno','Gafas','Gorro','Corbatín','Audífonos'])}</div></div><button type="button" id="obr" style="margin-top:12px">🎲 Aleatorio</button>`}
   if(st==='theme')h+=`<h2>Elige tus colores</h2><p>Toca uno y mira cómo queda tu chat. Puedes cambiarlo cuando quieras.</p>${themeHTML()}`;
-  if(st==='done')h+=`<div class="big">${avatar(A,'funny',132)}</div><h2>${d.anonymous?'¡Listo!':'¡Listo, '+esc(d.name)+'!'}</h2><p>${d.anonymous?'Modo anónimo: Calex se irá adaptando a ti según lo que le respondas y te hablará':'Calex te hablará'} con tono <b>${d.tone==='custom'?'personalizado':ob.tones[d.tone].toLowerCase()}</b>.<br>Tu personaje reaccionará cuando Calex trabaje a fondo o algo tenga gracia.</p>`;
+  if(st==='done')h+=`<div class="big">${avatar(A,'funny',132)}</div><h2>${d.anonymous?'¡Listo!':'¡Listo, '+esc(d.name)+'!'}</h2><p>${d.anonymous?'Modo anónimo: Calex se irá adaptando a ti según lo que le respondas y te hablará':'Calex te hablará'} con tono <b>${d.tone==='custom'?'personalizado':ob.tones[d.tone].toLowerCase()}</b>.<br>Tu persona reaccionará cuando Calex trabaje a fondo o algo tenga gracia.</p>`;
   const first=st==='welcome'||(st==='name'&&!isNew);
   h+=`<div id="obnav"><button type="button" id="obb" ${st==='welcome'?'style="visibility:hidden"':''}>${first?'Cancelar':st==='legal'?'Rechazar':'Atrás'}</button><button type="button" class="pri" id="obx">${st==='welcome'?'Empezar':st==='legal'?'Aceptar':st==='done'?'Empezar a usar Calex':'Siguiente'}</button></div>`;
   c.innerHTML=h;bindThemes(c);
-  c.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;A[k]=k==='acc'?+b.dataset.v:b.dataset.v;drawOb()});
+  c.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;A[k]=k==='acc'?+b.dataset.v:b.dataset.v;if(k==='kind'){delete A.skin;A.gender=PEOPLE[A.kind].g}drawOb()});
+  c.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=b.dataset.g;A.gender=g;if(!PEOPLE[A.kind]||PEOPLE[A.kind].g!==g){A.kind=AVK.find(k=>PEOPLE[k].g===g);delete A.skin}drawOb()});
   c.querySelectorAll('[data-mood]').forEach(b=>b.onclick=()=>{ob.mood=b.dataset.mood;drawOb()});
   c.querySelectorAll('[data-tone]').forEach(b=>b.onclick=()=>{d.tone=b.dataset.tone;drawOb()});
   c.querySelectorAll('[data-safe]').forEach(b=>{const f=()=>{d.safe=b.dataset.safe;drawOb()};b.onclick=f;b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}}});
   c.querySelectorAll('[data-os]').forEach(b=>b.onclick=()=>{d.device.os=b.dataset.os;drawOb()});
-  const r=$('obr');if(r)r.onclick=()=>{const p=a=>a[Math.random()*a.length|0];Object.assign(A,{kind:p(AVK),color:p(COLORS),acc:Math.random()*5|0});drawOb()};
+  const r=$('obr');if(r)r.onclick=()=>{const p=a=>a[Math.random()*a.length|0];const kd=p(AVK);Object.assign(A,{kind:kd,gender:PEOPLE[kd].g,color:p(COLORS),acc:Math.random()*5|0,skin:Math.random()<.5?p(SKINS):null});if(!A.skin)delete A.skin;drawOb()};
   c.querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>{const m=MEMBERS.find(x=>x.id===b.dataset.mb);if(!m)return;d.member=m.id;d.name=m.name;d.title=m.title;d.anonymous=false;drawOb()});
   const n1=$('obn1');if(n1){n1.oninput=()=>d.name=n1.value;n1.onkeydown=e=>{if(e.key==='Enter')$('obx').click()};n1.focus()}
   const ct=$('obct');if(ct)ct.oninput=()=>d.customTone=ct.value;
@@ -1038,6 +1067,8 @@ async function flushQ(){if(!OFFQ.length||!navigator.onLine||busy)return;const q=
   const up=()=>b.classList.toggle('on',!navigator.onLine);addEventListener('online',()=>{up();setTimeout(flushQ,800)});addEventListener('offline',up);up();setTimeout(flushQ,2500)})();
 /* botón Atrás del mando o del móvil: cierra lo que esté abierto antes de salir de la app (la app nativa lo llama) */
 window.calexBack=()=>{
+  if(window.kpClose&&window.kpClose())return true;
+  if(window.tvAccClose&&window.tvAccClose())return true;
   if($('pvw')){$('pvw').remove();return true}
   if($('sp')){closeSteps();return true}
   if($('lv')&&$('lv').classList.contains('on')){$('lvx').click();return true}
@@ -1067,12 +1098,12 @@ window.calexBack=()=>{
   // ---- pantalla de inicio ----
   const home=el('div');home.id='tvh';
   home.innerHTML='<nav id="tvrail"><div class="tvlogo">◉</div><button type="button" data-go="home" class="on"><i>⌂</i><span>Inicio</span></button><button type="button" data-go="talk"><i>🎤</i><span>Hablar</span></button><button type="button" data-go="chats"><i>💬</i><span>Charlas</span></button><button type="button" data-go="set"><i>⚙</i><span>Ajustes</span></button></nav>'
-   +'<section id="tvmain"><div class="tvtop"><span id="tvclk"></span></div><div class="tvhero"><div><h1 id="tvgreet"></h1><p class="ttl" id="tvttl"></p></div><div class="tvcta"><button type="button" id="tvtalk">🎤  Hablar con Calex</button><button type="button" id="tvtype">⌨  Escribir</button></div></div><h2>Prueba preguntar</h2><div class="tvrow" id="tvr1"></div><h2>Charlas recientes</h2><div class="tvrow" id="tvr2"></div><div id="tvhint2">'+hint+'</div></section>';
+   +'<section id="tvmain"><div class="tvtop"><span id="tvclk"></span></div><div class="tvhero"><div><h1 id="tvgreet"></h1><p class="ttl" id="tvttl"></p></div><div class="tvcta"><button type="button" id="tvtalk">🎤  Hablar con Calex</button><button type="button" id="tvtype">⌨  Escribir</button><button type="button" id="tvlink">🔗  Vincular Google</button></div></div><h2>Prueba preguntar</h2><div class="tvrow" id="tvr1"></div><h2>Charlas recientes</h2><div class="tvrow" id="tvr2"></div><div id="tvhint2">'+hint+'</div></section>';
   document.body.append(home);
   const tile=(t,sub,fn,alt)=>{const b=el('button','tile'+(alt?' alt':''),'<b></b><small></small>');b.type='button';b.firstChild.textContent=t;b.lastChild.textContent=sub;b.onclick=fn;return b};
   const tick=()=>{const t=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});clk.textContent=t;const c=$('tvclk');if(c)c.textContent=t};tick();setInterval(tick,20000);
   let SUGS=null;
-  window.tvRender=()=>{const nm=P&&P.name?', '+P.name:'';$('tvgreet').textContent=greet()+nm;$('tvttl').textContent=(P&&P.title&&!ONE)?P.title:'';
+  window.tvRender=()=>{const nm=P&&P.name?', '+P.name:'';$('tvgreet').textContent=greet()+nm;const au=(typeof AUTH!=='undefined'&&AUTH&&AUTH.user&&AUTH.user.provider!=='guest')?AUTH.user:null;$('tvttl').textContent=[(P&&P.title&&!ONE)?P.title:'',au?('Google: '+(AUTH.user.email||AUTH.user.name||'')):''].filter(Boolean).join(' · ');const tl=$('tvlink');if(tl)tl.style.display=au?'none':'';
     if(!SUGS){const s=[...document.querySelectorAll('#log .sg')].map(x=>x.textContent);if(s.length)SUGS=s}
     const sg=SUGS||['Explíqueme qué es una VPN en dos frases','Proponga una cena con pollo y arroz','Ayúdeme a redactar un correo formal'];
     const r1=$('tvr1');r1.textContent='';sg.forEach(t=>r1.append(tile(t,'Preguntar',()=>{window.tvShow('chat');newChat();send(t)})));
@@ -1080,6 +1111,15 @@ window.calexBack=()=>{
     if(!r2.children.length)r2.append(tile('Aún no hay charlas','Empieza una con «Hablar»',()=>$('tvtalk').click(),true))};
   window.tvShow=v=>{B.classList.toggle('tvhome',v==='home');if(v==='home'){window.tvRender();setTimeout(()=>{const f=$('tvtalk');if(f)f.focus()},40)}else setTimeout(()=>{const f=$('mic');if(f)f.focus()},60)};
   window.tvMic=()=>{const m=$('mic');if(m&&!m.classList.contains('on'))m.click()};
+  // vincular la cuenta de Google de la TV con un código (en la TV no hay navegador)
+  const acc=el('div');acc.id='tva';acc.setAttribute('role','dialog');acc.setAttribute('aria-label','Vincular cuenta de Google');
+  acc.innerHTML='<div class="kpc"><h2>Vincular tu cuenta de Google</h2><p>1. En tu celular abrí Calex e iniciá sesión con Google.<br>2. Andá a Configuración → <b>Vincular una TV</b>.<br>3. Escribí este código:</p><div class="tvcode" id="tvcode">······</div><p id="tvst"></p><div class="tvcta2"><button type="button" id="tvnew">Código nuevo</button><button type="button" id="tvx">Cerrar</button></div></div>';document.body.append(acc);
+  let poll='',timer=null;const stopP=()=>{clearInterval(timer);timer=null};
+  const startP=async()=>{stopP();$('tvst').textContent='Generando el código…';try{const r=await fetch('/auth/tv/start',{method:'POST'}),j=await r.json();if(!r.ok)throw new Error(j.error||'error');poll=j.poll;$('tvcode').textContent=j.code.slice(0,3)+' '+j.code.slice(3);$('tvst').textContent='Esperando que lo escribas en tu celular…';
+    timer=setInterval(async()=>{try{const x=await(await fetch('/auth/tv/poll?poll='+encodeURIComponent(poll))).json();if(x.status==='ok'){stopP();$('tvst').textContent='¡Listo! Entrando con tu cuenta…';setTimeout(()=>location.reload(),700)}else if(x.status==='expired'){stopP();$('tvst').textContent='El código caducó. Pide uno nuevo.'}}catch{}},3000)}catch(e){$('tvst').textContent='No se pudo: '+e.message}};
+  window.tvAcc=()=>{acc.classList.add('on');startP();setTimeout(()=>{const f=$('tvx');if(f)f.focus()},60)};
+  window.tvAccClose=()=>{if(acc.classList.contains('on')){acc.classList.remove('on');stopP();return true}return false};
+  $('tvnew').onclick=startP;$('tvx').onclick=()=>window.tvAccClose();$('tvlink').onclick=()=>window.tvAcc();
   $('tvtalk').onclick=()=>{window.tvShow('chat');newChat();setTimeout(window.tvMic,200)};
   $('tvtype').onclick=()=>{window.tvShow('chat');newChat();setTimeout(()=>$('q').focus(),80)};
   home.querySelectorAll('#tvrail [data-go]').forEach(b=>b.onclick=()=>{const g=b.dataset.go;if(g==='talk')$('tvtalk').click();else if(g==='chats'){const t=document.querySelector('#tvr2 .tile');if(t)t.focus()}else if(g==='set')$('bs').click();else{const t=$('tvtalk');if(t)t.focus()}});
@@ -1089,7 +1129,7 @@ window.calexBack=()=>{
   // ---- navegación espacial: elige el siguiente elemento según la dirección (no depende del WebView) ----
   const SEL='button,input,select,textarea,a[href],[tabindex="0"],.card,.sg,.h,.sw,.kd,.th,.ch,.mb,.tile';
   const vis=e=>{if(e.disabled||e.hidden||e.closest('[inert]'))return false;const r=e.getBoundingClientRect();if(r.width<2||r.height<2)return false;const cs=getComputedStyle(e);return cs.visibility!=='hidden'&&cs.display!=='none'};
-  const layer=()=>['pvw','pm','ov','wb','ob','lg','sp','lv'].map(i=>$(i)).find(e=>e&&(e.id==='pvw'||e.id==='sp'||e.classList.contains('on')))||B;
+  const layer=()=>['kp','tva','pvw','pm','ov','wb','ob','lg','sp','lv'].map(i=>$(i)).find(e=>e&&(e.id==='pvw'||e.id==='sp'||e.classList.contains('on')))||B;
   document.addEventListener('keydown',e=>{
     if(!/^Arrow(Up|Down|Left|Right)$/.test(e.key)||e.ctrlKey||e.altKey||e.metaKey)return;const d=e.key,a=document.activeElement;
     if(a&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT')&&(d==='ArrowLeft'||d==='ArrowRight')&&a.value&&a.selectionStart!==(d==='ArrowLeft'?0:a.value.length))return; // mover el cursor del texto
@@ -1119,6 +1159,29 @@ function trot(m){const d=document.createElement('div');d.className='dog';d.textC
  const K=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];let ki=0;addEventListener('keydown',e=>{ki=(e.key===K[ki]||e.key.toLowerCase()===K[ki])?ki+1:(e.key===K[0]?1:0);if(ki===K.length){ki=0;const on=document.body.classList.toggle('maquina');tip(on?'Modo máquina de escribir':'Vuelves a la letra de siempre')}});
  let c=0,ct=0;const cr=$('credit');if(cr)cr.addEventListener('click',()=>{const now=Date.now();if(now-ct>3000)c=0;ct=now;if(++c>=3){c=0;tip('Programado por Fede. Probado por la familia. Vigilado por el perro.')}});
  try{console.log('%cCALEX','font:600 22px Georgia;letter-spacing:.2em','hecho en casa por Fede')}catch{}})();
+
+/* ---------- modo secreto: Configuración → «Código» → 8800 (también se puede teclear 8800 con el teclado con Configuración abierta) ---------- */
+const PROVN={google:'Google',apple:'Apple',guest:'invitado'};
+function paintAcc(){const r=$('pacc');if(!r)return;if(typeof AUTH==='undefined'||!AUTH||!AUTH.user){r.style.display='none';return}const u=AUTH.user;r.style.display='';
+  if(u.provider==='guest'){$('paccl').innerHTML='<b>Invitado</b><small>Tus charlas solo están en este navegador. Vincula tu cuenta de Google para guardarlas y verlas en todos tus dispositivos.</small>';$('pagb').style.display='';$('pagb').onclick=()=>{location.href='/auth/start/google'}}
+  else{$('paccl').innerHTML='';const b=document.createElement('b');b.textContent='Cuenta de '+(PROVN[u.provider]||u.provider);const sm=document.createElement('small');sm.textContent=[u.name,u.email].filter(Boolean).join(' · ')||'Sesión iniciada';$('paccl').append(b,sm);$('pagb').style.display='none'}
+  const tl=$('tvlrow');if(tl)tl.style.display=(u.provider==='guest'||document.body.classList.contains('tv'))?'none':''}
+$('tvl').onclick=async()=>{const m=$('tvm'),code=($('tvc').value||'').trim();m.style.color='var(--bad)';if(!code){m.textContent='Escribe el código que ves en la TV.';return}
+  try{const r=await fetch('/auth/tv/link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})}),j=await r.json();if(!r.ok)throw new Error(j.error||'No se pudo vincular');m.style.color='var(--ok)';m.textContent='¡Listo! La TV ya entró con tu cuenta.';$('tvc').value=''}catch(e){m.textContent=e.message}};
+const SECRET='8800';
+function secretMode(){const on=document.body.classList.toggle('maquina');trot();tip(on?'Modo secreto activado: máquina de escribir':'Modo secreto desactivado')}
+(()=>{const kp=document.createElement('div');kp.id='kp';kp.setAttribute('role','dialog');kp.setAttribute('aria-label','Código');
+  kp.innerHTML='<div class="kpc"><small>Escribe el código</small><div class="kpd" id="kpd" aria-live="polite"></div><div class="kpg">'+[1,2,3,4,5,6,7,8,9,'⌫',0,'✕'].map(k=>'<button type="button" data-k="'+k+'">'+k+'</button>').join('')+'</div></div>';document.body.append(kp);
+  let buf='';const show=()=>{$('kpd').textContent=buf.replace(/./g,'●')||'····';$('kpd').classList.remove('err')};
+  const close=()=>{kp.classList.remove('on');buf='';const b=$('codb');if(b)b.focus()};
+  const press=k=>{if(k==='✕'){close();return}if(k==='⌫'){buf=buf.slice(0,-1);show();return}if(!/^\d$/.test(String(k)))return;buf+=k;show();
+    if(buf.length>=SECRET.length){if(buf===SECRET){close();$('sc').click();secretMode()}else{$('kpd').classList.add('err');setTimeout(()=>{buf='';show()},500)}}};
+  kp.addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b)press(b.dataset.k);else if(e.target===kp)close()});
+  $('codb').onclick=()=>{buf='';show();kp.classList.add('on');setTimeout(()=>{const f=kp.querySelector('[data-k="8"]');if(f)f.focus()},40)};
+  window.kpClose=()=>{if(kp.classList.contains('on')){close();return true}return false};
+  // con un teclado de verdad: teclear 8800 con Configuración abierta
+  let seq='';addEventListener('keydown',e=>{if(!$('ov').classList.contains('on')||kp.classList.contains('on'))return;if(/^\d$/.test(e.key)){seq=(seq+e.key).slice(-SECRET.length);if(seq===SECRET){seq='';$('sc').click();secretMode()}}else if(!['Shift','Control','Alt'].includes(e.key))seq=''});
+  addEventListener('keydown',e=>{if(kp.classList.contains('on')&&/^\d$/.test(e.key)){e.preventDefault();press(e.key)}else if(kp.classList.contains('on')&&e.key==='Backspace'){e.preventDefault();press('⌫')}},true)})();
 const plain=s=>String(s).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 function eggReply(t){const s=plain(t);
   if(/^(guau|woof|\/perro)$/.test(s))return{say:'Guau. El guardián del hogar está de ronda.',fx:()=>trot()};
@@ -1187,7 +1250,7 @@ async function loadModels(){const m=await(await fetch('/models')).json();const n
     bd=x=>{const c=(m.caps&&m.caps[x])||[];return c.includes('vision')?' · ve imágenes':''},mo=m.models.map(x=>[x,(m.labels&&m.labels[x])||nice(x)+bd(x)]),ef=Object.entries(m.efforts);
   fill($('sm'),mo,m.current);fill($('se'),ef,m.effort);fill($('cm'),mo,m.current);fill($('ce'),ef,m.effort);$('tmod').textContent=m.current;applyLevel(LEVEL)}
 async function openSet(){await loadModels();CFG=await(await fetch('/config')).json();
-  $('pf').textContent=P?(P.anonymous?'Anónimo':P.name)+' · tono '+(P.tone==='custom'?'personalizado':(ob.tones[P.tone]||P.tone).toLowerCase()):'Aún sin perfil';paintMembers();
+  $('pf').textContent=P?(P.anonymous?'Anónimo':P.name)+' · tono '+(P.tone==='custom'?'personalizado':(ob.tones[P.tone]||P.tone).toLowerCase()):'Aún sin perfil';paintMembers();paintAcc();
   $('sl').value=CFG.safetyLevel;origLevel=CFG.safetyLevel;$('lgo').value=CFG.legal.owner;$('lgm').value=CFG.legal.email;$('lgc2').value=CFG.legal.country;
   await loadAuth().catch(()=>{});renderOAuth();renderCloud();renderGw();
   $('acl').textContent=AUTH.user?'Sesión iniciada: '+(AUTH.user.name||AUTH.user.email||(P&&P.name)||'')+' ('+({password:'correo',google:'Google',facebook:'Facebook',huawei:'Huawei',apple:'Apple',guest:'invitado: tus charlas solo están en este navegador; inicia sesión con Google, Facebook o Huawei para verlas en todos tus dispositivos'}[AUTH.user.provider]||AUTH.user.provider)+')':'Sin iniciar sesión: usas los datos locales de este PC';

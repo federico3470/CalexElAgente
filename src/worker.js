@@ -41,14 +41,14 @@ const MODES = { general: ["✨", "General", ""], translator: ["🌐", "Traductor
   coder: ["💻", "Programador", "MODO PROGRAMADOR: ayuda a programar con código claro y explica lo esencial en pocas líneas. Si te piden una página web, una animación o un juego, entrega UN SOLO archivo HTML completo y autónomo dentro de UN ÚNICO bloque ```html (con el CSS en <style> y el JavaScript en <script> dentro del mismo archivo), que funcione al abrirlo sin descargar nada. No dividas el código en varios bloques ni dejes partes por completar. No uses imágenes externas ni enlaces a fotos: no puedes generar imágenes 4K; para texturas, fondos y efectos usa CSS (degradados), SVG (feTurbulence) o canvas, y dilo en una frase. El código debe ser COMPLETO y ELABORADO (varias secciones, animaciones y detalles, de 150 a 400 líneas), nunca un esqueleto ni un ejemplo mínimo: aquí NO se te pide ser breve con el código. Para «scrollytelling»: secciones de 100vh, position:sticky y un IntersectionObserver que anime cada sección al entrar; fondo de estrellas con <canvas> y Math.random, nebulosas con radial-gradient y texturas con SVG feTurbulence. Si piden una página muy pesada, de muchos MB o GB, o con texturas 4K u 8K: el peso y la belleza se consiguen generando las texturas en el navegador (canvas de 2048 a 4096 px con ruido fractal, WebGL con shaders, SVG con filtros) y con muchas secciones; el archivo sigue siendo texto y no puedes crear gigabytes de datos. Si el código no cabe en una respuesta, termínala en un punto limpio; cuando te digan «continúa», sigue desde la siguiente línea en un nuevo bloque ```html, sin repetir nada. Después del bloque, máximo tres líneas de explicación."], teacher: ["🎓", "Profe", "MODO PROFE: explica paso a paso con ejemplos sencillos y comprueba que se entiende."],
   summary: ["📝", "Resumen", "MODO RESUMEN: resume lo que te den en puntos claros y breves."], writer: ["✍️", "Escritor", "MODO ESCRITOR: ayuda a redactar y mejorar textos con buen estilo."],
   chef: ["🍳", "Cocina", "MODO COCINA: propón recetas y menús con lo que el usuario tenga, con pasos cortos."], coach: ["💪", "Coach", "MODO COACH: motiva con empatía y ayuda a fijar metas pequeñas y concretas."] };
-const AVK = ["robot", "cat", "fox", "panda", "owl", "dragon", "alien", "ghost"];
+const AVK = ["mateo", "lucas", "tomas", "raul", "sofia", "valen", "camila", "nora"];
 const hex = (v, d) => (/^#[0-9a-f]{6}$/i.test(v) ? v : d);
 const ageGuide = (a) => a < 13 ? "Usa palabras muy simples y un tono amable, explica paso a paso y mantén todo apto para niños." : a < 18 ? "Usa un lenguaje cercano y claro para un adolescente y mantén el contenido apto para menores." : a >= 65 ? "Sé paciente y claro, evita la jerga técnica." : "Trátalo como a un adulto.";
 function cleanProfile(b, old) {
   const age = !b.anonymous && Number.isInteger(+b.age) && +b.age >= 5 && +b.age <= 120 ? +b.age : null;
   return { anonymous: !!b.anonymous, name: b.anonymous ? "" : String(b.name || "").trim().slice(0, 30), member: String(b.member || "").replace(/[^\w-]/g, "").slice(0, 20), title: String(b.title || "").trim().slice(0, 40), age, device: { os: "", brand: "" },
     tone: TONES[b.tone] || b.tone === "custom" ? b.tone : "friendly", customTone: String(b.customTone || "").slice(0, 200),
-    avatar: { kind: AVK.includes(b.avatar?.kind) ? b.avatar.kind : "robot", color: hex(b.avatar?.color || b.avatar?.shirt, "#4fc3f7"), acc: Number.isInteger(b.avatar?.acc) && b.avatar.acc >= 0 && b.avatar.acc <= 4 ? b.avatar.acc : 0 },
+    avatar: { kind: AVK.includes(b.avatar?.kind) ? b.avatar.kind : "mateo", color: hex(b.avatar?.color || b.avatar?.shirt, "#4fc3f7"), acc: Number.isInteger(b.avatar?.acc) && b.avatar.acc >= 0 && b.avatar.acc <= 4 ? b.avatar.acc : 0, gender: ["hombre", "mujer"].includes(b.avatar?.gender) ? b.avatar.gender : "", skin: /^#[0-9a-f]{6}$/i.test(b.avatar?.skin || "") ? b.avatar.skin : "" },
     consent: b.consent?.terms ? { terms: String(b.consent.terms).slice(0, 20), ts: Date.now(), over13: !!b.consent.over13, guardian: !!b.consent.guardian } : old?.consent || null, created: old?.created || Date.now() };
 }
 // Lo que Calex sabe de la familia (se aplica a todas las charlas, salvo al traducir)
@@ -91,6 +91,30 @@ async function authRoutes(req, env, url, user) {
     if (!(await hit(env, "guest:" + (req.headers.get("cf-connecting-ip") || "x"), 10, 3600))) return json({ error: "Demasiados intentos, espera un rato" }, 429);
     const id = crypto.randomUUID(); await q(env, "INSERT INTO users(id,provider,sub,email,name,profile,facts,created) VALUES(?,?,?,?,?,?,?,?)", id, "guest", rnd(12), "", "", null, "[]", Date.now()).run();
     return json({ user: { id, provider: "guest", name: "", email: "" } }, 200, { "Set-Cookie": await newSession(env, id) });
+  }
+  // --- vincular una TV: la TV muestra un código de 6 letras; en el celu (con Google iniciado) se escribe y la TV entra con esa cuenta ---
+  if (req.method === "POST" && P === "/auth/tv/start") {
+    if (!(await hit(env, "tvstart:" + (req.headers.get("cf-connecting-ip") || "x"), 20, 3600))) return json({ error: "Demasiados intentos, espera un rato" }, 429);
+    const al = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", rb = crypto.getRandomValues(new Uint8Array(6)), code = [...rb].map((n) => al[n % al.length]).join(""), poll = rnd(24);
+    await q(env, "DELETE FROM oauth_states WHERE exp<?", Date.now()).run();
+    await q(env, "INSERT INTO oauth_states(state,provider,verifier,exp) VALUES(?,?,?,?)", "tv." + code, "tvcode", poll, Date.now() + 600000).run();
+    return json({ code, poll, expires: 600 });
+  }
+  if (req.method === "GET" && P === "/auth/tv/poll") {
+    const poll = url.searchParams.get("poll") || "", ok = await q(env, "SELECT * FROM oauth_states WHERE state=? AND provider='tvok'", "tvok." + poll).first();
+    if (!ok || ok.exp < Date.now()) { const alive = await q(env, "SELECT 1 x FROM oauth_states WHERE provider='tvcode' AND verifier=? AND exp>?", poll, Date.now()).first(); return json({ status: alive ? "pending" : "expired" }); }
+    await q(env, "DELETE FROM oauth_states WHERE state=?", "tvok." + poll).run();
+    return json({ status: "ok" }, 200, { "Set-Cookie": await newSession(env, ok.verifier) });
+  }
+  if (req.method === "POST" && P === "/auth/tv/link") {
+    if (!user || user.provider === "guest") return json({ error: "Inicia sesión con Google para vincular la TV" }, 401);
+    if (!(await hit(env, "tvlink:" + user.id, 10, 600))) return json({ error: "Demasiados intentos, espera un rato" }, 429);
+    const b = await req.json().catch(() => ({})), code = String(b.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    const row = await q(env, "SELECT * FROM oauth_states WHERE state=? AND provider='tvcode'", "tv." + code).first();
+    if (!row || row.exp < Date.now()) return json({ error: "Código no válido o caducado" }, 400);
+    await q(env, "DELETE FROM oauth_states WHERE state=?", "tv." + code).run();
+    await q(env, "INSERT INTO oauth_states(state,provider,verifier,exp) VALUES(?,?,?,?)", "tvok." + row.verifier, "tvok", user.id, Date.now() + 120000).run();
+    return json({ ok: true });
   }
   if (req.method === "POST" && P === "/auth/logout") { const t = cookie(req, "dot_session"); if (t) await q(env, "DELETE FROM sessions WHERE h=?", await sha(t)).run();
     return json("ok", 200, { "Set-Cookie": "dot_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0" }); }

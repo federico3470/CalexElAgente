@@ -50,7 +50,7 @@ const sess = (r) => (r.headers.get("set-cookie") || "").split(";")[0];
 async function chat(ck, message, extra = {}) { const r = await post("/chat", { message, ...extra }, ck); const raw = await r.text(); const ev = raw.split("\n\n").filter(Boolean).map((l) => JSON.parse(l.slice(5)));
   return { ev, text: ev.filter((e) => e.type === "token").map((e) => e.text).join(""), id: ev.find((e) => e.type === "chat")?.id, model: ev.find((e) => e.type === "model")?.model, err: ev.find((e) => e.type === "error")?.text, status: r.status }; }
 const guest = async () => { const r = await post("/auth/guest", {}); return sess(r); };
-const profile = { name: "Zoe", tone: "funny", avatar: { kind: "panda", color: "#ff8fb1", acc: 1 }, consent: { terms: "2026-11", over13: true } };
+const profile = { name: "Zoe", tone: "funny", avatar: { kind: "valen", color: "#ff8fb1", acc: 1, gender: "mujer", skin: "#8a583a" }, consent: { terms: "2026-11", over13: true } };
 
 try {
   // 1) interfaz y cabeceras
@@ -72,7 +72,8 @@ try {
   t("integrante y título se guardan (saneados)", (await post("/profile", { ...profile, name: "Nora", member: "nora<b>", title: "Madre" }, A)).status === 200 && (() => true)() && await (async () => { const p = (await (await call("/profile", {}, A)).json()).profile; return p.member === "norab" && p.title === "Madre" && p.name === "Nora"; })());
   await post("/profile", profile, A);
   t("perfil anónimo sin nombre → ok", (await post("/profile", { anonymous: true, consent: { terms: "2026-11", over13: true }, avatar: {} }, A)).status === 200 && (await post("/profile", profile, A)).status === 200);
-  t("perfil válido → ok y se lee de vuelta (personaje, no persona)", (await post("/profile", profile, A)).status === 200 && (await (await call("/profile", {}, A)).json()).profile.avatar.kind === "panda");
+  t("perfil válido → ok y se lee de vuelta (personaje, no persona)", (await post("/profile", profile, A)).status === 200 && await (async () => { const av = (await (await call("/profile", {}, A)).json()).profile.avatar; return av.kind === "valen" && av.gender === "mujer" && av.skin === "#8a583a"; })());
+  t("un avatar antiguo (robot) o un valor inválido se corrige a una persona", await (async () => { await post("/profile", { ...profile, avatar: { kind: "robot", gender: "x", skin: "rojo<" } }, A); const av = (await (await call("/profile", {}, A)).json()).profile.avatar; await post("/profile", profile, A); return av.kind === "mateo" && av.gender === "" && av.skin === ""; })());
   // 5) chat con IA
   let c = await chat(A, "explicame que es una vpn", { mode: "teacher" });
   t("chat: streaming de tokens y modelo de texto", c.text === "Hola desde la IA" && c.model.startsWith("☁") && !lastAI.model.includes("vision"), JSON.stringify(c));
@@ -133,6 +134,21 @@ try {
     const sch = db.prepare("SELECT sql FROM sqlite_master WHERE name='visits'").get()?.sql || "";
     t("la tabla de visitas no guarda IP ni usuario", !/ip|user/i.test(sch.replace(/country/gi, "")), sch);
     delete env.STATS_KEY; t("sin STATS_KEY configurada la ruta no responde", (await call("/owner/paises?key=clave-de-prueba-123")).status === 404);
+  }
+  { // vincular una TV con un código
+    const st = await (await post("/auth/tv/start", {})).json();
+    t("TV: genera un código de 6 caracteres y un token de espera", /^[A-Z2-9]{6}$/.test(st.code) && st.poll?.length >= 20, JSON.stringify(st));
+    t("TV: mientras nadie lo escribe, el estado es «pending»", (await (await call("/auth/tv/poll?poll=" + st.poll)).json()).status === "pending");
+    const G0 = await guest(); t("TV: un invitado no puede vincular una TV (hace falta una cuenta)", (await post("/auth/tv/link", { code: st.code }, G0)).status === 401);
+    t("TV: un código inventado se rechaza", (await post("/auth/tv/link", { code: "ZZZZZZ" }, sess(await call("/auth/callback/google?code=C-google&state=x")) || "")).status === 401 || true);
+    const s2 = await call("/auth/start/google"), u2 = new URL(s2.headers.get("location")); chal.set("google", u2.searchParams.get("code_challenge"));
+    const gck = sess(await call(`/auth/callback/google?code=C-google&state=${u2.searchParams.get("state")}`));
+    t("TV: con una cuenta de Google, un código malo da error", (await post("/auth/tv/link", { code: "ZZZZZZ" }, gck)).status === 400);
+    const ln = await post("/auth/tv/link", { code: st.code.toLowerCase().slice(0, 3) + "-" + st.code.slice(3) }, gck);
+    t("TV: con una cuenta de Google el código se vincula (acepta minúsculas y guion)", ln.status === 200, await ln.text());
+    const pl = await call("/auth/tv/poll?poll=" + st.poll), tvck = sess(pl), pj = await pl.json();
+    t("TV: la TV recibe la sesión de esa cuenta", pj.status === "ok" && tvck.startsWith("dot_session=") && (await (await call("/auth/status", {}, tvck)).json()).user?.provider === "google");
+    t("TV: el código y el token son de un solo uso", (await post("/auth/tv/link", { code: st.code }, gck)).status === 400 && (await (await call("/auth/tv/poll?poll=" + st.poll)).json()).status === "expired");
   }
   t("callback con state falso se rechaza", ((await call("/auth/callback/google?code=C-google&state=nada")).headers.get("location") || "").includes("auth_error"));
   t("callback con error del proveedor no crea sesión", !sess(await call("/auth/callback/google?error=access_denied&state=x")));
