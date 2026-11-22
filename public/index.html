@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr2s1dy">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr4lk9p">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -400,6 +400,10 @@ body.tv #kp .kpc{width:min(22em,92vw);padding:1.2em 1.5em}body.tv #kp .kpd{font-
 #tva p{margin:.3em 0;color:var(--mut);line-height:1.45;font-size:.85em}#tva .tvcode{font:700 2.6em Georgia,serif;letter-spacing:.22em;color:var(--acc);margin:.15em 0 .1em;padding-left:.22em}
 #tva .tvcta2{display:flex;gap:.8em;justify-content:center;margin-top:.8em}
 body.tv #tvlrow{display:none}
+/* sin el cuadrado azul al tocar partes redondeadas */
+*{-webkit-tap-highlight-color:transparent}:focus:not(:focus-visible){outline:none}a,button,[role=button],input,select,textarea,summary{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+.pcode{font:700 2.1em Georgia,serif;letter-spacing:.2em;color:var(--acc);text-align:center;margin:.25em 0 .1em;padding-left:.2em;user-select:all}.pst{color:var(--mut);text-align:center;font-size:.85em;margin:.2em 0 0}
+.tvpair{border:1px solid var(--glb);border-radius:22px;padding:.9em 1.1em;margin:.6em 0}.tvpair h3{margin:0 0 .2em;font:600 1.05em Georgia,serif}.tvpair p{margin:.2em 0;color:var(--mut);line-height:1.4;font-size:.85em}
 /* conectores, isla de música y easter eggs */
 #cnov{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:16px;z-index:9}#cnov.on{display:flex}
 #cnp{width:min(720px,100%);max-height:90vh;overflow:auto;padding:20px 22px;border-radius:28px;background-color:var(--gl2);border:1px solid var(--glb);box-shadow:var(--spec),var(--sh);-webkit-backdrop-filter:blur(var(--blur)) saturate(150%);backdrop-filter:blur(var(--blur)) saturate(150%)}
@@ -470,6 +474,7 @@ body.tv #isl,body.tv #bcn,body.tv #cnov{display:none!important}
   <h3>Configuración</h3><small style="color:var(--mut)" id="ro"></small>
   <h4>Cuenta</h4>
   <div class="r"><label id="acl">…</label><button id="acb">Iniciar sesión</button></div>
+  <div id="tvsl" hidden></div>
   <h4>Apariencia</h4>
   <div id="thset"></div>
   <div class="r" id="a3r" style="display:none"><label>Personas realistas en 3D (beta)<small>Prueba experimental. Por defecto se usan las personas de siempre.</small></label><input type="checkbox" id="a3t"></div>
@@ -581,7 +586,8 @@ const COLORS=['#4fc3f7','#ef6b6b','#5ad19a','#f5b342','#9b7cf4','#ff8fb1','#8b93
 const shade=(h,k)=>{const n=parseInt(h.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(k<0?v*(1+k):v+(255-v)*k)));return '#'+[n>>16&255,n>>8&255,n&255].map(f).map(v=>v.toString(16).padStart(2,'0')).join('')};
 const A3on=()=>{try{return localStorage.getItem('calex-a3d')==='on'}catch{return false}};
 function avatar(a,m='normal',size=48){a={...DEF,...a};
-  if(A3on()&&window.A3D&&A3D.init()){const u=A3D.url({kind:PEOPLE[a.kind]?a.kind:'mateo',skin:a.skin,color:a.color||a.shirt,acc:a.acc},m,size);if(u)return '<img class="av m-'+m+'" src="'+u+'" width="'+size+'" height="'+size+'" alt="" style="border-radius:50%;object-fit:cover">'} // versión Cloudflare: persona 3D realista (avatar3d.js)const K=PEOPLE[a.kind]?a.kind:'mateo',p=PEOPLE[K],c=/^#[0-9a-f]{6}$/i.test(a.color||a.shirt||'')?(a.color||a.shirt):DEF.color,skin=/^#[0-9a-f]{6}$/i.test(a.skin||'')?a.skin:p.skin,hc=p.hair;
+  if(A3on()&&window.A3D&&A3D.init()){const u=A3D.url({kind:PEOPLE[a.kind]?a.kind:'mateo',skin:a.skin,color:a.color||a.shirt,acc:a.acc},m,size);if(u)return '<img class="av m-'+m+'" src="'+u+'" width="'+size+'" height="'+size+'" alt="" style="border-radius:50%;object-fit:cover">'} // versión Cloudflare: persona 3D realista (avatar3d.js)
+  const K=PEOPLE[a.kind]?a.kind:'mateo',p=PEOPLE[K],c=/^#[0-9a-f]{6}$/i.test(a.color||a.shirt||'')?(a.color||a.shirt):DEF.color,skin=/^#[0-9a-f]{6}$/i.test(a.skin||'')?a.skin:p.skin,hc=p.hair;
   const id='c'+(++uid),sk1=shade(skin,.3),sk2=shade(skin,-.18),sk3=shade(skin,-.34),sh1=shade(c,.28),sh2=shade(c,-.3),h1=shade(hc,.25),h2=shade(hc,-.35),old=!!p.old,fem=p.g==='mujer',DARK='#2b2320',MOUTH='#8a3a3a';
   const defs=`<defs><clipPath id="${id}"><circle cx="50" cy="50" r="50"/></clipPath>
 <radialGradient id="${id}b" cx="35%" cy="22%" r="95%"><stop offset="0" stop-color="#f7f2e8"/><stop offset="1" stop-color="#c9d3dd"/></radialGradient>
@@ -757,17 +763,22 @@ const guest=()=>{try{return localStorage.getItem('dot-guest')==='1'}catch{return
 const loadAuth=async()=>{AUTH=await(await fetch('/auth/status')).json()};
 const OAB=[['google','Google','#ffffff','#3c4043','G'],['apple','Apple','#000000','#ffffff','A']];
 const afterLogin=()=>{const s=nextMissing();if(s)openOb(s);else{}};
+let _pt=null;
+function tvPair(codeEl,stEl){clearInterval(_pt);codeEl.textContent='······';stEl.textContent='Generando el código…';
+  fetch('/auth/tv/start',{method:'POST'}).then(r=>r.json().then(j=>({r,j}))).then(({r,j})=>{if(!r.ok)throw new Error(j.error||'error');codeEl.textContent=j.code.slice(0,3)+' '+j.code.slice(3);stEl.textContent='Esperando que lo escribas en tu celular…';
+    _pt=setInterval(async()=>{if(!document.body.contains(codeEl)){clearInterval(_pt);return}try{const x=await(await fetch('/auth/tv/poll?poll='+encodeURIComponent(j.poll))).json();if(x.status==='ok'){clearInterval(_pt);stEl.textContent='¡Listo! Entrando con tu cuenta…';setTimeout(()=>location.reload(),600)}else if(x.status==='expired'){clearInterval(_pt);stEl.textContent='El código caducó. Abrí Ajustes de nuevo para uno nuevo.'}}catch{}},3000)}).catch(e=>{stEl.textContent='No se pudo generar el código: '+e.message})}
+const PAIRHTML='<div class="tvpair"><h3>Vincular con Google</h3><p>En tu celular: abrí Calex, iniciá sesión con Google y andá a <b>Configuración → Vincular una TV</b>. Escribí este código:</p><div class="pcode" id="pcode">······</div><div class="pst" id="pst"></div></div>';
 function showLogin(err){const c=$('lgc');let first=false;try{first=!localStorage.getItem('dot-welcomed');localStorage.setItem('dot-welcomed','1')}catch{} // primera vez en este dispositivo: bienvenida con el vínculo de cuenta desde el principio
   c.innerHTML=`<svg viewBox="0 0 48 48" width="${first?76:56}" height="${first?76:56}" aria-hidden="true"><defs><linearGradient id="lgg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#lgg2)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg>
   ${first?`<h2>Bienvenido a Calex</h2><p>Su asistente personal: conversa, redacta, explica y analiza imágenes, también por voz.<br>Vincule su cuenta para guardar su perfil y sus conversaciones, o continúe como invitado.</p>
   <ul class="wl"><li>Respuestas claras y sobrias, en su idioma</li><li>Usted decide qué puede hacer con sus datos</li><li>Se adapta a su forma de hablar</li></ul>`:`<h2>Inicia sesión</h2><p>Tus chats, perfil y memoria se guardan en tu cuenta.</p>`}
   <div class="oa">${OAB.map(([k,n,bg,fg,g])=>`<button type="button" class="ob ${AUTH.providers[k]?.configured?'':'off'}" data-oa="${k}"><i style="background:${bg};color:${fg}">${g}</i>${first?'Vincular con':'Continuar con'} ${n}</button>`).join('')}</div>
-  <div class="lgh" id="lgh" role="status"></div>
+  <div class="lgh" id="lgh" role="status"></div>${document.body.classList.contains('tv')?PAIRHTML:''}
   <div class="or"><span>o con tu correo</span></div>
   <form id="lgf"><input type="email" id="lge" placeholder="Correo" aria-label="Correo" autocomplete="email" required><input type="password" id="lgp" placeholder="Contraseña (mínimo 8 caracteres)" aria-label="Contraseña" autocomplete="current-password" required>
   <div class="r2"><button class="pri" id="lgi">Entrar</button><button type="button" id="lgr">Crear cuenta</button></div></form>
   <div class="lge" id="lgerr" role="alert"></div><button type="button" class="lnk" id="lgg">Entrar como invitado</button>`;
-  $('lgerr').textContent=err||'';
+  $('lgerr').textContent=err||'';if(document.body.classList.contains('tv'))tvPair($('pcode'),$('pst'));
   c.querySelectorAll('[data-oa]').forEach(b=>b.onclick=()=>{const k=b.dataset.oa,n=OAB.find(x=>x[0]===k)[1];
     if(AUTH.providers[k]?.configured){ // pantalla de consentimiento (como al vincular una cuenta en un juego): Aceptar / Rechazar
       c.innerHTML=`<div class="big">${avatar(P?P.avatar:DEF,'normal',96)}</div><h2>Vincular con ${n}</h2><p>Calex recibirá tu <b>nombre y correo</b> de ${n} para crear o abrir tu cuenta. No recibe tu contraseña.</p>
@@ -1345,6 +1356,7 @@ async function send(text,o={}){
   const iv=setInterval(()=>$('tm').textContent=fmt(performance.now()-t0),100);
   const ensure=()=>{if(!cur){cur=add('a','');cur.classList.add('cur');raw=''}};
   let prog=null;
+  const wd=setTimeout(()=>note('t','Sigue pensando… la primera respuesta puede tardar un poco mientras el modelo arranca.'),12000),hard=setTimeout(()=>{if(CTL)CTL.abort()},150000);
   try{
     const r=await fetch('/chat',{method:'POST',signal:CTL.signal,body:JSON.stringify({message:text,chatId,model:$('sm').value,effort:$('se').value,level:LEVEL,images:imgs,docs:docs.map(d=>({name:d.name,text:d.text})),mode:$('sd').value,music:!!musicSrc()})});
     const rd=r.body.getReader(),dec=new TextDecoder();let buf='';
@@ -1357,7 +1369,7 @@ async function send(text,o={}){
           think.lastChild.textContent+=ev.text;tk++}
         else if(ev.type==='token'){
           if(think&&!think.done){think.done=1;think.firstChild.textContent='Ver razonamiento ('+fmt(performance.now()-think.t0)+')'}
-          if(first===null){first=performance.now()-t0;$('tf').textContent=fmt(first)}
+          if(first===null){first=performance.now()-t0;$('tf').textContent=fmt(first);clearTimeout(wd)}
           ensure();raw+=ev.text;const vv=vis(raw);cur.innerHTML=md(vv);cur.style.display=vv?'':'none';cur.classList.add('cur')}
         else if(ev.type==='tool'){if(cur){cur.classList.remove('cur');cur=null}note('t','🔧 '+ev.name+' '+JSON.stringify(ev.args).slice(0,140))}
         else if(ev.type==='progress'){if(!prog)prog=note('pg','');prog.textContent='⏳ '+ev.text}
@@ -1376,7 +1388,7 @@ async function send(text,o={}){
         scroll()}}
   }catch(e){ensure();if(e.name==='AbortError')cur.textContent=(raw?raw+'\n':'')+'(detenido)';else cur.textContent='Error: '+e.message}
   if(cur){cur.classList.remove('cur');if(raw){const vv=vis(raw);if(vv){cur.dataset.raw=vv;actions(cur)}else cur.remove()}}{const sc=stepsFromText(raw);if(sc)stepCard(sc)}if(think&&!think.done)think.firstChild.textContent='Ver razonamiento';
-  clearInterval(iv);$('tm').textContent=fmt(performance.now()-t0);$('dt').classList.remove('on');
+  clearTimeout(wd);clearTimeout(hard);clearInterval(iv);$('tm').textContent=fmt(performance.now()-t0);$('dt').classList.remove('on');
   busy=false;CTL=null;$('go').textContent='Enviar';$('go').classList.remove('stop');$('q').focus();loadHist();if(WKSPEAK){WKSPEAK=false;if(raw)wakeSay(raw.replace(/[*`#_>|]/g,'').slice(0,500))}
   setMood(/(ja){2,}|jeje|haha|😂|🤣|😆|chiste/i.test(raw+' '+text)?'funny':'normal',3500);
   if(raw&&ACTRE.test(raw))await connAct(raw,o.depth||0);
@@ -1395,6 +1407,7 @@ async function openSet(){await loadModels();CFG=await(await fetch('/config')).js
   $('pf').textContent=P?(P.anonymous?'Anónimo':P.name)+' · tono '+(P.tone==='custom'?'personalizado':(ob.tones[P.tone]||P.tone).toLowerCase()):'Aún sin perfil';paintMembers();paintAcc();
   $('sl').value=CFG.safetyLevel;origLevel=CFG.safetyLevel;$('lgo').value=CFG.legal.owner;$('lgm').value=CFG.legal.email;$('lgc2').value=CFG.legal.country;
   await loadAuth().catch(()=>{});renderOAuth();renderCloud();renderGw();
+  {const ts=$('tvsl');if(document.body.classList.contains('tv')&&!(AUTH.user&&AUTH.user.provider!=='guest')){ts.hidden=false;ts.innerHTML=PAIRHTML.replace('id="pcode"','id="scode"').replace('id="pst"','id="sst"');tvPair($('scode'),$('sst'))}else ts.hidden=true} // TV sin cuenta: en Ajustes aparece un código que cambia cada vez
   $('acl').textContent=AUTH.user?'Sesión iniciada: '+(AUTH.user.name||AUTH.user.email||(P&&P.name)||'')+' ('+({password:'correo',google:'Google',facebook:'Facebook',huawei:'Huawei',apple:'Apple',guest:'invitado: tus charlas solo están en este navegador; inicia sesión con Google, Facebook o Huawei para verlas en todos tus dispositivos'}[AUTH.user.provider]||AUTH.user.provider)+')':'Sin iniciar sesión: usas los datos locales de este PC';
   $('acb').textContent=AUTH.user?'Cerrar sesión':'Iniciar sesión';
   $('thset').innerHTML=themeHTML();bindThemes($('thset'));renderMem();initAppearance();
