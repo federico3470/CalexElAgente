@@ -210,5 +210,7 @@ void main(){
     if (!u) { var c = A.draw(a, mood, px, -.1); if (!c) return null; u = c.toDataURL("image/jpeg", .88); if (cache.size > 80) cache.delete(cache.keys().next().value); cache.set(k, u); }
     return u;
   };
-  init(); window.A3D = A;
+  /** Prepara el dibujo 3D (compila el sombreador). Es pesado en algunos celulares, así que solo se llama cuando la persona activa la opción. */
+  A.init = function () { if (!A.tried) { A.tried = true; init(); } return A.ok; };
+  window.A3D = A;
 })();
