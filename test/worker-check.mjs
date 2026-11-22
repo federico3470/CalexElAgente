@@ -248,6 +248,8 @@ try {
     t("si se acaba el saldo, la charla también sigue con el modelo gratuito", /Hola desde la IA/.test(r3.text) && !r3.err, r3.text + r3.err);
     delete globalThis.__orFail; delete env.OPENROUTER_KEY_ZAI; delete env.OPENROUTER_KEY_DEEPSEEK; globalThis.__or = []; const r4 = await chat(g3, "contame otra cosa", { level: 50 });
     t("sin claves configuradas, Calex funciona solo con Cloudflare y no llama a OpenRouter", globalThis.__or.length === 0 && /Hola desde la IA/.test(r4.text));
+    env.OPENROUTER_KEY_ANTHROPIC = "key-haiku-1usd"; env.OR_CHAT_MODEL = "or:anthropic/claude-haiku-5.5"; globalThis.__or = []; const r5 = await chat(g3, "dame un consejo de ahorro", { level: 50 });
+    t("Claude Haiku se pide con su propia clave (tope de US$ 1)", globalThis.__or[0]?.auth === "Bearer key-haiku-1usd" && globalThis.__or[0].model === "anthropic/claude-haiku-5.5" && /claude-haiku/.test(r5.model), JSON.stringify(globalThis.__or)); delete env.OPENROUTER_KEY_ANTHROPIC;
     delete env.STUDIO_MODEL; delete env.OR_CHAT_MODEL; }
 } catch (e) { t("excepción", false, e.stack); }
 console.log(`\n${pass} correctas, ${bad} fallidas.`); process.exit(bad ? 1 : 0);

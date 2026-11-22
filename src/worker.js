@@ -220,7 +220,7 @@ const ALLINONE = (level, live) => `Eres Calex, el asistente todo en uno de la fa
 
 // Los modelos con prefijo «or:» (ej. or:z-ai/glm-5.3) se piden a OpenRouter. Cada proveedor puede tener su PROPIA clave con su tope de gasto en OpenRouter.
 const isOR = (m) => typeof m === "string" && m.startsWith("or:");
-const orKey = (env, m) => { const id = m.slice(3); return (/^z-ai\//.test(id) && env.OPENROUTER_KEY_ZAI) || (/^deepseek\//.test(id) && env.OPENROUTER_KEY_DEEPSEEK) || env.OPENROUTER_KEY || ""; };
+const orKey = (env, m) => { const id = m.slice(3); return (/^z-ai\//.test(id) && env.OPENROUTER_KEY_ZAI) || (/^deepseek\//.test(id) && env.OPENROUTER_KEY_DEEPSEEK) || (/^anthropic\//.test(id) && env.OPENROUTER_KEY_ANTHROPIC) || env.OPENROUTER_KEY || ""; };
 const orReady = (env, m) => isOR(m) && !!orKey(env, m);
 async function orRun(env, model, payload) {
   const key = orKey(env, model); if (!key) throw new Error("OpenRouter sin clave");

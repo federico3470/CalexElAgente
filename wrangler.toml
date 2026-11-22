@@ -41,9 +41,9 @@ LEGAL_COUNTRY = ""            # país o jurisdicción
 # Las claves de inicio de sesión NO van aquí: se guardan como secretos (ver LEEME.md).
 
 # --- Modelos avanzados por OpenRouter (saldo prepago, sin cuota mensual) ---
-# Solo se usan si existen las claves (secretos OPENROUTER_KEY_ZAI y OPENROUTER_KEY_DEEPSEEK, cada una con su tope de gasto en OpenRouter).
+# Solo se usan si existen las claves (secretos OPENROUTER_KEY_ZAI y OPENROUTER_KEY_ANTHROPIC, cada una con su tope de gasto en OpenRouter).
 # Si falla una clave o se acaba el saldo, Calex sigue solo con los modelos gratuitos de Cloudflare.
 STUDIO_MODEL  = "or:z-ai/glm-5.3"                          # diseña las páginas (Calex Studio)
 CODER_MODEL   = "or:z-ai/glm-5.3"                          # juegos, apps y código
-OR_CHAT_MODEL = "or:deepseek/deepseek-v4.1-flash-1017"     # charla con esfuerzo Estándar o Profundo
-EYES_MODEL    = "or:deepseek/deepseek-v4.1-flash-1017"     # el que mira las capturas de las páginas (ve imágenes)
+OR_CHAT_MODEL = "or:anthropic/claude-haiku-5.5"                # charla con esfuerzo Estándar o Profundo
+EYES_MODEL    = "or:anthropic/claude-haiku-5.5"                # el que mira las capturas de las páginas (ve imágenes)
