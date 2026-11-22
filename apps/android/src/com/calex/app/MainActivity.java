@@ -11,6 +11,10 @@ import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
+import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -50,13 +54,14 @@ public class MainActivity extends Activity {
     w.setNavigationBarColor(Color.parseColor("#15140f"));
     w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
     web = new WebView(this);
-    web.setBackgroundColor(Color.parseColor("#15140f"));
+    web.setBackgroundColor(sheet() ? Color.TRANSPARENT : Color.parseColor("#15140f"));
     setContentView(web);
+    if (sheet()) setupSheet(w);
     WebSettings s = web.getSettings();
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.4");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.5");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
       @Override public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {
@@ -93,6 +98,22 @@ public class MainActivity extends Activity {
       }
     });
     if (!handleIntent(getIntent())) web.loadUrl(HOST + startQuery());
+  }
+
+  /** AssistActivity devuelve true: se muestra como un panel flotante abajo, no como una pantalla completa. */
+  protected boolean sheet() { return false; }
+
+  void setupSheet(Window w) {
+    DisplayMetrics dm = getResources().getDisplayMetrics(); float d = dm.density;
+    w.setStatusBarColor(Color.TRANSPARENT); w.setNavigationBarColor(Color.TRANSPARENT);
+    GradientDrawable bg = new GradientDrawable(); bg.setCornerRadius(28 * d); bg.setColor(Color.parseColor("#59101828"));
+    w.setBackgroundDrawable(bg);
+    w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+    WindowManager.LayoutParams lp = w.getAttributes();
+    lp.dimAmount = 0.28f; lp.width = dm.widthPixels - (int) (20 * d); lp.height = (int) (Math.min(dm.heightPixels * 0.62f, 560 * d)); lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL; lp.y = (int) (12 * d);
+    w.setAttributes(lp);
+    if (Build.VERSION.SDK_INT >= 31) { try { w.setBackgroundBlurRadius((int) (70 * d)); } catch (Exception e) { } } // desenfoca de verdad lo que hay detrás (liquid glass)
+    setFinishOnTouchOutside(true);
   }
 
   /** Calex Auto (paquete com.calex.auto) arranca en modo coche; como asistente digital, en modo de voz. */
@@ -135,6 +156,9 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void mediaCmd(String c) { Media.cmd(MainActivity.this, c); }
     /** Cierra la pantalla del asistente / modo coche y vuelve a lo que estabas haciendo. */
     @JavascriptInterface public void close() { runOnUiThread(new Runnable() { public void run() { finish(); } }); }
+    /** Abre la app completa (si falta iniciar sesión o se toca ⤢) y cierra el panel. */
+    @JavascriptInterface public void openApp() { runOnUiThread(new Runnable() { public void run() { try { Intent i = new Intent(MainActivity.this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP); startActivity(i); } catch (Exception e) { } if (sheet()) finish(); } }); }
+    @JavascriptInterface public void cancel() { runOnUiThread(new Runnable() { public void run() { if (sr != null) sr.cancel(); } }); }
     @JavascriptInterface public void stop() { runOnUiThread(new Runnable() { public void run() { if (sr != null) sr.stopListening(); } }); }
   }
 
@@ -145,12 +169,21 @@ public class MainActivity extends Activity {
       sr.setRecognitionListener(new RecognitionListener() {
         public void onReadyForSpeech(Bundle p) {}
         public void onBeginningOfSpeech() {}
-        public void onRmsChanged(float v) {}
+        public void onRmsChanged(float v) { js("window.__rms&&window.__rms(" + v + ")"); }
         public void onBufferReceived(byte[] b) {}
         public void onEndOfSpeech() {}
-        public void onPartialResults(Bundle p) {}
+        public void onPartialResults(Bundle p) { ArrayList<String> l = p.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION); if (l != null && !l.isEmpty()) js("window.__nsPartial&&window.__nsPartial(" + org.json.JSONObject.quote(l.get(0)) + ")"); }
         public void onEvent(int t, Bundle p) {}
-        public void onError(int e) { js("window.__nsEnd('" + (e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ? "no-speech" : "error") + "')"); }
+        public void onError(int e) {
+          String c = "error";
+          if (e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) c = "no-speech";
+          else if (e == SpeechRecognizer.ERROR_CLIENT) c = "aborted";
+          else if (e == SpeechRecognizer.ERROR_NETWORK || e == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || e == SpeechRecognizer.ERROR_SERVER) c = "network";
+          else if (e == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) c = "not-allowed";
+          else if (e == SpeechRecognizer.ERROR_AUDIO) c = "audio-capture";
+          else if (e == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) { c = "no-speech"; try { sr.destroy(); } catch (Exception x) { } sr = null; } // se vuelve a crear en el próximo intento
+          js("window.__nsEnd('" + c + "')");
+        }
         public void onResults(Bundle r) {
           ArrayList<String> l = r.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
           if (l != null && !l.isEmpty()) js("window.__nsResult(" + org.json.JSONObject.quote(l.get(0)) + ")");
@@ -161,6 +194,12 @@ public class MainActivity extends Activity {
     Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
     i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
     i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, pendingLang);
+    i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, pendingLang);
+    i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+    i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+    i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
+    i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1400L);
+    i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L);
     sr.startListening(i);
   }
 

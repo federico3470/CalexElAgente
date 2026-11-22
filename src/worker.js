@@ -253,9 +253,9 @@ async function critiquePage(env, PM, ask, look) {
 }
 
 async function chatRoute(req, env, user, ctx) {
-  const b = await req.json().catch(() => ({})), message = String(b.message || "").trim().slice(0, 4000);
+  const b = await req.json().catch(() => ({})), message = String(b.message || "").trim().slice(0, 24000);
   if (!message) return json({ error: "Mensaje vacío" }, 400);
-  const day = new Date().toISOString().slice(0, 10), limit = +env.DAILY_LIMIT || 80, level = lvlOf(b);
+  const day = new Date().toISOString().slice(0, 10), limit = +env.DAILY_LIMIT > 0 ? +env.DAILY_LIMIT : Infinity, level = lvlOf(b); // sin DAILY_LIMIT (o en 0) el uso es ilimitado
   const PM = pickModels(env), userPick = PM.text.find((m) => m.id === b.model) || PM.def;
   const hasImg = Array.isArray(b.images) && b.images.some((x) => typeof x === "string" && /^data:image\//.test(x));
   const profile = user.profile ? JSON.parse(user.profile) : null;
@@ -379,6 +379,26 @@ export default {
       if (!["GET", "HEAD"].includes(req.method)) { const o = req.headers.get("origin"); if (o && new URL(o).host !== url.host && !url.pathname.startsWith("/auth/callback/")) return json({ error: "Origen no permitido" }, 403); }
       const lg = /^\/legal\/(terminos|privacidad)$/.exec(url.pathname);
       if (lg) return new Response(LEGAL[lg[1]].replace(/\{\{VERSION\}\}/g, LEGAL_VERSION).replace(/\{\{OWNER\}\}/g, esc(env.LEGAL_OWNER, "(sin completar)")).replace(/\{\{EMAIL\}\}/g, esc(env.LEGAL_EMAIL, "(sin completar)")).replace(/\{\{COUNTRY\}\}/g, esc(env.LEGAL_COUNTRY, "(sin completar)")), { headers: { "Content-Type": "text/html; charset=utf-8", ...SEC } });
+      // iPhone: Apple no deja instalar apps fuera de la App Store sin cuenta de desarrollador; este perfil agrega Calex a la pantalla de inicio como una app a pantalla completa (Web Clip).
+      if (url.pathname === "/Calex-iPhone.mobileconfig") {
+        const ic = await env.ASSETS.fetch(new Request(new URL("/icon-180.png", url))), bytes = new Uint8Array(await ic.arrayBuffer()); let bin = ""; for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+        const home = url.origin + "/", plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>PayloadContent</key><array><dict>
+<key>FullScreen</key><true/><key>IsRemovable</key><true/><key>Precomposed</key><true/><key>Label</key><string>Calex</string>
+<key>Icon</key><data>${btoa(bin)}</data><key>URL</key><string>${home}</string>
+<key>PayloadDescription</key><string>Agrega Calex a tu pantalla de inicio</string><key>PayloadDisplayName</key><string>Calex</string>
+<key>PayloadIdentifier</key><string>com.calex.webclip.app</string><key>PayloadType</key><string>com.apple.webClip.managed</string>
+<key>PayloadUUID</key><string>7B1D5C0E-3F7A-4B8E-9C21-5A6E0D4F1A01</string><key>PayloadVersion</key><integer>1</integer>
+</dict></array>
+<key>PayloadDescription</key><string>Instala Calex en tu pantalla de inicio. No cambia ningún ajuste de tu iPhone.</string>
+<key>PayloadDisplayName</key><string>Calex</string><key>PayloadIdentifier</key><string>com.calex.webclip</string>
+<key>PayloadOrganization</key><string>Calex</string><key>PayloadRemovalDisallowed</key><false/><key>PayloadType</key><string>Configuration</string>
+<key>PayloadUUID</key><string>2E9A64B7-0C3D-4F15-8A7B-91D3E5C6B802</string><key>PayloadVersion</key><integer>1</integer>
+</dict></plist>`;
+        return new Response(plist, { headers: { "Content-Type": "application/x-apple-aspen-config", "Content-Disposition": 'attachment; filename="Calex-iPhone.mobileconfig"', "Cache-Control": "no-store", ...SEC } });
+      }
       if (url.pathname === "/.well-known/apple-developer-domain-association.txt") return env.APPLE_DOMAIN_ASSOCIATION ? new Response(String(env.APPLE_DOMAIN_ASSOCIATION), { headers: { "Content-Type": "text/plain; charset=utf-8", ...SEC } }) : json({}, 404); // verificación de dominio de Apple (se guarda como secreto)
       // estadística privada del responsable: solo el PAÍS aproximado de cada visita, agregado por día (sin IP, sin ciudad, sin cuenta). Nada de esto aparece en la interfaz.
       if (url.pathname === "/owner/paises") {

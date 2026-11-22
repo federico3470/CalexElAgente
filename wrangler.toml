@@ -26,7 +26,7 @@ database_id = "da640542-ea23-4e12-a55e-06dd30762541"
 
 [vars]
 # Límite diario por persona, en PUNTOS: los modelos grandes gastan más (ver LEEME.md). Protege tu cupo.
-DAILY_LIMIT = "80"
+# DAILY_LIMIT: sin definir = uso ilimitado (pon un número para limitar los mensajes por persona y día)
 LEGAL_OWNER = ""              # tu nombre o empresa (aparece en los términos y la privacidad)
 LEGAL_EMAIL = ""              # correo de contacto
 LEGAL_COUNTRY = ""            # país o jurisdicción

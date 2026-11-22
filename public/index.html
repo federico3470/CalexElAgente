@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwsd2yak">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwsdm2ck">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
 (function(){if(window.webkitSpeechRecognition||!window.CalexNative)return;function R(){this.lang='es-ES';this.continuous=false;this.interimResults=false}
  R.prototype.start=function(){window.__ns=this;try{window.CalexNative.start(this.lang||'es-ES')}catch(e){window.__nsEnd('error')}if(this.onstart)this.onstart()};
- R.prototype.stop=R.prototype.abort=function(){try{window.CalexNative.stop()}catch(e){}};
+ R.prototype.stop=function(){try{window.CalexNative.stop()}catch(e){}};R.prototype.abort=function(){try{(window.CalexNative.cancel||window.CalexNative.stop)()}catch(e){}};
+ window.__nsPartial=function(t){var s=window.__ns;if(s&&s.onpartial)s.onpartial(t)};
  window.__nsResult=function(t){var s=window.__ns;if(s&&s.onresult)s.onresult({resultIndex:0,results:[[{transcript:t,confidence:1}]]})};
  window.__nsEnd=function(err){var s=window.__ns;if(!s)return;if(err&&s.onerror)s.onerror({error:err});if(s.onend)s.onend()};
  window.SpeechRecognition=window.webkitSpeechRecognition=R})();
@@ -117,7 +118,32 @@ details.think div{border-left:2px solid var(--line);padding:4px 0 4px 10px;margi
 #lva{border-radius:50%;overflow:hidden;line-height:0;border:3px solid #fff8;box-shadow:0 0 0 6px #0006}#lvs{position:relative;z-index:2;max-width:760px;text-align:center;font-size:20px;line-height:1.4;background:#000a;padding:10px 16px;border-radius:14px;min-height:48px}
 #lvmu{display:none;position:relative;z-index:2;gap:14px}body.auto #lvmu{display:flex}#lvmu button{background:#000a;color:#fff;border:1px solid #fff4;border-radius:50%;width:64px;height:64px;font-size:26px;padding:0}
 #lvs{overflow-y:auto;max-height:36vh}body.auto #lvs{font-size:clamp(19px,5.2vw,30px);max-width:94vw;line-height:1.35}body.auto #lvb button{font-size:22px;padding:16px 26px;border-radius:40px}body.auto #lvc{display:none}body.auto #lva{box-shadow:0 0 0 8px #4fc3f733,0 0 60px #4fc3f755}
-#lvb{display:flex;gap:10px}#lvb button{background:#000a;color:#fff;border-color:#fff4;padding:10px 16px}#lvb .x{background:var(--bad);border-color:var(--bad)}
+#lvb{display:flex;gap:10px}
+#lvh,#lvin,#lvbars{display:none}
+body.auto #lvbars{display:block;width:92vw;height:78px;position:relative;z-index:2}
+body.assist{background:transparent!important}
+body.assist>*:not(#lv):not(script):not(style):not(link):not(.toast){display:none!important}
+body.assist:not(.app){background:radial-gradient(circle at 50% 100%,#1b2440,#0a0c12)!important}
+body.assist #lv{inset:0;background:transparent;padding:0;justify-content:flex-start;align-items:stretch;border-radius:28px;overflow:hidden;color:#fff}
+body.assist:not(.app) #lv{inset:auto 50% 24px auto;transform:translateX(50%);width:min(760px,96vw);height:min(560px,74vh);background:#12141fa0;backdrop-filter:blur(34px) saturate(1.6);-webkit-backdrop-filter:blur(34px) saturate(1.6)}
+body.assist #lv::before{content:"";position:absolute;inset:-45%;z-index:0;pointer-events:none;will-change:transform;background:radial-gradient(circle at 22% 28%,#4f8bff77,transparent 38%),radial-gradient(circle at 78% 22%,#ff4fa070,transparent 36%),radial-gradient(circle at 72% 78%,#ffd44f60,transparent 38%),radial-gradient(circle at 24% 82%,#3dffb060,transparent 38%),radial-gradient(circle at 50% 50%,#a65bff55,transparent 40%);filter:blur(34px);animation:lvspin 16s linear infinite}
+@keyframes lvspin{to{transform:rotate(360deg)}}
+body.assist #lv::after{content:"";position:absolute;inset:0;z-index:1;border-radius:28px;pointer-events:none;background:linear-gradient(160deg,#ffffff3a,#ffffff0c 42%,#ffffff1e);box-shadow:inset 0 0 0 1px #ffffff5a,inset 0 2px 0 #ffffff80,inset 0 -30px 50px #ffffff12}
+body.assist #lv>*{position:relative;z-index:2}
+body.assist #lvv,body.assist #lvt,body.assist #lvc,body.assist #lvmu{display:none!important}
+body.assist #lvh{display:flex;align-items:center;gap:12px;padding:18px 20px 6px;color:#fff}
+body.assist #lvh .sp{font-size:24px;line-height:1;background:linear-gradient(135deg,#7db0ff,#ff7ad9,#ffd36a);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.assist #lvh .tt{flex:1;display:flex;flex-direction:column;min-width:0}body.assist #lvh b{font:600 18px system-ui;text-shadow:0 1px 10px #0007}
+body.assist #lvst{font-style:normal;font-size:13px;color:#ffffffc0;min-height:16px}
+body.assist #lvexp{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#ffffff26;color:#fff;border:1px solid #ffffff48;padding:0;font-size:17px;backdrop-filter:blur(10px)}
+body.assist #lvs{background:transparent;min-height:0;max-height:none;flex:1;overflow-y:auto;text-align:left;padding:6px 22px;font-size:19px;line-height:1.45;max-width:none;width:auto;color:#fff;text-shadow:0 1px 10px #0009;border-radius:0}
+body.assist #lvbars{display:block;width:100%;height:70px;flex:none}
+body.assist #lvin{display:block;padding:0 16px}
+body.assist #lvq{width:100%;box-sizing:border-box;background:#ffffff22;border:1px solid #ffffff45;border-radius:28px;color:#fff;padding:14px 20px;font-size:17px;outline:none;backdrop-filter:blur(10px)}
+body.assist #lvq::placeholder{color:#ffffffb5}body.assist #lvq:focus{border-color:#ffffffa0;background:#ffffff2e}
+body.assist #lvb{justify-content:center;gap:12px;padding:12px 16px 18px}
+body.assist #lvb button{border-radius:28px;background:#ffffff28;border:1px solid #ffffff4a;color:#fff;backdrop-filter:blur(12px);font-size:16px;padding:13px 24px}
+body.assist #lvb .x{background:#ff4d6acc;border-color:#ff9aab}#lvb button{background:#000a;color:#fff;border-color:#fff4;padding:10px 16px}#lvb .x{background:var(--bad);border-color:var(--bad)}
 .kinds{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.kd{padding:3px;border-radius:50%;line-height:0;justify-self:center}.kd.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0 12px}.chips .ch{padding:7px 14px;font-size:14px}
 .legal{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;margin-bottom:10px}.legal ul{margin:6px 0;padding-left:20px}.legal li{margin:3px 0}.legal a{color:var(--acc)}
@@ -467,7 +493,7 @@ body.tv #isl,body.tv #bcn,body.tv #cnov{display:none!important}
 
 <div id="wb"><div id="wbc"></div></div>
 <div id="pm"></div>
-<div id="lv"><video id="lvv" autoplay muted playsinline></video><div id="lvt"><div id="lva"></div></div><div id="lvs" aria-live="polite">Preparando…</div>
+<div id="lv"><div id="lvh"><span class="sp">✦</span><span class="tt"><b>¿Qué querés hacer hoy?</b><i id="lvst"></i></span><button type="button" id="lvexp" aria-label="Abrir en la app completa">⤢</button></div><video id="lvv" autoplay muted playsinline></video><div id="lvt"><div id="lva"></div></div><div id="lvs" aria-live="polite">Preparando…</div><canvas id="lvbars" aria-hidden="true"></canvas><div id="lvin"><input id="lvq" type="text" placeholder="Escribí o hablá…" autocomplete="off" enterkeyhint="send" aria-label="Escribí tu mensaje"></div>
   <div id="lvb"><button type="button" id="lvc">📷 Cámara</button><button type="button" id="lvm">🎤 Micrófono</button><button type="button" class="x" id="lvx">Salir</button></div><div id="lvmu"><button type="button" data-mc="previous" aria-label="Canción anterior">⏮</button><button type="button" data-mc="toggle" aria-label="Pausar o reanudar">⏯</button><button type="button" data-mc="next" aria-label="Canción siguiente">⏭</button></div></div>
 <div id="lg"><div id="lgc"></div></div>
 <div id="ob"><div id="obc"></div></div>
@@ -842,61 +868,88 @@ $('mic').onclick=async()=>{if(dict){dict.stop();return}
   r.onerror=()=>{$('mic').classList.remove('on');dict=null};r.onend=()=>{$('mic').classList.remove('on');dict=null;if(document.body.classList.contains('tv')&&$('q').value.trim()&&!busy)$('go').click()};r.start()};
 /* Modo Live: cámara + voz continua. Cada frase que dices se envía con un fotograma de la cámara y la respuesta se va hablando mientras se genera. */
 let LV=null,liveChat=null;
-const lvSay=t=>{$('lvs').textContent=t};
+const lvSay=t=>{$('lvs').textContent=t;$('lvs').scrollTop=1e6};
 const lvOpen=(msg,cam)=>{$('lva').innerHTML=avatar(P?P.avatar:DEF,'normal',cam?84:160);$('lv').classList.add('on');lvSay(msg)};
 const MICHELP='Haz clic en el candado de la barra de direcciones y elige «Permitir» para el micrófono. En Windows: Configuración → Privacidad y seguridad → Micrófono → «Permitir que las aplicaciones de escritorio accedan al micrófono».';
 async function startLive(){
   warm('vision');
   if(!window.isSecureContext){LV={on:true,mic:false,cam:false,rec:{stop(){}}};lvOpen('El modo Live necesita una conexión segura (https o localhost): el navegador no permite cámara ni micrófono desde una dirección http como esta. Úsalo desde el PC, o con https (por ejemplo con Tailscale).',false);return}
   if(!SR){LV={on:true,mic:false,cam:false,rec:{stop(){}}};lvOpen('Este navegador no tiene reconocimiento de voz. Usa Microsoft Edge o Google Chrome.',false);return}
-  if(!document.body.classList.contains('auto')&&!await needPerm('live','Modo Live: cámara y micrófono','Calex usará tu cámara y tu micrófono solo mientras este modo esté abierto. No se graba vídeo: se toman fotogramas sueltos para responderte. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google.'))return;
+  if(!document.body.classList.contains('voz')&&!await needPerm('live','Modo Live: cámara y micrófono','Calex usará tu cámara y tu micrófono solo mientras este modo esté abierto. No se graba vídeo: se toman fotogramas sueltos para responderte. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google.'))return;
   // pedimos los permisos reales del navegador por adelantado, para que aparezca su aviso y podamos explicar cualquier bloqueo
-  let stream=null,err='';
-  try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:document.body.classList.contains('auto')?false:{width:640,height:480,facingMode:'user'}})}
+  let stream=null,err='';const NAT=!!window.CalexNative&&document.body.classList.contains('voz'); // en el celular escucha el reconocedor de Android: abrir también el micrófono desde la página lo dejaba sordo
+  if(!NAT)try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:document.body.classList.contains('voz')?false:{width:640,height:480,facingMode:'user'}})}
   catch(e1){try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e2){err=e2.name||'error'}}
   LV={on:true,stream,cam:!!(stream&&stream.getVideoTracks().length),mic:true,ctl:null,speaking:false,rec:new SR(),q:[],busy:false,fail:false};
   if(err){LV.mic=false;LV.fail=true;lvOpen(`El navegador no dejó usar el micrófono (${err}). ${MICHELP}`,false);return}
-  stream.getAudioTracks().forEach(t=>t.stop()); // el reconocimiento de voz abre el micrófono por su cuenta
+  if(stream)stream.getAudioTracks().forEach(t=>t.stop()); // el reconocimiento de voz abre el micrófono por su cuenta
   $('lvv').srcObject=LV.cam?stream:null;$('lvv').style.display=LV.cam?'block':'none';
-  lvOpen(LV.cam?'Te escucho y te veo. Habla cuando quieras.':'No encontré cámara: solo voz. Habla cuando quieras.',LV.cam);
+  lvOpen(LV.cam?'Te escucho y te veo. Habla cuando quieras.':NAT?'':'No encontré cámara: solo voz. Habla cuando quieras.',LV.cam);
   const r=LV.rec;r.lang='es-ES';r.continuous=true;r.interimResults=true;
   /* Fin de frase rápido: no espera al "final" del navegador (~1 s); envía a los ~300 ms de silencio, salvo que la frase quede abierta (coma, "y", "pero", "porque"…): ahí espera ~1,1 s */
   LV.base=0;LV.tm=0;
-  r.onstart=()=>{if(LV)LV.base=0};
+  r.onstart=()=>{if(LV)LV.base=0};r.onpartial=t=>{if(LV&&!LV.speaking&&!LV.paused&&t)lvSay('🎤 '+t)};
   r.onresult=e=>{let txt='';for(let i=LV.base;i<e.results.length;i++)txt+=e.results[i][0].transcript;txt=txt.trim();if(!txt)return;
     if(LV.speaking)liveStop(); // interrumpes a Calex: se calla
     lvSay('🎤 '+txt);clearTimeout(LV.tm);
     const open=/(,|\b(y|e|o|u|pero|que|porque|pues|como|si|aunque|entonces|qué|cómo|cuál|dónde|cuándo|con|para|por|de|en|a|el|la|los|las|un|una|mi|tu|su|este|eh|mmm|es que|o sea))$/i.test(txt),end=/[.?!]$/.test(txt);
     LV.tm=setTimeout(()=>{LV.base=e.results.length;liveAsk(txt)},open?1100:end?120:300)};
-  r.onend=()=>{if(LV&&LV.on&&LV.mic&&!LV.fail)setTimeout(()=>{try{r.start()}catch{}},LV.retry||250)};
+  r.onend=()=>{if(LV&&LV.on&&LV.mic&&!LV.fail&&!LV.paused)setTimeout(()=>{try{r.start()}catch{}},LV.retry||250)};
   r.onerror=e=>{if(!LV)return;const c=e.error;if(c==='no-speech'||c==='aborted')return; // nunca cerramos solos: mostramos el motivo
     if(c==='not-allowed'||c==='service-not-allowed'){LV.fail=true;lvSay(`El navegador bloqueó el reconocimiento de voz (${c}). ${MICHELP}`)}
     else if(c==='network'){LV.retry=2000;lvSay('El reconocimiento de voz de tu navegador necesita internet (usa un servicio de Microsoft o Google) y no pudo conectar. Reintentando…')}
     else if(c==='audio-capture'){LV.fail=true;lvSay('No encuentro ningún micrófono conectado.')}
     else lvSay('Error de voz: '+c)};
   try{r.start()}catch(e){lvSay('No se pudo iniciar el reconocimiento de voz: '+e.message)}}
-function liveStop(){speechSynthesis.cancel();LV&&LV.ctl&&LV.ctl.abort();if(LV){LV.speaking=false;LV.q=[]}}
+function liveStop(){try{speechSynthesis.cancel()}catch(e){}LV&&LV.ctl&&LV.ctl.abort();if(LV){LV.speaking=false;LV.q=[];lvResume()}}
+const lvResume=()=>{if(!LV||!LV.paused)return;LV.paused=0;clearTimeout(LV.rt);if(LV.on&&LV.mic&&!LV.fail)setTimeout(()=>{try{LV&&LV.rec.start()}catch{}},300)};
+function lvGuard(ms){clearTimeout(LV.rt);LV.rt=setTimeout(()=>{if(!LV)return;if(LV.speaking&&speechSynthesis.speaking)return lvGuard(1500);LV.speaking=false;lvResume()},ms)}
 function frame(){const v=$('lvv');if(!LV.cam||!v.videoWidth)return null;const cv=document.createElement('canvas'),k=512/Math.max(v.videoWidth,v.videoHeight);cv.width=v.videoWidth*k;cv.height=v.videoHeight*k;cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);return cv.toDataURL('image/jpeg',.6)}
-function speak(t){if(!t.trim()||!LV)return;const u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=1.08;LV.speaking=true;u.onend=()=>{if(!speechSynthesis.speaking&&!speechSynthesis.pending&&LV){LV.speaking=false;setMood('normal');$('lva').innerHTML=avatar(P?P.avatar:DEF,'normal',LV.cam?84:160)}};speechSynthesis.speak(u)}
+function speak(t){if(!t.trim()||!LV)return;const u=new SpeechSynthesisUtterance(t);u.lang='es-ES';u.rate=1.08;LV.speaking=true;
+  if(window.CalexNative&&LV.mic&&!LV.paused){LV.paused=1;try{LV.rec.abort()}catch{}} // en el celular el micrófono oye al parlante: se pausa mientras Calex habla (tocá las barras para interrumpir)
+  LV.spk=(LV.spk||0)+t.length;lvGuard(4000+LV.spk*90);
+  u.onend=u.onerror=()=>{if(!speechSynthesis.speaking&&!speechSynthesis.pending&&LV){LV.speaking=false;LV.spk=0;setMood('normal');$('lva').innerHTML=avatar(P?P.avatar:DEF,'normal',LV.cam?84:160);lvResume()}};try{speechSynthesis.speak(u)}catch(e){LV.speaking=false;lvResume()}}
 async function liveAsk(text){if(!LV)return;liveStop();LV.said=0;const ctl=LV.ctl=new AbortController(),fr=frame();let buf='',all='';
-  setMood('effort');$('lva').innerHTML=avatar(P?P.avatar:DEF,'effort',LV.cam?84:160);
+  LV.think=1;setMood('effort');$('lva').innerHTML=avatar(P?P.avatar:DEF,'effort',LV.cam?84:160);
   try{const r=await fetch('/chat',{method:'POST',signal:ctl.signal,body:JSON.stringify({message:text,chatId:liveChat,effort:'fast',live:true,images:fr?[fr]:[]})});
     const rd=r.body.getReader(),dec=new TextDecoder();let b='';
     for(;;){const{done,value}=await rd.read();if(done)break;b+=dec.decode(value,{stream:true});let i;
       while((i=b.indexOf('\n\n'))>=0){const ev=JSON.parse(b.slice(5,i));b=b.slice(i+2);
         if(ev.type==='chat')liveChat=ev.id;
-        if(ev.type==='token'){buf+=ev.text;all+=ev.text;lvSay(all);let m;
+        if(ev.type==='token'){LV.think=0;buf+=ev.text;all+=ev.text;lvSay(all);let m;
           while((m=/^([\s\S]*?[.!?¿\n:;])\s/.exec(buf)||(!LV.said&&/^([\s\S]{14,}?,)\s/.exec(buf)))){speak(m[1]);LV.said=1;buf=buf.slice(m[0].length)}}}}
     if(buf.trim())speak(buf);if(!all)lvSay('…');
     const fun=/(ja){2,}|jeje|haha|😂|🤣/i.test(all);if(fun){setMood('funny',3000);$('lva').innerHTML=avatar(P?P.avatar:DEF,'funny',LV.cam?84:160)}
   }catch(e){if(e.name!=='AbortError')lvSay('Error: '+e.message)}
-  loadHist()}
+  if(LV)LV.think=0;loadHist()}
 function endLive(){if(!LV)return;const l=LV;l.on=false;liveStop();try{l.rec.stop()}catch{}if(l.stream)l.stream.getTracks().forEach(t=>t.stop());$('lvv').srcObject=null;$('lv').classList.remove('on');LV=null;setMood('normal');loadHist()}
-$('liv').onclick=startLive;$('lvx').onclick=()=>{endLive();if(document.body.classList.contains('auto')){try{CalexNative.close()}catch(e){}}};
+$('liv').onclick=startLive;$('lvx').onclick=()=>{endLive();if(document.body.classList.contains('voz')){try{CalexNative.close()}catch(e){}}};
 document.querySelectorAll('#lvmu button').forEach(b=>b.onclick=()=>{try{musicCmd(b.dataset.mc)}catch(e){}});
-/*ASSIST*/ /* Asistente digital de Android (?assist=1) y modo coche (?auto=1): abre directo el modo de voz, sin cámara */
-(()=>{const q=new URLSearchParams(location.search);if(!q.get('assist')&&!q.get('auto'))return;document.body.classList.add('auto');let n=0;
- const t=setInterval(()=>{if(++n>160){clearInterval(t);return}if(!AUTH||!AUTH.user||!P||$('lg').classList.contains('on')||$('ob').classList.contains('on'))return;clearInterval(t);try{history.replaceState(null,'',location.pathname)}catch(e){}if(!LV)startLive()},250)})();
+/*SHEET*/ /* Barras de colores que se mueven: reaccionan a tu voz (nivel real del micrófono en el celular), al pensar y al hablar */
+function startBars(){const cv=$('lvbars'),cx=cv.getContext('2d'),st$=$('lvst');let lvl=0,last='';window.__rms=v=>{lvl=Math.max(lvl,Math.min(1,(v+2)/10))};
+ const rr=(x,y,w,h,r)=>{cx.beginPath();if(cx.roundRect)cx.roundRect(x,y,w,h,r);else cx.rect(x,y,w,h);cx.fill()};
+ const TXT=['','Escuchando…','Hablando… (tocá las barras para interrumpir)','Pensando…','Micrófono apagado'];
+ function draw(ts){requestAnimationFrame(draw);if(!$('lv').classList.contains('on'))return;const d=Math.min(devicePixelRatio||1,2),r=cv.getBoundingClientRect();if(r.width<2)return;
+  if(cv.width!==Math.round(r.width*d)||cv.height!==Math.round(r.height*d)){cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d)}
+  const W=cv.width,H=cv.height,N=Math.max(18,Math.floor(W/(13*d))),bw=W/N,t=ts/1000;
+  const m=LV?(LV.speaking?2:LV.think?3:LV.mic?1:4):0;if(TXT[m]!==last){last=TXT[m];st$.textContent=last}
+  lvl*=.9;const sim=window.CalexNative?0:(m===1?.14*(.5+.5*Math.sin(t*3)):0);
+  const amp=m===1?.16+lvl*.9+sim:m===2?.55:m===3?.38:m===4?.06:.12;
+  cx.clearRect(0,0,W,H);
+  for(let i=0;i<N;i++){const p=i/N,w=Math.sin(t*(m===3?6:3.2)+i*.55)*.5+Math.sin(t*1.7-i*.31+m)*.5,env=.5+.5*Math.sin(p*Math.PI),h=Math.max(bw*.55,(.1+(.5+.5*w)*amp*env)*H*.92),hue=(215+p*320+t*45)%360,x=(i+.5)*bw;
+   const g=cx.createLinearGradient(0,H/2-h/2,0,H/2+h/2);g.addColorStop(0,'hsla('+hue+',95%,70%,.98)');g.addColorStop(1,'hsla('+((hue+55)%360)+',95%,62%,.9)');
+   cx.fillStyle=g;cx.shadowColor='hsla('+hue+',95%,62%,.55)';cx.shadowBlur=10*d;rr(x-bw*.3,H/2-h/2,bw*.6,h,bw*.3)}}
+ requestAnimationFrame(draw)}
+$('lvbars').onclick=()=>{if(LV&&(LV.speaking||LV.think))liveStop()};
+$('lvq').onkeydown=e=>{if(e.key!=='Enter')return;const t=e.target.value.trim();if(!t||!LV)return;e.target.value='';clearTimeout(LV.tm);lvSay('✍️ '+t);liveAsk(t)};
+$('lvexp').onclick=()=>{try{CalexNative.openApp()}catch(e){location.href='/'}};
+/* Asistente digital de Android (?assist=1): panel flotante de voz. Modo coche (?auto=1): pantalla completa con letras grandes. */
+(()=>{const q=new URLSearchParams(location.search),as=q.get('assist'),au=q.get('auto');if(!as&&!au)return;const B=document.body;B.classList.add('voz',as?'assist':'auto');if(window.CalexNative)B.classList.add('app');
+ if(as)document.documentElement.style.background='transparent';startBars();let n=0;
+ const t=setInterval(()=>{if(++n>200){clearInterval(t);return}
+  const needLogin=$('lg').classList.contains('on')||$('ob').classList.contains('on');
+  if(as&&needLogin&&window.CalexNative&&CalexNative.openApp){clearInterval(t);CalexNative.openApp();return} // sin sesión iniciada: abre la app completa para entrar
+  if(!AUTH||!AUTH.user||!P||needLogin)return;clearInterval(t);try{history.replaceState(null,'',location.pathname)}catch(e){}if(!LV)startLive()},250)})();
 $('lvc').onclick=()=>{if(!LV||!LV.stream)return;LV.cam=!LV.cam;LV.stream.getVideoTracks().forEach(t=>t.enabled=LV.cam);$('lvv').style.opacity=LV.cam?.9:.1;$('lvc').textContent=LV.cam?'📷 Cámara':'🚫 Cámara'};
 $('lvm').onclick=()=>{if(!LV)return;LV.mic=!LV.mic;if(LV.mic){try{LV.rec.start()}catch{}}else LV.rec.stop();$('lvm').textContent=LV.mic?'🎤 Micrófono':'🔇 Micrófono'};
 addEventListener('keydown',e=>{if(e.key==='Escape'&&LV)endLive()});
@@ -1113,7 +1166,7 @@ $('updb').onclick=()=>UPD?applyUpdate():checkUpdate(true);
 let IS_LOCAL=['localhost','127.0.0.1','[::1]'].includes(location.hostname);try{if(localStorage.getItem('calex-remote')==='1')IS_LOCAL=false}catch{} // (la marca calex-remote solo sirve para probar el modo sin conexión en un servidor local) // Calex en el PC funciona sin internet con sus modelos locales
 let OFFQ=[];try{OFFQ=JSON.parse(localStorage.getItem('calex-offq')||'[]')}catch{}
 const saveQ=()=>{try{localStorage.setItem('calex-offq',JSON.stringify(OFFQ))}catch{}};
-function queueMsg(t,quiet){OFFQ.push(String(t).slice(0,4000));saveQ();if(!quiet){const u=[...log.querySelectorAll('.m.u')].pop();if(u)u.dataset.wait='1';note('t','Sin conexión estable: tu mensaje queda en espera ('+OFFQ.length+') y se envía solo en cuanto haya señal.')}clearTimeout(window.__qt);window.__qt=setTimeout(flushQ,20000)}
+function queueMsg(t,quiet){OFFQ.push(String(t).slice(0,24000));saveQ();if(!quiet){const u=[...log.querySelectorAll('.m.u')].pop();if(u)u.dataset.wait='1';note('t','Sin conexión estable: tu mensaje queda en espera ('+OFFQ.length+') y se envía solo en cuanto haya señal.')}clearTimeout(window.__qt);window.__qt=setTimeout(flushQ,20000)}
 async function flushQ(){if(!OFFQ.length||!navigator.onLine||busy)return;const q=OFFQ.slice();OFFQ=[];saveQ();log.querySelectorAll('.m.u[data-wait]').forEach(x=>x.remove());window.__fl=true;try{for(const t of q){if(!navigator.onLine){OFFQ.push(t);saveQ();continue}await send(t)}}finally{window.__fl=false}}
 (()=>{if(IS_LOCAL)return;const b=document.createElement('div');b.id='offb';b.setAttribute('role','status');b.textContent='Sin conexión: puedes leer tus charlas. Lo que escribas se enviará al volver internet.';document.body.append(b);
   const up=()=>b.classList.toggle('on',!navigator.onLine);addEventListener('online',()=>{up();setTimeout(flushQ,800)});addEventListener('offline',up);up();setTimeout(flushQ,2500)})();

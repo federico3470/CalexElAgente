@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Calex para iPhone</title>
+<meta name="theme-color" content="#0b0d14">
+<link rel="icon" href="/icon-192.png">
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0,#1d2a55 0,transparent 45%),radial-gradient(circle at 90% 30%,#4a1f55 0,transparent 40%),#0b0d14;color:#eef0f6;font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif;padding:max(20px,env(safe-area-inset-top)) 20px 40px}
+main{max-width:520px;margin:0 auto}
+.logo{width:84px;height:84px;border-radius:22px;display:block;margin:20px auto 14px;box-shadow:0 10px 40px #4f8bff55}
+h1{text-align:center;font-size:28px;margin:0 0 4px;letter-spacing:.2px}
+.sub{text-align:center;color:#aab1c5;margin:0 0 26px}
+.card{background:linear-gradient(160deg,#ffffff1f,#ffffff0a);border:1px solid #ffffff2e;border-radius:22px;padding:18px 18px 8px;margin:0 0 16px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.card h2{font-size:17px;margin:0 0 8px}
+ol{padding-left:20px;margin:0 0 10px}li{margin:6px 0}
+.btn{display:block;text-align:center;text-decoration:none;color:#fff;font-weight:600;padding:14px 18px;border-radius:16px;margin:12px 0 14px;background:linear-gradient(90deg,#4f8bff,#a65bff,#ff5b9a)}
+small,.note{color:#9aa2b8;font-size:13.5px}
+.note{margin:6px 4px}
+kbd{background:#ffffff22;border-radius:6px;padding:1px 7px;font:inherit}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/icon-192.png" alt="Calex">
+  <h1>Calex en tu iPhone</h1>
+  <p class="sub">Se instala en la pantalla de inicio y se abre a pantalla completa, como una app.</p>
+
+  <div class="card">
+    <h2>Opción 1 · Desde Safari (la más simple)</h2>
+    <ol>
+      <li>Abrí esta misma página <b>en Safari</b>.</li>
+      <li>Tocá <kbd>Compartir</kbd> (el cuadrado con la flecha).</li>
+      <li>Elegí <kbd>Agregar a pantalla de inicio</kbd> y confirmá.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Opción 2 · Perfil de instalación</h2>
+    <p>Agrega el ícono de Calex con un toque.</p>
+    <a class="btn" href="/Calex-iPhone.mobileconfig">Descargar perfil de Calex</a>
+    <ol>
+      <li>Tocá <b>Permitir</b> cuando Safari pregunte.</li>
+      <li>Abrí <kbd>Ajustes</kbd> → <kbd>Perfil descargado</kbd> → <kbd>Instalar</kbd>.</li>
+      <li>Aparece el ícono de Calex en tu pantalla de inicio.</li>
+    </ol>
+    <small>iOS lo marca como «no firmado»: es normal, solo agrega el ícono y no cambia ningún ajuste del teléfono. Podés borrarlo cuando quieras en Ajustes → General → VPN y gestión de dispositivos.</small>
+  </div>
+
+  <p class="note">Apple solo permite instalar apps fuera de la App Store con una cuenta de desarrollador de pago, por eso Calex en iPhone funciona como app web instalada. Tiene tus charlas, conectores y modo de voz del navegador; no puede reemplazar a Siri como asistente.</p>
+</main>
+</body>
+</html>
