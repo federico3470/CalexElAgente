@@ -20,7 +20,7 @@ $bn.Save("$PSScriptRoot\res\drawable-xhdpi\banner.png",[Drawing.Imaging.ImageFor
 Run "$bt\aapt2.exe" @("compile", "--dir", "res", "-o", "$b\res.zip")
 $mf = "$PSScriptRoot\AndroidManifest.xml"
 if ($Variant -eq "auto") { $m = Get-Content $mf -Raw -Encoding UTF8; $m = [regex]::Replace($m, "(?s)\s*<!--ASSIST-->.*?<!--/ASSIST-->", ""); $m = $m.Replace('package="com.calex.app"', 'package="com.calex.auto"').Replace('android:label="Calex" android:icon', 'android:label="Calex Auto" android:icon'); $mf = "$b\AndroidManifest.xml"; [IO.File]::WriteAllText($mf, $m, (New-Object Text.UTF8Encoding $false)) }
-Run "$bt\aapt2.exe" @("link", "-o", "$b\base.apk", "-I", $jar, "--manifest", $mf, "--min-sdk-version", "23", "--target-sdk-version", "34", "--version-code", "14", "--version-name", "1.9", "$b\res.zip", "--java", "$b\gen")
+Run "$bt\aapt2.exe" @("link", "-o", "$b\base.apk", "-I", $jar, "--manifest", $mf, "--min-sdk-version", "23", "--target-sdk-version", "34", "--version-code", "15", "--version-name", "2.0", "$b\res.zip", "--java", "$b\gen")
 $src = @(Get-ChildItem src -Recurse -Filter *.java | ForEach-Object FullName) + @(Get-ChildItem "$b\gen" -Recurse -Filter *.java | ForEach-Object FullName)
 Run "javac" (@("-source", "8", "-target", "8", "-Xlint:-options", "-bootclasspath", $jar, "-d", "$b\classes") + $src)
 $cls = @(Get-ChildItem "$b\classes" -Recurse -Filter *.class | ForEach-Object FullName)
