@@ -38,7 +38,7 @@ import java.util.ArrayList;
 public class MainActivity extends Activity {
   static final String HOST = "https://calex.federicoreta773.workers.dev";
   static final int REQ_MIC = 7, REQ_FILE = 9;
-  static final String OFFLINE = "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><body style='margin:0;height:100vh;display:grid;place-items:center;background:#15140f;color:#ece7db;font:20px Georgia,serif;text-align:center'><div><h1 style='font-weight:600;letter-spacing:.12em'>CALEX</h1><p>Sin conexión.<br>Cuando vuelva internet, toca para reintentar.</p><p><a href='" + HOST + "' style='display:inline-block;background:#d4a35f;color:#15140f;padding:.6em 1.6em;border-radius:2em;text-decoration:none;font:600 18px sans-serif'>Reintentar</a></p></div></body>";
+  static final String OFFLINE = "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><body style='margin:0;height:100vh;display:grid;place-items:center;background:#0d0e11;color:#ece7db;font:20px Georgia,serif;text-align:center'><div><h1 style='font-weight:600;letter-spacing:.12em'>CALEX</h1><p>Sin conexión.<br>Cuando vuelva internet, toca para reintentar.</p><p><a href='" + HOST + "' style='display:inline-block;background:#d4a35f;color:#0d0e11;padding:.6em 1.6em;border-radius:2em;text-decoration:none;font:600 18px sans-serif'>Reintentar</a></p></div></body>";
   long lastBack = 0;
   WebView web;
   ValueCallback<Uri[]> chooser;
@@ -54,18 +54,18 @@ public class MainActivity extends Activity {
   protected void onCreate(Bundle b) {
     super.onCreate(b);
     Window w = getWindow();
-    w.setStatusBarColor(Color.parseColor("#15140f"));
-    w.setNavigationBarColor(Color.parseColor("#15140f"));
+    w.setStatusBarColor(Color.parseColor("#0d0e11"));
+    w.setNavigationBarColor(Color.parseColor("#0d0e11"));
     w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
     web = new WebView(this);
-    web.setBackgroundColor(sheet() || overlay() ? Color.TRANSPARENT : Color.parseColor("#15140f"));
+    web.setBackgroundColor(sheet() || overlay() ? Color.TRANSPARENT : Color.parseColor("#0d0e11"));
     setContentView(web);
     if (sheet()) setupSheet(w); else if (overlay()) setupOverlay(w);
     WebSettings s = web.getSettings();
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.6");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.7");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
       @Override public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {
@@ -240,8 +240,8 @@ public class MainActivity extends Activity {
     i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
     i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
     i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
-    i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1400L);
-    i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L);
+    i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2600L);
+    i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2200L);
     sr.startListening(i);
   }
 
