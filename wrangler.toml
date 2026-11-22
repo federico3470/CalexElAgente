@@ -34,3 +34,9 @@ LEGAL_COUNTRY = ""            # país o jurisdicción
 
 # PUBLIC_URL = "https://nixel.tudominio.com"   # solo si usas un dominio propio
 # Las claves de inicio de sesión NO van aquí: se guardan como secretos (ver LEEME.md).
+
+# --- Modelos de pago (se activan al pasar a Workers Paid; sin plan de pago Calex vuelve solo a los gratuitos) ---
+# STUDIO_MODEL = "@cf/zai-org/glm-5.3-flash"         # diseña las páginas (Calex Studio)
+# CODER_MODEL  = "@cf/zai-org/glm-5.3"               # juegos, apps y código
+# CHAT_MODEL   = "@cf/zai-org/glm-4.7-flash"         # charla del día a día (rápido y barato)
+# (DeepSeek V4 Pro fue dado de baja por Cloudflare el 20/11/2026: lo reemplaza @cf/deepseek-ai/deepseek-v4.1-flash-1017)

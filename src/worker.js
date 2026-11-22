@@ -189,7 +189,7 @@ const DEFAULT_MODELS = [
   { id: "@cf/qwen/qwen2.5-coder-32b-instruct", label: "Código · Qwen Coder · 32B", w: 3, coder: true }, // hecho para programar (el plan gratis no permite GLM-5.3; con plan de pago: variable CODER_MODEL)
 ];
 const catalog = (env) => { try { const m = env.MODELS ? JSON.parse(env.MODELS) : null; if (Array.isArray(m) && m.length) return m.filter((x) => x && /^@cf\/[\w-]+\/[\w.-]+$/.test(String(x.id)) && !String(x.id).includes("..")).slice(0, 12).map((x) => ({ id: x.id, label: String(x.label || x.id.split("/").pop()).slice(0, 60), w: Math.max(1, Math.min(10, +x.w || 1)), def: !!x.def, vision: !!x.vision })); } catch {} return DEFAULT_MODELS; };
-const pickModels = (env) => { const cat = catalog(env), coder = env.CODER_MODEL ? { id: env.CODER_MODEL, w: 3 } : cat.find((m) => m.coder), text = cat.filter((m) => !m.vision && !m.coder), def = env.CHAT_MODEL ? { id: env.CHAT_MODEL, w: 1 } : text.find((m) => m.def) || text[0], vis = cat.find((m) => m.vision) || { id: env.VISION_MODEL || "@cf/mistralai/mistral-small-3.1-24b-instruct", w: 2 }; return { cat, text, def, vis, coder }; };
+const pickModels = (env) => { const cat = catalog(env), coderFree = cat.find((m) => m.coder), coder = env.CODER_MODEL ? { id: env.CODER_MODEL, w: 3 } : coderFree, text = cat.filter((m) => !m.vision && !m.coder), def = env.CHAT_MODEL ? { id: env.CHAT_MODEL, w: 1 } : text.find((m) => m.def) || text[0], vis = cat.find((m) => m.vision) || { id: env.VISION_MODEL || "@cf/mistralai/mistral-small-3.1-24b-instruct", w: 2 }; return { cat, text, def, vis, coder, coderFree }; };
 const sse = (o) => enc.encode(`data: ${JSON.stringify(o)}\n\n`);
 // ---------- intención: ¿pide una página, un cambio a la última página, o código? ----------
 // \b de JavaScript no entiende las tildes («hacé»), por eso los límites de palabra se arman con lookarounds de letras Unicode
@@ -200,13 +200,13 @@ const CODE_RE = W("c[oó]digo|programa|script|funci[oó]n|algoritmo|html|css|jav
 const EDIT_RE = W("cambi[aá]\\w*|agreg[aá]\\w*|sac[aá]\\w*|quit[aá]\\w*|pon[eé]\\w*|modific[aá]\\w*|m[aá]s|menos|otro|otra|reemplaz[aá]\\w*|actualiz[aá]\\w*|color\\w*|t[ií]tulo|texto|secci[oó]n|fondo|tipograf[ií]a|fuente|oscuro|claro|precios?|testimonios?|contacto");
 const lvlOf = (b) => { const n = Math.round(+b.level); return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 50; };
 const SPEC_SYS = (n) => `Eres director creativo y redactor de una agencia web premium. Devuelve SOLO un objeto JSON válido (sin markdown ni comentarios) con este esquema:\n${SPEC_SCHEMA}\nReglas: español rioplatense natural y específico del rubro (nada de lorem ipsum ni frases genéricas); titulares potentes y cortos; elige "preset" y "font" que combinen con el rubro y la personalidad de la marca; usa ${n} secciones variadas (siempre features, split y gallery, y al final cta y contact); en "texture" y "tag" usa los valores del esquema; los datos de contacto deben ser ficticios de ejemplo (dominio .example); cada "items" con 3 elementos salvo pricing (3) y faq (4). PALETA según el rubro: comida, café, restaurante, artesanal, bodega → ember, gold o sand; tecnología, software, startups, finanzas → ocean, royal o mono; naturaleza, salud, bienestar, deporte → forest o sky; lujo, joyería, moda, eventos → gold, royal o mono; educación, servicios locales → sky o sand. TÍTULOS: creativos, concretos y propios de la marca; evita arrancar con «Nuestro», «Nuestra», «Lo que dicen» o «Preguntas frecuentes» (usa por ejemplo «Del grano a tu taza» o «Dudas, resueltas»). El titular del hero debe ser una promesa o imagen potente, no una descripción. Los textos de cada ítem deben tener datos o detalles concretos del rubro.`;
-async function makeSpec(env, user, modelId, ask, level, current) {
+async function makeSpec(env, user, modelIds, ask, level, current) {
   const n = level < 34 ? 5 : level < 67 ? 7 : 9;
   const ask2 = current ? `Spec actual de la página:\n${JSON.stringify(current)}\n\nCambio pedido por el usuario: ${ask}\n\nDevuelve el spec COMPLETO actualizado con ese cambio (conserva todo lo demás).` : `Pedido del usuario: ${ask}`;
-  for (let k = 0; k < 2; k++) {
+  for (const modelId of [...new Set([].concat(modelIds).filter(Boolean))]) for (let k = 0; k < 2; k++) {
     try { const out = await env.AI.run(modelId, { messages: [{ role: "system", content: SPEC_SYS(n) }, { role: "user", content: ask2 + (k ? "\n\nIMPORTANTE: responde únicamente con el JSON." : "") }], max_tokens: 3800, temperature: 0.85 });
       const t = String(out?.response ?? out?.result?.response ?? ""), j = extractJSONObj(t); if (j && Array.isArray(j.sections) && j.sections.length >= 2) return normalizeSpec(j, ask, level);
-    } catch (e) { if (k) throw e; }
+    } catch (e) { if (env.NOFALLBACK) throw e; break; } // el modelo no está disponible (p. ej. plan gratis): se prueba con el siguiente
   }
   return null;
 }
@@ -248,7 +248,7 @@ async function chatRoute(req, env, user, ctx) {
     // transmite una respuesta del modelo; si el modelo elegido falla, vuelve al estándar
     const run = async (mdl, messages, maxTok) => {
       const payload = { messages, stream: true, max_tokens: maxTok }; let out;
-      try { out = await env.AI.run(mdl, payload); } catch (e1) { if (env.NOFALLBACK || /license|agree/i.test(String(e1.message)) || mdl === PM.def.id || images.length) throw e1; out = await env.AI.run(PM.def.id, payload); send({ type: "model", model: "☁ " + PM.def.id.split("/").pop() }); }
+      try { out = await env.AI.run(mdl, payload); } catch (e1) { if (env.NOFALLBACK || /license|agree/i.test(String(e1.message)) || mdl === PM.def.id || images.length) throw e1; const fb = route === "code" && PM.coderFree && mdl !== PM.coderFree.id ? PM.coderFree.id : PM.def.id; out = await env.AI.run(fb, payload); send({ type: "model", model: "☁ " + fb.split("/").pop() }); }
       let got = "";
       if (out && typeof out.getReader === "function") {
         const rd = out.getReader(), dec = new TextDecoder(); let buf = "";
@@ -263,7 +263,7 @@ async function chatRoute(req, env, user, ctx) {
       if (used > limit) throw Object.assign(new Error("limit"), { limit: true });
       if (route === "site" || route === "edit") {
         send({ type: "progress", text: route === "edit" ? "Aplicando tu cambio…" : "Pensando la dirección creativa y los textos…" });
-        spec = await makeSpec(env, user, PM.def.id, message, level, route === "edit" ? lastSpec : null);
+        spec = await makeSpec(env, user, [env.STUDIO_MODEL, PM.def.id], message, level, route === "edit" ? lastSpec : null);
         if (!spec) throw new Error("no pude armar el diseño; inténtalo de nuevo");
         send({ type: "progress", text: "Armando secciones, shaders y texturas…" });
         const html = buildSite(spec), intro = `Listo: armé «${spec.title}» con diseño propio, fondo animado y texturas procedurales (hasta 4K en pantallas capaces).\n\n`, outro = "\n\nToca «Vista previa» para verla o «Descargar» para guardarla. Pídeme cambios (colores, secciones, textos, estilo) y la ajusto.";
