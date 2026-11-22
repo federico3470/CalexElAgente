@@ -363,6 +363,33 @@ async function addStrike(env, uid, reason) { await q(env, "INSERT INTO strikes(u
 function ownerOk(url, env) { const k = String(url.searchParams.get("key") || ""), want = String(env.STATS_KEY || "");
   let same = want.length >= 8 && k.length === want.length; if (same) { let d = 0; for (let i = 0; i < k.length; i++) d |= k.charCodeAt(i) ^ want.charCodeAt(i); same = d === 0; } return same; }
 
+
+// ---------- búsqueda en la web (DuckDuckGo, sin clave): Calex muestra en qué páginas busca ----------
+const WEB_RE = /(busc[aáoe]|investig|googlea|en internet|en la web|noticia|actualidad|[uú]ltim[oa]s? (noticia|dato|version|versión|partido)|precio|cotizaci|d[oó]lar|clima|pron[oó]stico|qui[eé]n (es|gan[oó]|fue)|cu[aá]ndo (es|juega|sale|empieza)|resultado|partido|estreno|este a[nñ]o|hoy en|horario de|d[oó]nde (queda|puedo comprar))/i;
+const decEnt = (t) => String(t).replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+const rssTag = (x, t) => { const m = new RegExp("<" + t + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + t + ">", "i").exec(x); return m ? decEnt(m[1].replace(/^<!\[CDATA\[|\]\]>$/g, "")) : ""; };
+async function rssItems(url, kind) {
+  const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; CalexBot/1.0)", "Accept-Language": "es" }, signal: AbortSignal.timeout(6500) });
+  if (!r.ok) return [];
+  const xml = await r.text(), out = []; let m; const re = /<item>([\s\S]*?)<\/item>/g;
+  while ((m = re.exec(xml)) && out.length < 8) {
+    const it = m[1], title = rssTag(it, "title"), link = rssTag(it, "link"), desc = rssTag(it, "description");
+    let host = "", su = /<source[^>]+url="([^"]+)"/i.exec(it); try { host = new URL(su ? su[1] : link).hostname.replace(/^www\./, ""); } catch { continue; }
+    if (!/^https?:\/\//i.test(link)) continue;
+    out.push({ title: (kind === "news" ? title.replace(/\s+-\s+[^-]{2,40}$/, "") : title).slice(0, 140), url: link.slice(0, 600), host, snippet: kind === "news" ? (su ? rssTag(it, "source") + " · " : "") + (rssTag(it, "pubDate") || "").slice(0, 22) : desc.slice(0, 260) });
+  }
+  return out;
+}
+async function webSearch(env, query) {
+  if (String(env.WEB_SEARCH || "") === "off") return [];
+  const qq = encodeURIComponent(String(query).replace(/^(busc[aá]|investig[aá]|googlea)\s+(en internet|en la web|en google)?\s*/i, "").slice(0, 200)), news = /noticia|actualidad|[uú]ltim|hoy|partido|resultado|estreno|pol[ií]tica|d[oó]lar|cotizaci/i.test(query);
+  const jobs = news ? [rssItems("https://news.google.com/rss/search?hl=es-419&gl=AR&ceid=AR:es-419&q=" + qq, "news"), rssItems("https://www.bing.com/search?format=rss&setlang=es&cc=AR&q=" + qq, "web")] : [rssItems("https://www.bing.com/search?format=rss&setlang=es&cc=AR&q=" + qq, "web")];
+  const res = (await Promise.all(jobs.map((j) => j.catch(() => [])))).flat(), out = [], seen = new Set();
+  // se alternan noticias y páginas para mostrar variedad de sitios
+  for (const it of res) { const k = it.host; if (seen.has(k) && out.length >= 3) continue; seen.add(k); out.push(it); if (out.length >= 5) break; }
+  return out;
+}
+
 async function chatRoute(req, env, user, ctx) {
   const b = await req.json().catch(() => ({})), message = String(b.message || "").trim().slice(0, 24000);
   if (!message) return json({ error: "Mensaje vacío" }, 400);
@@ -409,7 +436,7 @@ async function chatRoute(req, env, user, ctx) {
   const hist = msgs.filter((m) => m.content).slice(-20).map((m) => ({ role: m.role, content: m.spec ? `[Se generó la página «${m.spec.title}» con Calex Studio]` : m.docs?.length ? m.docs.map((d) => `[Documento adjunto: ${d.name}]\n${d.text}`).join("\n\n") + "\n\n" + m.content : m.content }));
   if (images.length) hist[hist.length - 1].content = [{ type: "text", text: message }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))];
   const stream = new ReadableStream({ async start(ctrl) {
-    const send = (o) => ctrl.enqueue(sse(o)); let text = "", spec = null;
+    const send = (o) => ctrl.enqueue(sse(o)); let text = "", spec = null, sources = null;
     // transmite una respuesta del modelo; si el modelo elegido falla, vuelve al estándar
     const run = async (mdl, messages, maxTok) => {
       const payload = { messages, stream: true, max_tokens: maxTok }; let out;
@@ -448,12 +475,19 @@ async function chatRoute(req, env, user, ctx) {
           send({ type: "progress", text: "Continuando el código…" }); part = await run(model, [{ role: "system", content: CODE_SYS }, ...hist, { role: "assistant", content: text.slice(-9000) }, { role: "user", content: "Continúa exactamente donde quedaste, sin repetir nada y sin volver a abrir el bloque de código; cierra el archivo y el bloque ```." }], cap); }
       } else {
         const outCap = b.live ? 220 : level < 34 ? 450 : level < 67 ? 1000 : 1900;
-        await run(model, [{ role: "system", content: sys }, ...hist], outCap);
+        let webCtx = "";
+        if (route === "chat" && !images.length && !docs.length && WEB_RE.test(message)) {
+          send({ type: "search", state: "start" });
+          const found = await webSearch(env, message);
+          if (found.length) { sources = found; send({ type: "sources", items: found }); webCtx = "\n\nRESULTADOS DE BÚSQUEDA WEB (acabas de consultar internet; úsalos para dar información actual y nunca digas que no puedes buscar):\n" + found.map((f, i) => "[" + (i + 1) + "] " + f.title + " (" + f.host + "): " + f.snippet).join("\n") + "\nResponde con esos datos, menciona entre corchetes el número de la fuente ([1], [2]) y no inventes lo que no aparezca en los resultados."; }
+          else send({ type: "search", state: "none" });
+        }
+        await run(model, [{ role: "system", content: sys + webCtx }, ...hist], outCap);
       }
       if (!text) throw new Error("respuesta vacía");
     } catch (e) {
       send({ type: "error", text: e.limit ? `Llegaste al límite diario gratuito. Las páginas y los modelos grandes gastan más cupo: prueba con esfuerzo Rápido o vuelve mañana.` : /license|agree/i.test(e.message) ? "El modelo de imágenes necesita aceptar su licencia una vez en el panel de Cloudflare (AI → Workers AI)." : `La IA no respondió (${String(e.message).slice(0, 120)}). Puede que se haya agotado el cupo gratuito de hoy.` }); }
-    if (text) { msgs.push({ role: "assistant", content: text, ...(spec && { spec }) }); await q(env, "INSERT INTO chats(id,user_id,title,pinned,updated,messages) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET messages=excluded.messages, updated=excluded.updated",
+    if (text) { msgs.push({ role: "assistant", content: text, ...(spec && { spec }), ...(sources && { sources }) }); await q(env, "INSERT INTO chats(id,user_id,title,pinned,updated,messages) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET messages=excluded.messages, updated=excluded.updated",
       id, user.id, title, chat?.pinned || 0, Date.now(), JSON.stringify(msgs.slice(-24))).run(); }
     send({ type: "done" }); ctrl.close(); } });
   return new Response(stream, { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", ...SEC } });

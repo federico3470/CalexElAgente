@@ -34,7 +34,7 @@
     P + ' header button,' + P + ' header select{border-color:transparent!important;font-size:14.5px;padding:7px 10px;height:auto!important;width:auto}',
     P + ' header #bt{font-size:0!important;width:32px;height:32px;padding:0;position:relative}',
     P + ' header #bt::before{content:"";position:absolute;left:6px;right:6px;top:11px;height:1px;background:var(--txt);box-shadow:0 5px 0 var(--txt),0 10px 0 var(--txt)}',
-    P + ' header .avb{width:30px!important;height:30px!important;padding:0!important;border-radius:50%!important;border:1px solid var(--hair)!important;overflow:hidden;margin-left:6px}',
+    P + ' header .avb{width:36px!important;height:36px!important;padding:0!important;border-radius:50%!important;border:1px solid var(--hair)!important;overflow:hidden;line-height:0;margin-left:6px}',
     /* archivo (historial) como cajón lateral */
     P + ' #side{position:fixed!important;left:0;top:0;bottom:0;width:min(380px,88vw)!important;z-index:30;margin:0!important;padding:34px 0 20px!important;background:var(--bg)!important;border:0!important;border-right:1px solid var(--hair)!important;transform:none;transition:transform .55s var(--ease),box-shadow .55s!important;box-shadow:50px 0 140px #000a!important;display:flex;flex-direction:column}',
     P + ' #side.hide{transform:translateX(-104%)!important;margin:0!important;box-shadow:none!important}',
@@ -102,21 +102,21 @@
   ].join('\n');
   var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'], DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   function folio() { var d = new Date(); return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()] + ' de ' + d.getFullYear(); }
-  function mode() { try { var v = localStorage.getItem('calex-ui2'); return v === 'atelier' || v === 'classic' ? v : 'ios'; } catch (e) { return 'ios'; } }
+  function mode() { try { var v = localStorage.getItem('calex-ui2'); return v === 'atelier' || v === 'classic' || v === 'material' ? v : 'ios'; } catch (e) { return 'ios'; } }
   function themeFor(m) { var light = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches; return m === 'ios' ? (light ? 'i-claro' : 'i-oscuro') : (light ? 'a-papel' : 'a-tinta'); }
   function setMode(m, userChoice) {
     var h = document.documentElement; if (m === 'classic') h.removeAttribute('data-ui'); else h.setAttribute('data-ui', m);
-    try { localStorage.setItem('calex-ui2', m); if (m !== 'classic' && (userChoice || !localStorage.getItem('calex-ui2-t'))) { localStorage.setItem('calex-ui2-t', '1'); if (window.applyTheme) applyTheme(themeFor(m), true); } } catch (e) { }
+    try { localStorage.setItem('calex-ui2', m); if (m !== 'classic' && (userChoice || !localStorage.getItem('calex-ui2-t'))) { localStorage.setItem('calex-ui2-t', '1'); if (m === 'material' && window.CalexMaterial) CalexMaterial.apply(); else if (typeof applyTheme === 'function') applyTheme(themeFor(m), true); } } catch (e) { }
     wire();
   }
   var wired = false;
   function ui() { return document.documentElement.getAttribute('data-ui'); }
   function wire() {
     var b = document.querySelector('header .brand'); if (b) b.setAttribute('data-folio', folio());
-    var q = document.getElementById('q'); if (q) { if (!q.dataset.ph0) q.dataset.ph0 = q.placeholder; q.placeholder = ui() === 'atelier' ? 'Escriba aquí…' : ui() === 'ios' ? 'Mensaje' : q.dataset.ph0; }
+    var q = document.getElementById('q'); if (q) { if (!q.dataset.ph0) q.dataset.ph0 = q.placeholder; q.placeholder = ui() === 'atelier' ? 'Escriba aquí…' : ui() === 'ios' ? 'Mensaje' : ui() === 'material' ? 'Escribe un mensaje' : q.dataset.ph0; }
     var side = document.getElementById('side'); if (!side) return;
     var sc = document.getElementById('atscrim'); if (!sc) { sc = document.createElement('div'); sc.id = 'atscrim'; document.body.appendChild(sc); sc.addEventListener('click', function () { side.classList.add('hide'); }); }
-    var drawer = function () { return ui() === 'atelier' || (ui() === 'ios' && innerWidth < 900); };
+    var drawer = function () { return ui() === 'atelier' || ((ui() === 'ios' || ui() === 'material') && innerWidth < 900); };
     var sync = function () { sc.classList.toggle('on', !side.classList.contains('hide') && drawer()); };
     if (!wired) {
       wired = true; new MutationObserver(sync).observe(side, { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', sync);
@@ -127,9 +127,15 @@
     sync();
     var row = document.getElementById('strow'), old = document.getElementById('uisel');
     if (row && !old) {
-      var r = document.createElement('div'); r.className = 'r'; r.innerHTML = '<label>Presentación<small>iOS: esquinas redondeadas y movimiento de resorte. Atelier: papel y tinta, estilo editorial. Clásica: la presentación original.</small></label><select id="uisel"><option value="ios">iOS</option><option value="atelier">Atelier</option><option value="classic">Clásica</option></select>';
-      row.parentNode.insertBefore(r, row); var s = r.querySelector('select'); s.value = mode(); s.onchange = function () { setMode(s.value, true); };
+      var r = document.createElement('div'); r.className = 'r'; r.innerHTML = '<label>Presentación<small>iOS: esquinas redondeadas y movimiento de resorte. Material You Expressive: color tonal que usted elige y las formas de Material 3 Expresivo. Atelier: papel y tinta, estilo editorial. Clásica: la presentación original.</small></label><select id="uisel"><option value="ios">iOS</option><option value="material">Material You Expressive</option><option value="atelier">Atelier</option><option value="classic">Clásica</option></select>';
+      row.parentNode.insertBefore(r, row); var s = r.querySelector('select'); s.value = mode(); s.onchange = function () { setMode(s.value, true); var mr = document.getElementById('matrow'); if (mr) mr.style.display = s.value === 'material' ? '' : 'none'; };
     } else if (old) old.value = mode();
+    var ms = document.getElementById('matseed'), uis = document.getElementById('uisel');
+    if (uis && !ms && window.CalexMaterial) {
+      var rr = document.createElement('div'); rr.className = 'r'; rr.id = 'matrow'; rr.innerHTML = '<label>Color de Material You<small>El color base con el que se genera toda la paleta.</small></label><select id="matseed">' + CalexMaterial.SEEDS.map(function (x) { return '<option value="' + x[1] + '">' + x[0] + '</option>'; }).join('') + '</select>';
+      uis.closest('.r').parentNode.insertBefore(rr, uis.closest('.r').nextSibling); var sel = rr.querySelector('select'); sel.value = String(CalexMaterial.seed()); sel.onchange = function () { CalexMaterial.setSeed(+sel.value); };
+    }
+    var mr = document.getElementById('matrow'); if (mr) mr.style.display = mode() === 'material' ? '' : 'none';
   }
   function boot() {
     var st = document.createElement('style'); st.id = 'calex-atelier'; st.textContent = CSS; document.head.appendChild(st);

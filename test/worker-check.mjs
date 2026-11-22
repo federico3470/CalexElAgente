@@ -21,7 +21,7 @@ const MOCK = "https://mock.test";
 const { privateKey: APK, publicKey: APUB } = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
 const APPLE_PEM = "-----BEGIN PRIVATE KEY-----\n" + Buffer.from(await crypto.subtle.exportKey("pkcs8", APK)).toString("base64").match(/.{1,64}/g).join("\n") + "\n-----END PRIVATE KEY-----";
 const ov = (p) => JSON.stringify({ auth: `${MOCK}/${p}/authorize`, token: `${MOCK}/${p}/token`, user: `${MOCK}/${p}/user` });
-const env = { DB, AI, ASSETS, DAILY_LIMIT: "5", LEGAL_OWNER: "Fede <Test>", LEGAL_EMAIL: "fede@example.com", LEGAL_COUNTRY: "México",
+const env = { DB, AI, ASSETS, DAILY_LIMIT: "5", WEB_SEARCH: "off", LEGAL_OWNER: "Fede <Test>", LEGAL_EMAIL: "fede@example.com", LEGAL_COUNTRY: "México",
   GOOGLE_CLIENT_ID: "gid", GOOGLE_CLIENT_SECRET: "gsec", FACEBOOK_APP_ID: "fid", FACEBOOK_APP_SECRET: "fsec", HUAWEI_CLIENT_ID: "hid", HUAWEI_CLIENT_SECRET: "hsec",
   APPLE_CLIENT_ID: "com.test.nixel", APPLE_TEAM_ID: "TEAM123456", APPLE_KEY_ID: "KEY1234567", APPLE_PRIVATE_KEY: APPLE_PEM, OVERRIDE_APPLE: ov("apple"), OVERRIDE_GOOGLE: ov("google"), OVERRIDE_FACEBOOK: ov("facebook"), OVERRIDE_HUAWEI: ov("huawei"),
   MODELS: JSON.stringify([{ id: "@cf/meta/llama-3.1-8b-instruct-fp8", label: "Equilibrado", w: 1, def: true }, { id: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", label: "Potente", w: 5 }, { id: "@cf/test/bad-model", label: "Roto", w: 3 }, { id: "@cf/meta/llama-3.2-11b-vision-instruct", label: "Imágenes", w: 2, vision: true }]) }; // catálogo de prueba (la IA es simulada)
@@ -387,6 +387,10 @@ try {
   const rU = await mkGuest(); let rl = null, n40 = null; for (let i = 1; i <= 41; i++) { const x = await chat(rU.ck, "hola " + i); if (i === 40) n40 = x; if (i === 41) rl = x; }
   t("anti-abuso: el mensaje 41 en un minuto recibe un aviso amable y formal; el 40 no", /demasiada rapidez/.test(rl.err || "") && !/demasiada rapidez/.test(n40.err || "") && !/bloquead/.test(rl.err || ""), JSON.stringify([n40.err, rl.err]));
   t("el límite por minuto no bloquea la sesión", !db.prepare("SELECT 1 FROM strikes WHERE user_id=?").get(rU.id)); }
+  { const of = globalThis.fetch; globalThis.fetch = async (u, o) => /bing\.com\/search/.test(u) ? new Response('<rss><channel><item><title>Dólar hoy</title><link>https://www.ejemplo.com/dolar</link><description>Cotización</description></item></channel></rss>') : /news\.google/.test(u) ? new Response('<rss><channel><item><title>Titular - Diario</title><link>https://news.google.com/rss/articles/abc</link><pubDate>Sun, 22 Nov 2026</pubDate><source url="https://www.diario.com">Diario</source></item></channel></rss>') : of(u, o);
+    delete env.WEB_SEARCH; db.exec("DELETE FROM hits"); const wck = await guest(); const w = await chat(wck, "Busca las últimas noticias de hoy"); globalThis.fetch = of; env.WEB_SEARCH = "off";
+    const src = w.ev.find((e) => e.type === "sources");
+    t("búsqueda web: emite las páginas consultadas (sources) y las usa en el prompt", src && src.items.length === 2 && src.items.some((i) => i.host === "diario.com") && /RESULTADOS DE BÚSQUEDA WEB/.test(lastAI.input.messages[0].content), JSON.stringify(w.ev.slice(0, 4))); }
 } catch (e) { t("excepción", false, e.stack); }
 console.log(`\n${pass} correctas, ${bad} fallidas.`); process.exit(bad ? 1 : 0);
 
