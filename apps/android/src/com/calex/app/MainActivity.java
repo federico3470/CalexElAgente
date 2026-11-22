@@ -45,6 +45,9 @@ public class MainActivity extends Activity {
   PermissionRequest pendingPerm;
   SpeechRecognizer sr;
   boolean listenerSet = false;
+  boolean active = false, spoke = false;
+  long activeSince = 0, lastResT = 0;
+  String lastRes = "";
   android.speech.tts.TextToSpeech tts;
   boolean ttsReady = false;
   int ttsPending = 0;
@@ -65,7 +68,7 @@ public class MainActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/2.3");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/2.4");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
       @Override public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {
@@ -177,7 +180,7 @@ public class MainActivity extends Activity {
     /** Estilo del asistente digital: "siri" (brillo en los bordes) o "panel" (hoja de cristal abajo). */
     @JavascriptInterface public void setAssistStyle(String st) { getSharedPreferences("calex", 0).edit().putString("assist", "panel".equals(st) ? "panel" : "siri").apply(); }
     @JavascriptInterface public String getAssistStyle() { return getSharedPreferences("calex", 0).getString("assist", "siri"); }
-    @JavascriptInterface public void cancel() { runOnUiThread(new Runnable() { public void run() { if (sr != null) sr.cancel(); } }); }
+    @JavascriptInterface public void cancel() { runOnUiThread(new Runnable() { public void run() { active = false; if (sr != null) sr.cancel(); } }); }
     @JavascriptInterface public void stop() { runOnUiThread(new Runnable() { public void run() { if (sr != null) sr.stopListening(); } }); }
   }
 
@@ -204,19 +207,22 @@ public class MainActivity extends Activity {
   }
 
   void listen() {
+    if (active && System.currentTimeMillis() - activeSince < 20000) return; // ya hay una escucha en curso: evita iniciar dos a la vez (producía resultados repetidos)
+    active = true; activeSince = System.currentTimeMillis(); spoke = false;
     if (sr == null) sr = Rec.create(this); // reconocedor real del teléfono (nunca el de Calex)
     if (sr == null) { js("window.__nsEnd('service-not-allowed')"); return; }
     if (!listenerSet) {
       listenerSet = true;
       sr.setRecognitionListener(new RecognitionListener() {
         public void onReadyForSpeech(Bundle p) { js("window.__nsReady&&window.__nsReady()"); }
-        public void onBeginningOfSpeech() {}
+        public void onBeginningOfSpeech() { spoke = true; }
         public void onRmsChanged(float v) { js("window.__rms&&window.__rms(" + v + ")"); }
         public void onBufferReceived(byte[] b) {}
         public void onEndOfSpeech() {}
-        public void onPartialResults(Bundle p) { ArrayList<String> l = p.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION); if (l != null && !l.isEmpty()) js("window.__nsPartial&&window.__nsPartial(" + org.json.JSONObject.quote(l.get(0)) + ")"); }
+        public void onPartialResults(Bundle p) { ArrayList<String> l = p.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION); if (l != null && !l.isEmpty()) spoke = true; if (l != null && !l.isEmpty()) js("window.__nsPartial&&window.__nsPartial(" + org.json.JSONObject.quote(l.get(0)) + ")"); }
         public void onEvent(int t, Bundle p) {}
         public void onError(int e) {
+          active = false;
           String c = "error";
           if (e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) c = "no-speech";
           else if (e == SpeechRecognizer.ERROR_CLIENT) c = "aborted";
@@ -228,7 +234,13 @@ public class MainActivity extends Activity {
         }
         public void onResults(Bundle r) {
           ArrayList<String> l = r.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-          if (l != null && !l.isEmpty()) js("window.__nsResult(" + org.json.JSONObject.quote(l.get(0)) + ")");
+          active = false;
+          if (l != null && !l.isEmpty()) {
+            String t = l.get(0), n = t.toLowerCase().trim(); long now = System.currentTimeMillis();
+            boolean dup = n.equals(lastRes) && now - lastResT < 9000 && !spoke; // el reconocedor a veces repite el último resultado al reiniciarse
+            if (!dup) { lastRes = n; lastResT = now; js("window.__nsResult(" + org.json.JSONObject.quote(t) + ")"); }
+          }
+          spoke = false;
           js("window.__nsEnd()");
         }
       });

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwsh4emz">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwshclny">
 <script>/*SINEMOJI*/
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -999,14 +999,17 @@ async function startLive(){
   const r=LV.rec;r.lang='es-ES';r.continuous=true;r.interimResults=true;
   /* Fin de frase rápido: no espera al "final" del navegador (~1 s); envía a los ~300 ms de silencio, salvo que la frase quede abierta (coma, "y", "pero", "porque"…): ahí espera ~1,1 s */
   LV.base=0;LV.tm=0;
-  r.onstart=()=>{if(LV)LV.base=0};r.onready=()=>{if(LV)LV.ready=1};r.onpartial=t=>{if(LV&&!LV.speaking&&!LV.paused&&t){clearTimeout(LV.tm);lvSay((LV.acc?LV.acc+' ':'')+t)}};
+  r.onstart=()=>{if(LV)LV.base=0};r.onready=()=>{if(LV)LV.ready=1};r.onpartial=t=>{if(LV&&!LV.speaking&&!LV.paused&&t){LV.fresh=1;clearTimeout(LV.tm);lvSay((LV.acc?LV.acc+' ':'')+t)}};
   r.onresult=e=>{let txt='';for(let i=LV.base;i<e.results.length;i++)txt+=e.results[i][0].transcript;txt=txt.trim();if(!txt)return;
     if(LV.speaking)liveStop(); // interrumpes a Calex: se calla
-    /*VOZ3*/if(window.CalexNative){LV.acc=(LV.acc?LV.acc+' ':'')+txt;txt=LV.acc} // varias frases seguidas se juntan en una sola consulta
+    /*VOZ3*//*DEDUPE*/if(window.CalexNative){const nrm=x=>x.toLowerCase().replace(/[^\p{L}\p{N} ]/gu,'').replace(/\s+/g,' ').trim(),n=nrm(txt),now=Date.now();
+      if(LV.lastN===n&&now-(LV.lastT||0)<9000&&!LV.fresh)return; // el reconocedor repite a veces el último resultado al reiniciarse: se ignora si no hubo voz nueva
+      LV.lastN=n;LV.lastT=now;LV.fresh=0;
+      const a=nrm(LV.acc||'');if(!a)LV.acc=txt;else if(n===a||a.endsWith(n))txt=LV.acc;else if(n.startsWith(a))LV.acc=txt;else LV.acc=LV.acc+' '+txt;txt=LV.acc} // varias frases seguidas se juntan en una sola consulta
     lvSay(txt);clearTimeout(LV.tm);
     const open=/(,|\b(y|e|o|u|pero|que|porque|pues|como|si|aunque|entonces|qué|cómo|cuál|dónde|cuándo|con|para|por|de|en|a|el|la|los|las|un|una|mi|tu|su|este|eh|mmm|es que|o sea))$/i.test(txt),end=/[.?!]$/.test(txt);
     LV.tm=setTimeout(()=>{LV.base=e.results.length;LV.acc='';liveAsk(txt)},window.CalexNative?(open?2200:end?1100:1500):(open?1100:end?120:300))};
-  r.onend=()=>{if(LV&&LV.on&&LV.mic&&!LV.fail&&!LV.paused)setTimeout(()=>{try{r.start()}catch{}},LV.retry||60)};
+  r.onend=()=>{if(LV&&LV.on&&LV.mic&&!LV.fail&&!LV.paused)setTimeout(()=>{try{r.start()}catch{}},LV.retry||450)};
   r.onerror=e=>{if(!LV)return;const c=e.error;if(c==='no-speech'||c==='aborted')return; // nunca cerramos solos: mostramos el motivo
     if(c==='not-allowed'||c==='service-not-allowed'){LV.fail=true;lvSay(`El navegador bloqueó el reconocimiento de voz (${c}). ${MICHELP}`)}
     else if(c==='network'){LV.retry=2000;lvSay('El reconocimiento de voz de tu navegador necesita internet (usa un servicio de Microsoft o Google) y no pudo conectar. Reintentando…')}
