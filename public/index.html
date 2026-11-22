@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr4lk9p">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr592of">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -1109,8 +1109,8 @@ $('updb').onclick=()=>UPD?applyUpdate():checkUpdate(true);
 let IS_LOCAL=['localhost','127.0.0.1','[::1]'].includes(location.hostname);try{if(localStorage.getItem('calex-remote')==='1')IS_LOCAL=false}catch{} // (la marca calex-remote solo sirve para probar el modo sin conexión en un servidor local) // Calex en el PC funciona sin internet con sus modelos locales
 let OFFQ=[];try{OFFQ=JSON.parse(localStorage.getItem('calex-offq')||'[]')}catch{}
 const saveQ=()=>{try{localStorage.setItem('calex-offq',JSON.stringify(OFFQ))}catch{}};
-function queueMsg(t){OFFQ.push(String(t).slice(0,4000));saveQ();note('t','Sin conexión: tu mensaje queda en espera ('+OFFQ.length+') y se enviará cuando vuelva internet.')}
-async function flushQ(){if(!OFFQ.length||!navigator.onLine||busy)return;const q=OFFQ.slice();OFFQ=[];saveQ();for(const t of q){if(!navigator.onLine){OFFQ.push(t);saveQ();continue}await send(t)}}
+function queueMsg(t,quiet){OFFQ.push(String(t).slice(0,4000));saveQ();if(!quiet){const u=[...log.querySelectorAll('.m.u')].pop();if(u)u.dataset.wait='1';note('t','Sin conexión estable: tu mensaje queda en espera ('+OFFQ.length+') y se envía solo en cuanto haya señal.')}clearTimeout(window.__qt);window.__qt=setTimeout(flushQ,20000)}
+async function flushQ(){if(!OFFQ.length||!navigator.onLine||busy)return;const q=OFFQ.slice();OFFQ=[];saveQ();log.querySelectorAll('.m.u[data-wait]').forEach(x=>x.remove());window.__fl=true;try{for(const t of q){if(!navigator.onLine){OFFQ.push(t);saveQ();continue}await send(t)}}finally{window.__fl=false}}
 (()=>{if(IS_LOCAL)return;const b=document.createElement('div');b.id='offb';b.setAttribute('role','status');b.textContent='Sin conexión: puedes leer tus charlas. Lo que escribas se enviará al volver internet.';document.body.append(b);
   const up=()=>b.classList.toggle('on',!navigator.onLine);addEventListener('online',()=>{up();setTimeout(flushQ,800)});addEventListener('offline',up);up();setTimeout(flushQ,2500)})();
 /* botón Atrás del mando o del móvil: cierra lo que esté abierto antes de salir de la app (la app nativa lo llama) */
@@ -1386,7 +1386,7 @@ async function send(text,o={}){
           mk('Permitir',true);mk('Rechazar',false)}
         else if(ev.type==='error'){ensure();cur.textContent='Error: '+ev.text}
         scroll()}}
-  }catch(e){ensure();if(e.name==='AbortError')cur.textContent=(raw?raw+'\n':'')+'(detenido)';else cur.textContent='Error: '+e.message}
+  }catch(e){if(!raw&&!IS_LOCAL&&e instanceof TypeError&&!(CTL&&CTL.signal.aborted)){queueMsg(text,window.__fl);if(window.__fl&&ub&&ub.remove)ub.remove();if(cur){cur.remove();cur=null}}else{ensure();if(e.name==='AbortError')cur.textContent=(raw?raw+'\n':'')+'(detenido)';else cur.textContent='Error: '+e.message}}
   if(cur){cur.classList.remove('cur');if(raw){const vv=vis(raw);if(vv){cur.dataset.raw=vv;actions(cur)}else cur.remove()}}{const sc=stepsFromText(raw);if(sc)stepCard(sc)}if(think&&!think.done)think.firstChild.textContent='Ver razonamiento';
   clearTimeout(wd);clearTimeout(hard);clearInterval(iv);$('tm').textContent=fmt(performance.now()-t0);$('dt').classList.remove('on');
   busy=false;CTL=null;$('go').textContent='Enviar';$('go').classList.remove('stop');$('q').focus();loadHist();if(WKSPEAK){WKSPEAK=false;if(raw)wakeSay(raw.replace(/[*`#_>|]/g,'').slice(0,500))}
