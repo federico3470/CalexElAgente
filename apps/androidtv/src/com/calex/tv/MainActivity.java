@@ -55,7 +55,7 @@ public class MainActivity extends Activity {
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.3 CalexTV");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.4 CalexTV");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
       @Override public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {

@@ -92,11 +92,16 @@ public class MainActivity extends Activity {
         return true;
       }
     });
-    if (!handleIntent(getIntent())) web.loadUrl(HOST);
+    if (!handleIntent(getIntent())) web.loadUrl(HOST + startQuery());
   }
+
+  /** Calex Auto (paquete com.calex.auto) arranca en modo coche; como asistente digital, en modo de voz. */
+  String startQuery() { return getPackageName().endsWith(".auto") ? "/?auto=1" : ""; }
 
   /** calex://login?code=… → el Worker canjea el código por una sesión dentro del WebView. */
   boolean handleIntent(Intent i) {
+    String act = i == null ? null : i.getAction();
+    if (act != null && (act.equals("com.calex.app.ASSIST") || act.equals(Intent.ACTION_ASSIST) || act.equals(Intent.ACTION_VOICE_COMMAND) || act.equals("android.intent.action.VOICE_ASSIST"))) { web.loadUrl(HOST + "/?assist=1"); return true; }
     Uri d = i == null ? null : i.getData();
     if (d != null && "calex".equals(d.getScheme()) && "login".equals(d.getHost()) && d.getQueryParameter("code") != null) {
       web.loadUrl(HOST + "/auth/app?code=" + Uri.encode(d.getQueryParameter("code")));
@@ -128,6 +133,8 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void mediaSettings() { runOnUiThread(new Runnable() { public void run() { try { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); } catch (Exception e) { } } }); }
     @JavascriptInterface public String mediaState() { return Media.state(MainActivity.this); }
     @JavascriptInterface public void mediaCmd(String c) { Media.cmd(MainActivity.this, c); }
+    /** Cierra la pantalla del asistente / modo coche y vuelve a lo que estabas haciendo. */
+    @JavascriptInterface public void close() { runOnUiThread(new Runnable() { public void run() { finish(); } }); }
     @JavascriptInterface public void stop() { runOnUiThread(new Runnable() { public void run() { if (sr != null) sr.stopListening(); } }); }
   }
 

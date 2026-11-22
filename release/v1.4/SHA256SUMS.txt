@@ -1,1 +1,5 @@
-b63dadeda4f8a6b7cbe49dd9e46ce4c0397dc9e0b4ad4d2d53e6b1f0f275aea7 *Calex-1.4.apk
+0c11edad820c2e3a006c253807c2294b22a3a035dbcd633c5b0f7d428fcb6ede *Calex-1.4.apk
+5dd1a98eecc8aeb833bf78e393e7c87ecf502844cbf4565a4c89c87cca7a8635 *Calex-1.4v-ATV.apk
+5dd1a98eecc8aeb833bf78e393e7c87ecf502844cbf4565a4c89c87cca7a8635 *Calex-1.4v-GTV.apk
+d2bba27377a63db32aae9d9e3914a296bb9a32a0c625ad5f75ae405312e37172 *Calex-Auto-1.4.apk
+c8e6d7bdc7f1577d0070998feef449d508b0c8d5d5977be79207fd686b3b1ada *Calex-1.4.exe

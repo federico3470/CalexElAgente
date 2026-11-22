@@ -7,16 +7,19 @@ using System.Reflection;
 using System.Windows.Forms;
 [assembly: AssemblyTitle("Calex")]
 [assembly: AssemblyProduct("Calex")]
-[assembly: AssemblyVersion("1.3.0.0")]
-[assembly: AssemblyFileVersion("1.3.0.0")]
+[assembly: AssemblyVersion("1.4.0.0")]
+[assembly: AssemblyFileVersion("1.4.0.0")]
 
 static class Calex
 {
-  const string Url = "https://calex.federicoreta773.workers.dev";
+  const string Home = "https://calex.federicoreta773.workers.dev"; // «Calex.exe --voz» abre directo el modo de voz (sin cámara)
+
+  static string Url = Home;
 
   [STAThread]
   static int Main(string[] args)
   {
+    foreach (string a in args) if (a == "--voz") Url = Home + "/?assist=1";
     string pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     string[] candidatos = {
       Path.Combine(pf86, @"Microsoft\Edge\Application\msedge.exe"), Path.Combine(pf, @"Microsoft\Edge\Application\msedge.exe"),

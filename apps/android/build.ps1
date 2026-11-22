@@ -1,4 +1,5 @@
 # Compila Calex.apk sin Gradle. Necesita D:\Android (JDK 17 + SDK con platforms;android-34 y build-tools;34.0.0).
+param([string]$Variant = "main")  # main = Calex (con asistente digital) · auto = Calex Auto (modo coche, paquete com.calex.auto)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 $jh = (Get-ChildItem D:\Android\jdk -Directory | Select-Object -First 1).FullName; $env:JAVA_HOME = $jh; $env:Path = "$jh\bin;" + $env:Path
@@ -17,16 +18,19 @@ $g.DrawImage($logo,28,42,96,96); $f = New-Object Drawing.Font "Segoe UI Semibold
 $bn.Save("$PSScriptRoot\res\drawable-xhdpi\banner.png",[Drawing.Imaging.ImageFormat]::Png); $bn.Dispose(); $logo.Dispose()
 
 Run "$bt\aapt2.exe" @("compile", "--dir", "res", "-o", "$b\res.zip")
-Run "$bt\aapt2.exe" @("link", "-o", "$b\base.apk", "-I", $jar, "--manifest", "AndroidManifest.xml", "--min-sdk-version", "23", "--target-sdk-version", "34", "--version-code", "8", "--version-name", "1.4", "$b\res.zip", "--java", "$b\gen")
+$mf = "$PSScriptRoot\AndroidManifest.xml"
+if ($Variant -eq "auto") { $m = Get-Content $mf -Raw -Encoding UTF8; $m = [regex]::Replace($m, "(?s)\s*<!--ASSIST-->.*?<!--/ASSIST-->", ""); $m = $m.Replace('package="com.calex.app"', 'package="com.calex.auto"').Replace('android:label="Calex" android:icon', 'android:label="Calex Auto" android:icon'); $mf = "$b\AndroidManifest.xml"; [IO.File]::WriteAllText($mf, $m, (New-Object Text.UTF8Encoding $false)) }
+Run "$bt\aapt2.exe" @("link", "-o", "$b\base.apk", "-I", $jar, "--manifest", $mf, "--min-sdk-version", "23", "--target-sdk-version", "34", "--version-code", "9", "--version-name", "1.4", "$b\res.zip", "--java", "$b\gen")
 $src = @(Get-ChildItem src -Recurse -Filter *.java | ForEach-Object FullName) + @(Get-ChildItem "$b\gen" -Recurse -Filter *.java | ForEach-Object FullName)
 Run "javac" (@("-source", "8", "-target", "8", "-Xlint:-options", "-bootclasspath", $jar, "-d", "$b\classes") + $src)
 $cls = @(Get-ChildItem "$b\classes" -Recurse -Filter *.class | ForEach-Object FullName)
 Run "$bt\d8.bat" (@("--lib", $jar, "--output", $b, "--min-api", "23") + $cls)
 Push-Location $b; Run "$bt\aapt.exe" @("add", "base.apk", "classes.dex"); Pop-Location
 Run "$bt\zipalign.exe" @("-f", "-p", "4", "$b\base.apk", "$b\aligned.apk")
+$apkName = if ($Variant -eq "auto") { "Calex-Auto.apk" } else { "Calex.apk" }
 $ks = "$PSScriptRoot\calex-release.jks"
 if (-not (Test-Path $ks)) { Run "keytool" @("-genkeypair", "-keystore", $ks, "-alias", "calex", "-keyalg", "RSA", "-keysize", "2048", "-validity", "10000", "-storepass", "calex-familia", "-keypass", "calex-familia", "-dname", "CN=Calex, O=Familia") }
 New-Item -ItemType Directory -Force "$PSScriptRoot\..\dist" | Out-Null
-Run "$bt\apksigner.bat" @("sign", "--ks", $ks, "--ks-pass", "pass:calex-familia", "--key-pass", "pass:calex-familia", "--out", "$PSScriptRoot\..\dist\Calex.apk", "$b\aligned.apk")
-Run "$bt\apksigner.bat" @("verify", "--verbose", "$PSScriptRoot\..\dist\Calex.apk")
-Get-Item "$PSScriptRoot\..\dist\Calex.apk" | Select-Object FullName, Length
+Run "$bt\apksigner.bat" @("sign", "--ks", $ks, "--ks-pass", "pass:calex-familia", "--key-pass", "pass:calex-familia", "--out", "$PSScriptRoot\..\dist\$apkName", "$b\aligned.apk")
+Run "$bt\apksigner.bat" @("verify", "--verbose", "$PSScriptRoot\..\dist\$apkName")
+Get-Item "$PSScriptRoot\..\dist\$apkName" | Select-Object FullName, Length

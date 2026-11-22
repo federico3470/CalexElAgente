@@ -1,21 +1,46 @@
-Calex 1.4
+# Calex 1.4
 
-**Conectores (como los de ChatGPT)**
-- Nuevo botón **Conectores**: vincula Gmail, Google Calendar, Google Drive, Spotify, GitHub, Telegram, Discord, Slack, avisos al celular (ntfy) y Todoist.
-- Calex los usa cuando se lo pides: «mandale un mail a Lorenzo», «qué tengo en la agenda esta semana». Lo que **envía o crea** algo te lo muestra y espera tu confirmación. Lo que solo lee, lo hace directamente.
-- Los accesos se guardan cifrados y puedes desvincular cuando quieras.
+Tu asistente, ahora en todas partes: **celular, Google TV, Android TV, Windows y el auto**.
 
-**Isla dinámica de música**
-- Arriba aparece una pastilla negra con la canción que suena. Al tocarla se abre con carátula, barra de avance y ⏮ ⏯ ⏭.
-- Mientras charlas puedes decir «adelantá esta canción» o «pausá la música».
-- En la app de Android controla **cualquier** app de música (Spotify, YouTube Music, Deezer…) con el permiso «Acceso a notificaciones». También funciona con Spotify vinculado (requiere Premium para controlar).
+## Descargas
 
-**Easter eggs nuevos**: `/asado`, `/mate`, `/gol`, `/versiculo`, `/paz`, `/dado`, `/moneda`, `/truco`, el código Konami y siete toques al logo.
+| Para | Archivo | Qué es |
+|---|---|---|
+| 📱 **Celular y tableta** (Android 6+) | `Calex-1.4.apk` | La app completa. Ahora **se puede elegir como asistente digital** del teléfono. |
+| 📺 **Google TV** | `Calex-1.4v-GTV.apk` | Hecha para el control remoto, con vinculación por código. |
+| 📺 **Android TV** | `Calex-1.4v-ATV.apk` | La misma app de TV, para televisores y cajitas con Android TV. |
+| 🖥️ **Windows 10/11** | `Calex-1.4.exe` | Se abre como una aplicación. `Calex.exe --voz` abre directo el modo de voz. |
+| 🚗 **Calex Auto** (Android) | `Calex-Auto-1.4.apk` | Modo coche: letras enormes, un botón para hablar y controles de música. Convive con la app normal. |
 
-**Personas 3D realistas (beta, opcional)**: en Configuración se puede activar una versión dibujada en 3D real con WebGL. Por defecto siguen las personas de siempre.
+Las dos de TV son la misma aplicación; se publican con dos nombres para que sea fácil encontrar la tuya.
 
-**Android 1.4**: vinculación de conectores en el navegador y regreso a la app, y control de la música del celular.
+## Calex como asistente del celular
 
-**Descargas**
-- `Calex-1.4.apk`: Android (móvil y tableta).
-- Google TV (`Calex-1.3v-GTV.apk`) y Windows (`Calex-1.3.exe`) no cambian: cargan la web en vivo y ya ven lo nuevo.
+Instalá `Calex-1.4.apk` y elegí Calex una sola vez:
+
+**Ajustes → Aplicaciones → Aplicaciones predeterminadas → App de asistente digital → Calex**
+
+(En algunos Samsung: *Ajustes → Aplicaciones → Elegir apps predeterminadas → App de asistente digital*.)
+
+Desde ese momento, lo que antes llamaba a Gemini llama a Calex: el **botón lateral** (mantenerlo apretado, si así lo tenés configurado), la **pulsación larga del botón de inicio** o el gesto de deslizar desde la esquina. Se abre directo el **modo de voz**: hablás, Calex responde en voz alta y podés interrumpirlo.
+
+Lo que Android no deja cambiar: la frase de activación «Ok Google / Hey Google» sigue siendo de Google.
+
+## Calex en el auto
+
+- **Calex Auto** es un modo pensado para el celular dentro del auto: sin cámara, texto grande, botón de micrófono grande y ⏮ ⏯ ⏭ para la música.
+- Con **Bluetooth**, el botón de asistente del volante manda la orden al asistente predeterminado del teléfono: si elegiste Calex, se abre Calex.
+- **Android Auto** (la pantalla del auto) solo acepta Google Assistant y apps aprobadas por Google en Play Store; no permite reemplazarlo. Por eso Calex funciona en el auto desde el celular, no dentro de la pantalla de Android Auto.
+
+## Más novedades de la 1.4
+
+- **Conectores**: Gmail, Google Calendar, Drive, Spotify, GitHub, Telegram, Discord, Slack, ntfy y Todoist. Lo que envía o crea algo te pide confirmación.
+- **Isla dinámica de música** con carátula, barra de avance y controles; en Android controla cualquier app de música.
+- **Calex Studio**: páginas web diseñadas por la IA con shaders y texturas procedurales hasta 4K, con revisión visual.
+- **Más adjuntos**: hasta 8 imágenes y 10 documentos por mensaje.
+- **Esfuerzo** ajustable (rápido ↔ profundo) y un solo modo «todo en uno».
+- **Easter eggs**: `/asado`, `/mate`, `/gol`, `/versiculo`, `/paz`, `/dado`, `/moneda`, `/truco`, el código Konami y siete toques al logo.
+
+La interfaz se carga en vivo desde la web: lo nuevo de Calex llega a todas las versiones sin reinstalar.
+
+Verificá las descargas con `SHA256SUMS.txt`.

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mws3x252">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwsd2yak">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -115,6 +115,8 @@ details.think div{border-left:2px solid var(--line);padding:4px 0 4px 10px;margi
 #lv{position:fixed;inset:0;background:#000;z-index:35;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:16px;color:#fff}#lv.on{display:flex}
 #lvv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.9}#lvt,#lvb{position:relative;z-index:2}
 #lva{border-radius:50%;overflow:hidden;line-height:0;border:3px solid #fff8;box-shadow:0 0 0 6px #0006}#lvs{position:relative;z-index:2;max-width:760px;text-align:center;font-size:20px;line-height:1.4;background:#000a;padding:10px 16px;border-radius:14px;min-height:48px}
+#lvmu{display:none;position:relative;z-index:2;gap:14px}body.auto #lvmu{display:flex}#lvmu button{background:#000a;color:#fff;border:1px solid #fff4;border-radius:50%;width:64px;height:64px;font-size:26px;padding:0}
+#lvs{overflow-y:auto;max-height:36vh}body.auto #lvs{font-size:clamp(19px,5.2vw,30px);max-width:94vw;line-height:1.35}body.auto #lvb button{font-size:22px;padding:16px 26px;border-radius:40px}body.auto #lvc{display:none}body.auto #lva{box-shadow:0 0 0 8px #4fc3f733,0 0 60px #4fc3f755}
 #lvb{display:flex;gap:10px}#lvb button{background:#000a;color:#fff;border-color:#fff4;padding:10px 16px}#lvb .x{background:var(--bad);border-color:var(--bad)}
 .kinds{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.kd{padding:3px;border-radius:50%;line-height:0;justify-self:center}.kd.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0 12px}.chips .ch{padding:7px 14px;font-size:14px}
@@ -466,7 +468,7 @@ body.tv #isl,body.tv #bcn,body.tv #cnov{display:none!important}
 <div id="wb"><div id="wbc"></div></div>
 <div id="pm"></div>
 <div id="lv"><video id="lvv" autoplay muted playsinline></video><div id="lvt"><div id="lva"></div></div><div id="lvs" aria-live="polite">Preparando…</div>
-  <div id="lvb"><button type="button" id="lvc">📷 Cámara</button><button type="button" id="lvm">🎤 Micrófono</button><button type="button" class="x" id="lvx">Salir</button></div></div>
+  <div id="lvb"><button type="button" id="lvc">📷 Cámara</button><button type="button" id="lvm">🎤 Micrófono</button><button type="button" class="x" id="lvx">Salir</button></div><div id="lvmu"><button type="button" data-mc="previous" aria-label="Canción anterior">⏮</button><button type="button" data-mc="toggle" aria-label="Pausar o reanudar">⏯</button><button type="button" data-mc="next" aria-label="Canción siguiente">⏭</button></div></div>
 <div id="lg"><div id="lgc"></div></div>
 <div id="ob"><div id="obc"></div></div>
 <div id="cnov"><div id="cnp" role="dialog" aria-label="Conectores"></div></div>
@@ -847,10 +849,10 @@ async function startLive(){
   warm('vision');
   if(!window.isSecureContext){LV={on:true,mic:false,cam:false,rec:{stop(){}}};lvOpen('El modo Live necesita una conexión segura (https o localhost): el navegador no permite cámara ni micrófono desde una dirección http como esta. Úsalo desde el PC, o con https (por ejemplo con Tailscale).',false);return}
   if(!SR){LV={on:true,mic:false,cam:false,rec:{stop(){}}};lvOpen('Este navegador no tiene reconocimiento de voz. Usa Microsoft Edge o Google Chrome.',false);return}
-  if(!await needPerm('live','Modo Live: cámara y micrófono','Calex usará tu cámara y tu micrófono solo mientras este modo esté abierto. No se graba vídeo: se toman fotogramas sueltos para responderte. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google.'))return;
+  if(!document.body.classList.contains('auto')&&!await needPerm('live','Modo Live: cámara y micrófono','Calex usará tu cámara y tu micrófono solo mientras este modo esté abierto. No se graba vídeo: se toman fotogramas sueltos para responderte. El reconocimiento de voz del navegador puede enviar el audio a Microsoft o Google.'))return;
   // pedimos los permisos reales del navegador por adelantado, para que aparezca su aviso y podamos explicar cualquier bloqueo
   let stream=null,err='';
-  try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:{width:640,height:480,facingMode:'user'}})}
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:document.body.classList.contains('auto')?false:{width:640,height:480,facingMode:'user'}})}
   catch(e1){try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e2){err=e2.name||'error'}}
   LV={on:true,stream,cam:!!(stream&&stream.getVideoTracks().length),mic:true,ctl:null,speaking:false,rec:new SR(),q:[],busy:false,fail:false};
   if(err){LV.mic=false;LV.fail=true;lvOpen(`El navegador no dejó usar el micrófono (${err}). ${MICHELP}`,false);return}
@@ -890,7 +892,11 @@ async function liveAsk(text){if(!LV)return;liveStop();LV.said=0;const ctl=LV.ctl
   }catch(e){if(e.name!=='AbortError')lvSay('Error: '+e.message)}
   loadHist()}
 function endLive(){if(!LV)return;const l=LV;l.on=false;liveStop();try{l.rec.stop()}catch{}if(l.stream)l.stream.getTracks().forEach(t=>t.stop());$('lvv').srcObject=null;$('lv').classList.remove('on');LV=null;setMood('normal');loadHist()}
-$('liv').onclick=startLive;$('lvx').onclick=endLive;
+$('liv').onclick=startLive;$('lvx').onclick=()=>{endLive();if(document.body.classList.contains('auto')){try{CalexNative.close()}catch(e){}}};
+document.querySelectorAll('#lvmu button').forEach(b=>b.onclick=()=>{try{musicCmd(b.dataset.mc)}catch(e){}});
+/*ASSIST*/ /* Asistente digital de Android (?assist=1) y modo coche (?auto=1): abre directo el modo de voz, sin cámara */
+(()=>{const q=new URLSearchParams(location.search);if(!q.get('assist')&&!q.get('auto'))return;document.body.classList.add('auto');let n=0;
+ const t=setInterval(()=>{if(++n>160){clearInterval(t);return}if(!AUTH||!AUTH.user||!P||$('lg').classList.contains('on')||$('ob').classList.contains('on'))return;clearInterval(t);try{history.replaceState(null,'',location.pathname)}catch(e){}if(!LV)startLive()},250)})();
 $('lvc').onclick=()=>{if(!LV||!LV.stream)return;LV.cam=!LV.cam;LV.stream.getVideoTracks().forEach(t=>t.enabled=LV.cam);$('lvv').style.opacity=LV.cam?.9:.1;$('lvc').textContent=LV.cam?'📷 Cámara':'🚫 Cámara'};
 $('lvm').onclick=()=>{if(!LV)return;LV.mic=!LV.mic;if(LV.mic){try{LV.rec.start()}catch{}}else LV.rec.stop();$('lvm').textContent=LV.mic?'🎤 Micrófono':'🔇 Micrófono'};
 addEventListener('keydown',e=>{if(e.key==='Escape'&&LV)endLive()});
