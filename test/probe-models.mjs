@@ -12,5 +12,6 @@ for (const id of ids) {
     const raw = await r.text(); for (const l of raw.split("\n\n").filter(Boolean)) { try { const e = JSON.parse(l.slice(5)); if (e.type === "token") { if (!first) first = Date.now() - t0; text += e.text; } else if (e.type === "model") model = e.model; else if (e.type === "error") err = e.text; } catch {} } } catch (e) { err = String(e.message || e); }
   const m = /```html\s*([\s\S]*?)(?:```|$)/i.exec(text), html = m ? m[1] : "", name = id.split("/").pop().replace(/[^\w.-]/g, "_");
   if (html) fs.writeFileSync(path.join(OUT, name + ".html"), html);
+  const rv = /Revisión visual: (.*)/.exec(text); if (rv) console.log("   → " + rv[0].slice(0, 300));
   console.log(`${id.padEnd(48)} usó=${model.padEnd(34)} ${((Date.now() - t0) / 1000).toFixed(0).padStart(3)}s primer-token=${(first / 1000).toFixed(0)}s  texto=${text.length}  html=${html.length}  <script>=${(html.match(/<script/g) || []).length} canvas/webgl=${/canvas|webgl/i.test(html)}  ${err ? "ERROR: " + err.slice(0, 260) : ""}`);
 }

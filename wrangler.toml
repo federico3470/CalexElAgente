@@ -2,12 +2,17 @@
 name = "calex"
 main = "src/worker.js"
 compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
 
 # La interfaz web (carpeta public). El Worker atiende primero todas las peticiones.
 [assets]
 directory = "./public"
 binding = "ASSETS"
 run_worker_first = true
+
+# Navegador de Cloudflare (Browser Run): Calex mira las páginas que arma con capturas de pantalla (gratis: 10 minutos por día).
+[browser]
+binding = "BROWSER"
 
 # Modelos de IA de Cloudflare (Workers AI): tiene un cupo diario gratuito.
 [ai]

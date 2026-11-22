@@ -7,5 +7,8 @@
     "test": "node test/worker-check.mjs",
     "preview": "node test/dev-server.mjs",
     "deploy": "npx wrangler deploy"
+  },
+  "dependencies": {
+    "@cloudflare/puppeteer": "^2.0.1"
   }
 }
