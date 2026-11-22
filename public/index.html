@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr63zfu">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwr66uc2">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -547,7 +547,6 @@ body.tv #isl,body.tv #bcn,body.tv #cnov{display:none!important}
   <div class="r" style="justify-content:flex-end;margin-top:12px"><button id="sc">Cerrar</button><button class="pri" id="ss">Guardar</button></div>
 </div></div>
 
-<script src="/avatar3d.js"></script>
 <script>
 const $=id=>document.getElementById(id);let chatId=null,busy=false,CFG=null;
 const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -584,7 +583,6 @@ const DEF={kind:'mateo',color:'#4fc3f7',acc:0};
 const COLORS=['#4fc3f7','#ef6b6b','#5ad19a','#f5b342','#9b7cf4','#ff8fb1','#8b93a5','#2b2f3a'];
 const shade=(h,k)=>{const n=parseInt(h.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(k<0?v*(1+k):v+(255-v)*k)));return '#'+[n>>16&255,n>>8&255,n&255].map(f).map(v=>v.toString(16).padStart(2,'0')).join('')};
 function avatar(a,m='normal',size=48){a={...DEF,...a};
-  if(a.st==='3d'&&window.A3D&&A3D.init()){const u=A3D.url({kind:PEOPLE[a.kind]?a.kind:'mateo',skin:a.skin,color:a.color||a.shirt,acc:a.acc},m,size);if(u)return '<img class="av m-'+m+'" src="'+u+'" width="'+size+'" height="'+size+'" alt="" style="border-radius:50%;object-fit:cover">'} // versión Cloudflare: persona 3D realista (avatar3d.js)
   const K=PEOPLE[a.kind]?a.kind:'mateo',p=PEOPLE[K],c=/^#[0-9a-f]{6}$/i.test(a.color||a.shirt||'')?(a.color||a.shirt):DEF.color,skin=/^#[0-9a-f]{6}$/i.test(a.skin||'')?a.skin:p.skin,hc=p.hair;
   const id='c'+(++uid),sk1=shade(skin,.3),sk2=shade(skin,-.18),sk3=shade(skin,-.34),sh1=shade(c,.28),sh2=shade(c,-.3),h1=shade(hc,.25),h2=shade(hc,-.35),old=!!p.old,fem=p.g==='mujer',DARK='#2b2320',MOUTH='#8a3a3a';
   const defs=`<defs><clipPath id="${id}"><circle cx="50" cy="50" r="50"/></clipPath>
@@ -636,7 +634,6 @@ function avatar(a,m='normal',size=48){a={...DEF,...a};
   return `<svg class="av m-${m}" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">${defs}<g clip-path="url(#${id})"><rect width="100" height="100" fill="url(#${id}b)"/>${back}${neck}${torso}${ears}${head}${wr}${cheeks}${eyes}${brow}${nose}${beard}${mouth}${hair}${extra}${sweat}</g></svg>`}
 const greet=()=>{const h=new Date().getHours();return h<5?'Qué tarde':h>=21||h<8?'Buenas noches':h>=14?'Buenas tardes':'Buenos días'};
 const clock=()=>new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-addEventListener('a3d-ready',()=>{paintAv();try{if($('ob')&&$('ob').classList.contains('on'))drawOb()}catch{}});addEventListener('a3d-failed',()=>{try{tip('Este aparato no puede dibujar las personas realistas: se usan las clásicas')}catch{}});
 function paintAv(){const a=P?P.avatar:DEF;$('hav').innerHTML=avatar(a,mood,36);const g=document.querySelector('.gav');if(g)g.innerHTML=avatar(a,mood,96)}
 function setMood(m,ms){mood=m;paintAv();clearTimeout(moodT);if(ms)moodT=setTimeout(()=>setMood('normal'),ms)}
 const empty=()=>{const nm=P&&P.name?', '+esc(P.name):'';
@@ -697,7 +694,6 @@ function drawOb(){const d=ob.d,A=d.avatar,S=seq(),s=ob.step,st=S[s],c=$('obc'),i
   if(st==='avatar'){const G=A.gender||(PEOPLE[A.kind]&&PEOPLE[A.kind].g)||'hombre',list=AVK.filter(k=>PEOPLE[k].g===G);h+=`<h2>Elige tu persona</h2><p>Mira cómo reacciona:</p><div class="big">${avatar(A,ob.mood,132)}</div>
     <div class="chips" style="margin:4px 0">${[['normal','Normal'],['effort','Esfuerzo'],['funny','Gracia']].map(([m,n])=>`<button type="button" class="ch ${ob.mood===m?'on':''}" data-mood="${m}">${n}</button>`).join('')}</div>
     <div class="chips" style="margin:4px 0">${[['hombre','Hombre'],['mujer','Mujer']].map(([g,n])=>`<button type="button" class="ch ${G===g?'on':''}" data-g="${g}">${n}</button>`).join('')}</div>
-    <div class="chips" style="margin:4px 0">${[['','Clásico'],['3d','Realista 3D']].map(([v,n])=>`<button type="button" class="ch ${(A.st||'')===v?'on':''}" data-st="${v}">${n}</button>`).join('')}</div>
     <div class="kinds">${list.map(k=>`<button type="button" class="kd ${A.kind===k?'on':''}" data-k="kind" data-v="${k}" title="${AVN[k]}" aria-label="${AVN[k]}">${avatar({...A,kind:k,skin:null},'normal',58)}</button>`).join('')}</div>
     <div class="bld"><div class="o"><label>Piel</label>${sw('skin',SKINS)}</div><div class="o"><label>Camiseta</label>${sw('color',COLORS)}</div><div class="o"><label>Extra</label>${ch('acc',['Ninguno','Gafas','Gorro','Corbatín','Audífonos'])}</div></div><button type="button" id="obr" style="margin-top:12px">🎲 Aleatorio</button>`}
   if(st==='theme')h+=`<h2>Elige tus colores</h2><p>Toca uno y mira cómo queda tu chat. Puedes cambiarlo cuando quieras.</p>${themeHTML()}`;
@@ -706,7 +702,6 @@ function drawOb(){const d=ob.d,A=d.avatar,S=seq(),s=ob.step,st=S[s],c=$('obc'),i
   h+=`<div id="obnav"><button type="button" id="obb" ${st==='welcome'?'style="visibility:hidden"':''}>${first?'Cancelar':st==='legal'?'Rechazar':'Atrás'}</button><button type="button" class="pri" id="obx">${st==='welcome'?'Empezar':st==='legal'?'Aceptar':st==='done'?'Empezar a usar Calex':'Siguiente'}</button></div>`;
   c.innerHTML=h;bindThemes(c);
   c.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;A[k]=k==='acc'?+b.dataset.v:b.dataset.v;if(k==='kind'){delete A.skin;A.gender=PEOPLE[A.kind].g}drawOb()});
-  c.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{const v=b.dataset.st;if(v==='3d'){if(!window.A3D||!window.WebGL2RenderingContext){tip('Este aparato no puede dibujar las personas realistas');return}tip('Preparando las personas realistas…');A3D.init()}A.st=v;drawOb()});
   c.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=b.dataset.g;A.gender=g;if(!PEOPLE[A.kind]||PEOPLE[A.kind].g!==g){A.kind=AVK.find(k=>PEOPLE[k].g===g);delete A.skin}drawOb()});
   c.querySelectorAll('[data-mood]').forEach(b=>b.onclick=()=>{ob.mood=b.dataset.mood;drawOb()});
   c.querySelectorAll('[data-tone]').forEach(b=>b.onclick=()=>{d.tone=b.dataset.tone;drawOb()});

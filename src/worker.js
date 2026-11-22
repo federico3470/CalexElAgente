@@ -62,7 +62,7 @@ function cleanProfile(b, old) {
   const age = !b.anonymous && Number.isInteger(+b.age) && +b.age >= 5 && +b.age <= 120 ? +b.age : null;
   return { anonymous: !!b.anonymous, name: b.anonymous ? "" : String(b.name || "").trim().slice(0, 30), member: String(b.member || "").replace(/[^\w-]/g, "").slice(0, 20), title: String(b.title || "").trim().slice(0, 40), age, device: { os: "", brand: "" },
     tone: TONES[b.tone] || b.tone === "custom" ? b.tone : "friendly", customTone: String(b.customTone || "").slice(0, 200),
-    avatar: { kind: AVK.includes(b.avatar?.kind) ? b.avatar.kind : "mateo", color: hex(b.avatar?.color || b.avatar?.shirt, "#4fc3f7"), acc: Number.isInteger(b.avatar?.acc) && b.avatar.acc >= 0 && b.avatar.acc <= 4 ? b.avatar.acc : 0, gender: ["hombre", "mujer"].includes(b.avatar?.gender) ? b.avatar.gender : "", skin: /^#[0-9a-f]{6}$/i.test(b.avatar?.skin || "") ? b.avatar.skin : "", st: b.avatar?.st === "3d" ? "3d" : "" },
+    avatar: { kind: AVK.includes(b.avatar?.kind) ? b.avatar.kind : "mateo", color: hex(b.avatar?.color || b.avatar?.shirt, "#4fc3f7"), acc: Number.isInteger(b.avatar?.acc) && b.avatar.acc >= 0 && b.avatar.acc <= 4 ? b.avatar.acc : 0, gender: ["hombre", "mujer"].includes(b.avatar?.gender) ? b.avatar.gender : "", skin: /^#[0-9a-f]{6}$/i.test(b.avatar?.skin || "") ? b.avatar.skin : "" },
     consent: b.consent?.terms ? { terms: String(b.consent.terms).slice(0, 20), ts: Date.now(), over13: !!b.consent.over13, guardian: !!b.consent.guardian } : old?.consent || null, created: old?.created || Date.now() };
 }
 // Lo que Calex sabe de la familia (se aplica a todas las charlas, salvo al traducir)
