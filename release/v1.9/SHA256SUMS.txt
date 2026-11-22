@@ -1,0 +1,6 @@
+d70ceab5fbc576d427a7602fe468c437793d9f798e489f043171f94f8dcfa3d7 *Calex-1.9.apk
+13e1d9d8f35ba4dbf3add4a1e3edd9330ba59a4722ac8b3a2bd28858640b14e2 *Calex-1.9v-ATV.apk
+13e1d9d8f35ba4dbf3add4a1e3edd9330ba59a4722ac8b3a2bd28858640b14e2 *Calex-1.9v-GTV.apk
+228f3715e6ac78dcfe262bbb5e293b8b87346bbcb63dcac47cac2ba9493768e3 *Calex-Auto-1.9.apk
+38835cc67d04b9e8e9590e542adbbcd62eb7362bfbe564e44927704ed8561cdb *Calex-1.9.exe
+24fb3883641d2def267e2ab67eec9cd5ab99636b122dc7a61a4e2d5e0b1c64b2 *Calex-iPhone.mobileconfig

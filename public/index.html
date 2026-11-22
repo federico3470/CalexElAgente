@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwsgn9hj">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwsgt8p6">
 <script>/*SINEMOJI*/
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -533,7 +533,7 @@ body.tv #isl,body.tv #bcn,body.tv #bfn,body.tv #cnov{display:none!important}
 
 <div id="wb"><div id="wbc"></div></div>
 <div id="pm"></div>
-<div id="lv"><div class="lve g"><i></i></div><div class="lve"><i></i></div><div id="lvh"><i id="lvorb"></i><svg class="sp" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fb0ff"/><stop offset="0.5" stop-color="#b9a4ff"/><stop offset="1" stop-color="#e7d7ae"/></linearGradient></defs><path d="M12 2c.6 5.2 4.8 9.4 10 10-5.2.6-9.4 4.8-10 10-.6-5.2-4.8-9.4-10-10 5.2-.6 9.4-4.8 10-10z" fill="url(#spg)"/></svg><span class="tt"><b>¿En qué puedo ayudarle?</b><i id="lvst"></i></span><button type="button" id="lvexp" aria-label="Abrir en la app completa">⤢</button></div><video id="lvv" autoplay muted playsinline></video><div id="lvt"><div id="lva"></div></div><div id="lvs" aria-live="polite">Preparando…</div><canvas id="lvbars" aria-hidden="true"></canvas><div id="lvch"></div><div id="lvin"><input id="lvq" type="text" placeholder="Escriba o hable…" autocomplete="off" enterkeyhint="send" aria-label="Escribí tu mensaje"></div>
+<div id="lv"><div class="lve g"><i></i></div><div class="lve"><i></i></div><div id="lvh"><i id="lvorb"></i><svg class="sp" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fb0ff"/><stop offset="0.5" stop-color="#b9a4ff"/><stop offset="1" stop-color="#e7d7ae"/></linearGradient></defs><path d="M12 2c.6 5.2 4.8 9.4 10 10-5.2.6-9.4 4.8-10 10-.6-5.2-4.8-9.4-10-10 5.2-.6 9.4-4.8 10-10z" fill="url(#spg)"/></svg><span class="tt"><b>¿En qué puedo ayudarle?</b><i id="lvst"></i></span><button type="button" id="lvexp" aria-label="Abrir en la app completa">⤢</button></div><video id="lvv" autoplay muted playsinline></video><div id="lvt"><div id="lva"></div></div><div id="lvs" aria-live="polite">Preparando…</div><canvas id="lvbars" aria-hidden="true"></canvas><div id="lvch"></div><div id="lvin"><input id="lvq" type="text" placeholder="Escriba o hable…" autocomplete="off" enterkeyhint="send" aria-label="Escriba su mensaje"><button type="button" id="lvsend" aria-label="Enviar"></button></div>
   <div id="lvb"><button type="button" id="lvc">Cámara</button><button type="button" id="lvm">Micrófono</button><button type="button" class="x" id="lvx">Salir</button></div><div id="lvmu"><button type="button" data-mc="previous" aria-label="Canción anterior"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button><button type="button" data-mc="toggle" aria-label="Pausar o reanudar"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></button><button type="button" data-mc="next" aria-label="Canción siguiente"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button></div></div>
 <div id="lg"><div id="lgc"></div></div>
 <div id="ob"><div id="obc"></div></div>
@@ -991,6 +991,7 @@ function startBars(){const cv=$('lvbars'),cx=cv.getContext('2d'),st$=$('lvst');l
 $('lv').addEventListener('click',e=>{if(document.body.classList.contains('siri')&&e.target===$('lv'))$('lvx').click()});
 $('lvbars').onclick=()=>{if(LV&&(LV.speaking||LV.think))liveStop()};
 $('lvq').onkeydown=e=>{if(e.key!=='Enter')return;const t=e.target.value.trim();if(!t||!LV)return;e.target.value='';clearTimeout(LV.tm);lvSay(t);liveAsk(t)};
+$('lvsend').onclick=()=>{const e=$('lvq'),t=e.value.trim();if(!t||!LV)return;e.value='';$('lvin').classList.remove('has');clearTimeout(LV.tm);lvSay(t);liveAsk(t)};$('lvq').addEventListener('input',e=>$('lvin').classList.toggle('has',!!e.target.value.trim()));
 $('lvexp').onclick=()=>{try{CalexNative.openApp()}catch(e){location.href='/'}};
 /* Asistente digital de Android (?assist=1): panel flotante de voz. Modo coche (?auto=1): pantalla completa con letras grandes. */
 (()=>{const q=new URLSearchParams(location.search),as=q.get('assist'),au=q.get('auto');if(!as&&!au)return;const B=document.body;B.classList.add('voz',as?'assist':'auto');if(window.CalexNative)B.classList.add('app');
@@ -1004,7 +1005,7 @@ let n=0;
   if(as&&needLogin&&window.CalexNative&&CalexNative.openApp){clearInterval(t);CalexNative.openApp();return} // sin sesión iniciada: abre la app completa para entrar
   if(!AUTH||!AUTH.user||!P||needLogin)return;clearInterval(t);try{history.replaceState(null,'',location.pathname)}catch(e){}if(!LV)startLive()},250)})();
 $('lvc').onclick=()=>{if(!LV||!LV.stream)return;LV.cam=!LV.cam;LV.stream.getVideoTracks().forEach(t=>t.enabled=LV.cam);$('lvv').style.opacity=LV.cam?.9:.1;$('lvc').textContent=LV.cam?'Cámara':'Cámara apagada'};
-$('lvm').onclick=()=>{if(!LV)return;LV.mic=!LV.mic;if(LV.mic){try{LV.rec.start()}catch{}}else LV.rec.stop();$('lvm').textContent=LV.mic?'Micrófono':'Micrófono apagado'};
+$('lvm').onclick=()=>{if(!LV)return;LV.mic=!LV.mic;if(LV.mic){try{LV.rec.start()}catch{}}else LV.rec.stop();$('lvm').textContent=LV.mic?'Micrófono':'Micrófono apagado';$('lvm').classList.toggle('muted',!LV.mic)};
 addEventListener('keydown',e=>{if(e.key==='Escape'&&LV)endLive()});
 
 /* ---------- extras: acciones, novedades, apariencia, memoria, modos, atajos, GPU ---------- */
