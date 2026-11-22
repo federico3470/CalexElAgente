@@ -13,3 +13,5 @@ apps/android/build/
 release/v*/*.apk
 release/v*/*.exe
 release/v*/*.apk
+
+test/out-probe/

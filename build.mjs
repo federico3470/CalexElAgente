@@ -26,7 +26,7 @@ rep("viñetas legales", "<li>Tus chats, perfil y memoria <b>se guardan en tu equ
   "<li>Tus chats y tu perfil <b>se guardan en tu cuenta</b>, en servidores de Cloudflare. No se venden ni se usan para publicidad.</li><li>Tus mensajes los procesa una IA de Cloudflare (Workers AI).</li>");
 rep("consentimiento de cuenta", "<li>Tus chats y tu perfil se guardan en tu equipo.</li>", "<li>Tus chats y tu perfil se guardan en tu cuenta de Dot (Cloudflare).</li>");
 rep("sugerencias", "const SUG=['Mi equipo va lento, ¿puede diagnosticarlo?','Genera una imagen de un faro al amanecer','Crea una página web para una cafetería','Resuelve los ejercicios de esta foto','Investiga a fondo la mejor tarjeta gráfica económica','Explícame qué es una VPN en dos frases'];",
-  "const SUG=['Explíqueme qué es una VPN en dos frases','Proponga una cena con pollo y arroz','Traduzca «buenos días» a cinco idiomas','Ayúdeme a redactar un correo formal','Resuma las ventajas de ahorrar a diario','Explique la fotosíntesis de forma sencilla'];");
+  "const SUG=['Explíqueme qué es una VPN en dos frases','Proponga una cena con pollo y arroz','Traduzca «buenos días» a cinco idiomas','Ayúdeme a redactar un correo formal','Hazme una página web espectacular para una cafetería','Explique la fotosíntesis de forma sencilla'];");
 rep("subtítulo vacío", "<small>Puedo gestionar su dispositivo con su autorización, redactar documentos, investigar en la web, diseñar sitios web y crear imágenes.</small>", "<small>Puedo redactar, traducir, explicar y analizar imágenes que usted adjunte, y conversar por voz.</small>");
 rep("título", "<title>Dot</title>", "<title>Dot</title>");
 // --- oculta en Configuración lo que solo existe en el PC ---
@@ -37,7 +37,7 @@ rep("recorte para web", "</body>", `<script>
  ['Modelo','Seguridad','Permisos de herramientas','Memoria','Acceso desde otros dispositivos','Cuentas (avanzado)','Nube opcional','PC remota'].forEach(hide);
  document.querySelectorAll('#set details').forEach(d=>d.style.display='none');
  const w=document.getElementById('wbn');if(w&&w.closest('.r'))w.closest('.r').style.display='none';
- const s=document.createElement('style');s.textContent='#eb,#se,#gpuc,#lgf,.or{display:none!important}';document.head.appendChild(s)})();
+ const s=document.createElement('style');s.textContent='#se,#gpuc,#lgf,.or,#sd{display:none!important}';document.head.appendChild(s)})();
 </script></body>`);
 
 // --- marca pública: la interfaz del PC se llama Dot; las versiones públicas se llaman Nixel ---

@@ -13,6 +13,7 @@ let lastAI = null;
 const AI = { async run(model, input) { lastAI = { model, input }; const last = JSON.stringify(input.messages.at(-1));
   if (/BOOM/.test(last)) throw new Error("capacity exceeded");
   if (/bad-model/.test(model)) throw new Error("model not found");
+  if (!input.stream) return { response: globalThis.__specAI || "{}" }; // respuestas completas (Calex Studio pide el diseño en JSON)
   const body = ["Hola ", "desde ", "la IA"].map((w) => `data: ${JSON.stringify({ response: w })}\n\n`).join("") + "data: [DONE]\n\n";
   return new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(body)); c.close(); } }); } };
 const ASSETS = { fetch: async (req) => { const p = new URL(req.url).pathname; const f = path.join(ROOT, "public", p === "/" ? "index.html" : p.slice(1)); return fs.existsSync(f) ? new Response(fs.readFileSync(f), { headers: { "Content-Type": p === "/" || p.endsWith(".html") ? "text/html" : "application/octet-stream" } }) : new Response("no", { status: 404 }); } };
@@ -79,7 +80,7 @@ try {
   t("chat: streaming de tokens y modelo de texto", c.text === "Hola desde la IA" && c.model.startsWith("☁") && !lastAI.model.includes("vision"), JSON.stringify(c));
   const sys = lastAI.input.messages[0].content;
   t("el prompt lleva el contexto de la familia (argentina, cristiana evangélica)", /argentina/i.test(sys) && /evangélica/i.test(sys) && /Reina-Valera/.test(sys), sys.slice(-200));
-  t("el prompt lleva nombre, tono y modo (sin edad)", /Zoe/.test(sys) && !/años/.test(sys) && /humor/.test(sys) && /MODO PROFE/.test(sys), sys);
+  t("el prompt lleva nombre, tono y el modo todo en uno (sin edad)", /Zoe/.test(sys) && !/años/.test(sys) && /humor/.test(sys) && /todo en uno/.test(sys) && /profe paciente/.test(sys));
   t("el historial se guarda y lista", (await (await call("/chats", {}, A)).json()).some((x) => x.id === c.id));
   const c2 = await chat(A, "y la ram?", { chatId: c.id }); const full = await (await call("/chats/" + c.id, {}, A)).json();
   t("segunda pregunta continúa la misma charla", c2.id === c.id && full.messages.length === 4, full.messages.length);
@@ -208,6 +209,24 @@ try {
   const lim = await chat(G, "b", { model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast" }); await chat(G, "c", { model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast" });
   const lim2 = await chat(G, "d", { model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast" });
   t("con modelos grandes el límite diario llega antes (aviso de cupo)", [hit, lim, lim2].some((x) => /límite diario/.test(x.err || "")), JSON.stringify([hit.err, lim.err, lim2.err]));
+  // ---- todo en uno: esfuerzo, páginas (Calex Studio) y código ----
+  { env.CODER_MODEL = "@cf/qwen/qwen2.5-coder-32b-instruct"; const g2 = await guest(); await post("/profile", { name: "Ana", tone: "friendly", avatar: { kind: "mateo" }, consent: { terms: "2026-11", over13: true } }, g2);
+    const md = await (await call("/modes", {}, g2)).json(); t("hay un solo modo: todo en uno", Object.keys(md).length === 1 && md.general.label === "Todo en uno", JSON.stringify(md));
+    await chat(g2, "hola", { level: 10 }); const rap = lastAI.model; await chat(g2, "hola", { level: 90 }); const pro = lastAI;
+    t("esfuerzo Rápido usa el modelo más liviano y Profundo un modelo grande con orden de pensar con calma", /llama-3\.1-8b/.test(rap) && /llama-3\.3-70b/.test(pro.model) && /Modo profundo/.test(pro.input.messages[0].content) && pro.input.max_tokens > 1500, rap + " / " + pro.model);
+    await chat(g2, "hola", { level: 10 }); t("en Rápido pide respuestas breves y limita la longitud", /Modo rápido/.test(lastAI.input.messages[0].content) && lastAI.input.max_tokens <= 500);
+    const SPECJ = JSON.stringify({ title: "Brasa", tagline: "Café", theme: { preset: "ember", font: "serif", shader: "warp" }, hero: { headline: "Café de verdad", sub: "Tostado hoy", cta: "Ver menú" }, marquee: ["a", "b", "c"], sections: [{ type: "features", nav: "Lo nuestro", title: "Hecho con obsesión", items: [{ icon: "☕", title: "Tostado", text: "Propio" }] }, { type: "split", title: "Historia", text: "Hola", bullets: ["x"], texture: "wood" }, { type: "contact", title: "Contacto", lines: ["hola@brasa.example"] }], footer: "Brasa" });
+    globalThis.__specAI = SPECJ; const sc = await chat(g2, "Hacé una página web para mi cafetería Brasa", { level: 50 });
+    t("pedir una página activa Calex Studio y entrega un HTML completo con shaders y texturas", /Calex Studio/.test(sc.model) && /<!doctype html>/i.test(sc.text) && /canvas class="bg"/.test(sc.text) && /canvas class="tex"/.test(sc.text) && sc.text.includes("Café de verdad") && sc.ev.some((e) => e.type === "progress"), sc.text.slice(0, 200));
+    t("el texto de la página va escapado (sin inyección)", !/<script>alert/.test(sc.text));
+    globalThis.__specAI = SPECJ.replace("ember", "ocean"); const ed = await chat(g2, "cambiale los colores a azul y agregá una sección de precios", { level: 50, chatId: sc.id });
+    t("un cambio posterior ajusta la misma página sin empezar de cero", /Calex Studio/.test(ed.model) && /Spec actual de la página/.test(JSON.stringify(lastAI.input.messages)) && /#35a0ff/i.test(ed.text), ed.model);
+    globalThis.__specAI = null; await chat(g2, "gracias, ¿me explicás qué es una vpn?", { level: 50, chatId: sc.id });
+    t("después de una página el historial no mete el HTML entero en el contexto", !/<canvas/.test(JSON.stringify(lastAI.input.messages)) && /Se generó la página/.test(JSON.stringify(lastAI.input.messages)));
+    await chat(g2, "Programame un juego de snake en html", { level: 50 }); t("programar usa el modelo de código con su prompt de ingeniero senior", /qwen2\.5-coder/.test(lastAI.model) && /ingeniero de software senior/.test(lastAI.input.messages[0].content) && lastAI.input.max_tokens >= 3000, lastAI.model);
+    await chat(g2, "Explicame qué hace un for en javascript", { level: 50 }); t("explicar código no activa el modelo de código ni Studio", !/qwen2\.5-coder/.test(lastAI.model));
+    const m2 = await (await call("/models", {}, g2)).json(); t("el modelo de código no aparece en el selector", !m2.models.some((x) => /coder/.test(x)));
+  }
 } catch (e) { t("excepción", false, e.stack); }
 console.log(`\n${pass} correctas, ${bad} fallidas.`); process.exit(bad ? 1 : 0);
 

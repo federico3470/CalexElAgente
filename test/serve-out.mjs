@@ -1,0 +1,2 @@
+import http from "node:http"; import fs from "node:fs"; import path from "node:path";
+const D = path.join(import.meta.dirname, "out-probe"); http.createServer((q, r) => { const f = path.join(D, path.basename(q.url.split("?")[0]) || "demo.html"); if (fs.existsSync(f)) { r.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); r.end(fs.readFileSync(f)); } else { r.writeHead(404); r.end("no"); } }).listen(8790, () => console.log("http://localhost:8790/demo.html"));

@@ -1,7 +1,7 @@
 // Calex Cloud · Cloudflare Worker (plan gratis): API + inicio de sesión (Google y Apple) + IA (Workers AI) + datos (D1).
 // Mantiene la MISMA API que el Calex local, para reutilizar la misma interfaz.
 import { LEGAL } from "./legal.js";
-import { SCROLLY } from "./templates.js";
+import { normalizeSpec, buildSite, SPEC_SCHEMA } from "./studio.js";
 import * as CN from "./connectors.js";
 
 const LEGAL_VERSION = "2026-11";
@@ -51,10 +51,7 @@ async function connCtx(env, user, req) {
 // ---------- perfil, modos, tonos ----------
 const TONES = { friendly: ["Amigable", "Tono cercano, cálido y natural."], formal: ["Formal", "Tono formal y profesional, trato respetuoso, sin bromas."],
   funny: ["Divertido", "Tono divertido: humor ligero y alguna broma corta, sin pasarte ni alargar la respuesta."], direct: ["Directo", "Tono muy directo y escueto: solo lo esencial."] };
-const MODES = { general: ["✨", "General", ""], translator: ["🌐", "Traductor", "MODO TRADUCTOR: traduce lo que te escriba al idioma que pida (si no dice cuál: español↔inglés). Devuelve solo la traducción."],
-  coder: ["💻", "Programador", "MODO PROGRAMADOR: ayuda a programar con código claro y explica lo esencial en pocas líneas. Si te piden una página web, una animación o un juego, entrega UN SOLO archivo HTML completo y autónomo dentro de UN ÚNICO bloque ```html (con el CSS en <style> y el JavaScript en <script> dentro del mismo archivo), que funcione al abrirlo sin descargar nada. No dividas el código en varios bloques ni dejes partes por completar. No uses imágenes externas ni enlaces a fotos: no puedes generar imágenes 4K; para texturas, fondos y efectos usa CSS (degradados), SVG (feTurbulence) o canvas, y dilo en una frase. El código debe ser COMPLETO y ELABORADO (varias secciones, animaciones y detalles, de 150 a 400 líneas), nunca un esqueleto ni un ejemplo mínimo: aquí NO se te pide ser breve con el código. Para «scrollytelling»: secciones de 100vh, position:sticky y un IntersectionObserver que anime cada sección al entrar; fondo de estrellas con <canvas> y Math.random, nebulosas con radial-gradient y texturas con SVG feTurbulence. Si piden una página muy pesada, de muchos MB o GB, o con texturas 4K u 8K: el peso y la belleza se consiguen generando las texturas en el navegador (canvas de 2048 a 4096 px con ruido fractal, WebGL con shaders, SVG con filtros) y con muchas secciones; el archivo sigue siendo texto y no puedes crear gigabytes de datos. Si el código no cabe en una respuesta, termínala en un punto limpio; cuando te digan «continúa», sigue desde la siguiente línea en un nuevo bloque ```html, sin repetir nada. Después del bloque, máximo tres líneas de explicación."], teacher: ["🎓", "Profe", "MODO PROFE: explica paso a paso con ejemplos sencillos y comprueba que se entiende."],
-  summary: ["📝", "Resumen", "MODO RESUMEN: resume lo que te den en puntos claros y breves."], writer: ["✍️", "Escritor", "MODO ESCRITOR: ayuda a redactar y mejorar textos con buen estilo."],
-  chef: ["🍳", "Cocina", "MODO COCINA: propón recetas y menús con lo que el usuario tenga, con pasos cortos."], coach: ["💪", "Coach", "MODO COACH: motiva con empatía y ayuda a fijar metas pequeñas y concretas."] };
+const MODES = { general: ["✨", "Todo en uno", ""] }; // un solo modo: Calex detecta si hay que charlar, traducir, explicar, redactar, cocinar, motivar o programar
 const AVK = ["mateo", "lucas", "tomas", "raul", "sofia", "valen", "camila", "nora"];
 const hex = (v, d) => (/^#[0-9a-f]{6}$/i.test(v) ? v : d);
 const ageGuide = (a) => a < 13 ? "Usa palabras muy simples y un tono amable, explica paso a paso y mantén todo apto para niños." : a < 18 ? "Usa un lenguaje cercano y claro para un adolescente y mantén el contenido apto para menores." : a >= 65 ? "Sé paciente y claro, evita la jerga técnica." : "Trátalo como a un adulto.";
@@ -189,50 +186,102 @@ const DEFAULT_MODELS = [
   { id: "@cf/mistralai/mistral-small-3.1-24b-instruct", label: "Equilibrado · Mistral Small · 24B", w: 2 },
   { id: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", label: "Potente · Llama 3.3 · 70B", w: 3, def: true },
   { id: "@cf/mistralai/mistral-small-3.1-24b-instruct", label: "Imágenes · Mistral Small · 24B", w: 2, vision: true },
+  { id: "@cf/qwen/qwen2.5-coder-32b-instruct", label: "Código · Qwen Coder · 32B", w: 3, coder: true }, // hecho para programar (el plan gratis no permite GLM-5.3; con plan de pago: variable CODER_MODEL)
 ];
 const catalog = (env) => { try { const m = env.MODELS ? JSON.parse(env.MODELS) : null; if (Array.isArray(m) && m.length) return m.filter((x) => x && /^@cf\/[\w-]+\/[\w.-]+$/.test(String(x.id)) && !String(x.id).includes("..")).slice(0, 12).map((x) => ({ id: x.id, label: String(x.label || x.id.split("/").pop()).slice(0, 60), w: Math.max(1, Math.min(10, +x.w || 1)), def: !!x.def, vision: !!x.vision })); } catch {} return DEFAULT_MODELS; };
-const pickModels = (env) => { const cat = catalog(env), text = cat.filter((m) => !m.vision), def = env.CHAT_MODEL ? { id: env.CHAT_MODEL, w: 1 } : text.find((m) => m.def) || text[0], vis = cat.find((m) => m.vision) || { id: env.VISION_MODEL || "@cf/mistralai/mistral-small-3.1-24b-instruct", w: 2 }; return { cat, text, def, vis }; };
+const pickModels = (env) => { const cat = catalog(env), coder = env.CODER_MODEL ? { id: env.CODER_MODEL, w: 3 } : cat.find((m) => m.coder), text = cat.filter((m) => !m.vision && !m.coder), def = env.CHAT_MODEL ? { id: env.CHAT_MODEL, w: 1 } : text.find((m) => m.def) || text[0], vis = cat.find((m) => m.vision) || { id: env.VISION_MODEL || "@cf/mistralai/mistral-small-3.1-24b-instruct", w: 2 }; return { cat, text, def, vis, coder }; };
 const sse = (o) => enc.encode(`data: ${JSON.stringify(o)}\n\n`);
-async function chatRoute(req, env, user) {
+// ---------- intención: ¿pide una página, un cambio a la última página, o código? ----------
+// \b de JavaScript no entiende las tildes («hacé»), por eso los límites de palabra se arman con lookarounds de letras Unicode
+const W = (alts) => new RegExp("(?<![\\p{L}\\d])(?:" + alts + ")(?![\\p{L}\\d])", "iu");
+const MAKE_RE = W("(?<!qu[eé] )hac[eé]|haz|hacer|hac[eé]me|hazme|cre[aá]|crea|crear|cre[aá]me|arm[aá]|arma|armar|arm[aá]me|gener[aá]|genera|program[aá]|programa|programame|dise[nñ][aá]|dise[nñ]a|dise[nñ]ar|constru[ií]|construye|desarroll[aá]|desarrolla|quiero|necesito|dame|mostrame|escrib[ií]|escribe|codific[aá]");
+const SITE_RE = W("p[aá]gina|landing|sitio|web ?site|portfolio|portafolio|tienda ?(?:online|virtual)?|e-?commerce|home ?page|blog|men[uú] digital");
+const CODE_RE = W("c[oó]digo|programa|script|funci[oó]n|algoritmo|html|css|javascript|python|java|c\\+\\+|sql|api|juego|animaci[oó]n|calculadora|app|aplicaci[oó]n|bot|extensi[oó]n|componente|react|shader|canvas|three\\.?js|scroll\\w*|simulador|dashboard");
+const EDIT_RE = W("cambi[aá]\\w*|agreg[aá]\\w*|sac[aá]\\w*|quit[aá]\\w*|pon[eé]\\w*|modific[aá]\\w*|m[aá]s|menos|otro|otra|reemplaz[aá]\\w*|actualiz[aá]\\w*|color\\w*|t[ií]tulo|texto|secci[oó]n|fondo|tipograf[ií]a|fuente|oscuro|claro|precios?|testimonios?|contacto");
+const lvlOf = (b) => { const n = Math.round(+b.level); return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 50; };
+const SPEC_SYS = (n) => `Eres director creativo y redactor de una agencia web premium. Devuelve SOLO un objeto JSON válido (sin markdown ni comentarios) con este esquema:\n${SPEC_SCHEMA}\nReglas: español rioplatense natural y específico del rubro (nada de lorem ipsum ni frases genéricas); titulares potentes y cortos; elige "preset" y "font" que combinen con el rubro y la personalidad de la marca; usa ${n} secciones variadas (siempre features, split y gallery, y al final cta y contact); en "texture" y "tag" usa los valores del esquema; los datos de contacto deben ser ficticios de ejemplo (dominio .example); cada "items" con 3 elementos salvo pricing (3) y faq (4). PALETA según el rubro: comida, café, restaurante, artesanal, bodega → ember, gold o sand; tecnología, software, startups, finanzas → ocean, royal o mono; naturaleza, salud, bienestar, deporte → forest o sky; lujo, joyería, moda, eventos → gold, royal o mono; educación, servicios locales → sky o sand. TÍTULOS: creativos, concretos y propios de la marca; evita arrancar con «Nuestro», «Nuestra», «Lo que dicen» o «Preguntas frecuentes» (usa por ejemplo «Del grano a tu taza» o «Dudas, resueltas»). El titular del hero debe ser una promesa o imagen potente, no una descripción. Los textos de cada ítem deben tener datos o detalles concretos del rubro.`;
+async function makeSpec(env, user, modelId, ask, level, current) {
+  const n = level < 34 ? 5 : level < 67 ? 7 : 9;
+  const ask2 = current ? `Spec actual de la página:\n${JSON.stringify(current)}\n\nCambio pedido por el usuario: ${ask}\n\nDevuelve el spec COMPLETO actualizado con ese cambio (conserva todo lo demás).` : `Pedido del usuario: ${ask}`;
+  for (let k = 0; k < 2; k++) {
+    try { const out = await env.AI.run(modelId, { messages: [{ role: "system", content: SPEC_SYS(n) }, { role: "user", content: ask2 + (k ? "\n\nIMPORTANTE: responde únicamente con el JSON." : "") }], max_tokens: 3800, temperature: 0.85 });
+      const t = String(out?.response ?? out?.result?.response ?? ""), j = extractJSONObj(t); if (j && Array.isArray(j.sections) && j.sections.length >= 2) return normalizeSpec(j, ask, level);
+    } catch (e) { if (k) throw e; }
+  }
+  return null;
+}
+function extractJSONObj(t) { const a = t.indexOf("{"), b = t.lastIndexOf("}"); if (a < 0 || b < a) return null; try { return JSON.parse(t.slice(a, b + 1)); } catch { return null; } }
+const CODE_SYS = `Eres un ingeniero de software senior y diseñador front-end de nivel agencia. Entrega código COMPLETO y listo para usar, nunca esqueletos. Si piden algo visual o interactivo (juego, animación, herramienta, simulador), entrega UN SOLO archivo HTML autónomo dentro de UN ÚNICO bloque \`\`\`html con CSS en <style> y JavaScript en <script>, que funcione al abrirlo sin descargar nada y sin imágenes externas. Calidad de producto real: diseño moderno y cuidado (tipografía, espaciado, paleta coherente, modo oscuro elegante), responsive, animaciones suaves, accesible, y sin errores de consola. Para fondos, texturas y efectos usa WebGL con shaders (ruido fractal fbm, dominio deformado) o canvas, generados proceduralmente: texturas de alta resolución (hasta 4096 px cuando el dispositivo lo permita; reduce en celulares), partículas, parallax y animaciones al hacer scroll con IntersectionObserver. No uses lorem ipsum. Para código que no es visual, usa el lenguaje pedido con bloques \`\`\`lenguaje, comentarios útiles y manejo de errores. Después del código, máximo tres líneas de explicación. Responde en español.`;
+const ALLINONE = (level, live) => `Eres Calex, el asistente todo en uno de la familia: charlas, explicas como un profe paciente, traduces, resumes, redactas, ayudas a cocinar, motivas como un coach, resuelves tareas y programas. Detecta solo lo que te piden y hazlo bien, sin pedir que cambien de modo. Responde SIEMPRE en el idioma del usuario (normalmente español). Estilo: registro formal y profesional pero cercano, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes y entrega de inmediato pasos numerados y cortos. Según lo pedido: traducir = devuelve solo la traducción (si no dice idioma: español↔inglés); explicar o enseñar = paso a paso con ejemplos sencillos y comprobando que se entiende; resumir = puntos claros y breves; redactar = buen estilo y listo para usar; cocina = recetas con pasos cortos según lo que tenga; ánimo y metas = empatía y metas pequeñas y concretas; programar = código completo en bloques con el lenguaje, explicando solo lo esencial. Las páginas web completas las arma Calex Studio automáticamente cuando las piden.${level < 34 ? " Modo rápido: responde en una a tres frases, directo al grano." : level >= 67 ? " Modo profundo: piensa con calma antes de responder, verifica cálculos y datos, considera casos límite y da una respuesta completa y bien estructurada (con títulos o pasos cuando ayude)." : ""}${live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`;
+
+async function chatRoute(req, env, user, ctx) {
   const b = await req.json().catch(() => ({})), message = String(b.message || "").trim().slice(0, 4000);
   if (!message) return json({ error: "Mensaje vacío" }, 400);
-  const day = new Date().toISOString().slice(0, 10), limit = +env.DAILY_LIMIT || 80;
-  const PM = pickModels(env), picked = PM.text.find((m) => m.id === b.model) || PM.def; // el modelo elegido en el selector (solo los del catálogo)
-  const hasImg = Array.isArray(b.images) && b.images.some((x) => typeof x === "string" && /^data:image\//.test(x)), chosen = hasImg ? PM.vis : picked, weight = chosen.w || 1;
-  await q(env, "INSERT INTO usage(user_id,day,n) VALUES(?,?,?) ON CONFLICT(user_id,day) DO UPDATE SET n=n+?", user.id, day, weight, weight).run();
-  const used = (await q(env, "SELECT n FROM usage WHERE user_id=? AND day=?", user.id, day).first())?.n || 1;
+  const day = new Date().toISOString().slice(0, 10), limit = +env.DAILY_LIMIT || 80, level = lvlOf(b);
+  const PM = pickModels(env), userPick = PM.text.find((m) => m.id === b.model) || PM.def;
+  const hasImg = Array.isArray(b.images) && b.images.some((x) => typeof x === "string" && /^data:image\//.test(x));
   const profile = user.profile ? JSON.parse(user.profile) : null;
   let chat = b.chatId ? await q(env, "SELECT * FROM chats WHERE id=? AND user_id=?", String(b.chatId), user.id).first() : null;
   const id = chat?.id || crypto.randomUUID(), msgs = chat ? JSON.parse(chat.messages) : [], title = chat?.title || message.slice(0, 44);
   const images = (Array.isArray(b.images) ? b.images : []).slice(0, 3).map(String).filter((s) => s.length < 1.6e6 && /^data:image\//.test(s));
   const docs = (Array.isArray(b.docs) ? b.docs : []).slice(0, 3).map((d) => ({ name: String(d?.name || "documento").replace(/[\r\n]/g, " ").slice(0, 80), text: String(d?.text || "").slice(0, 14000) })).filter((d) => d.text.trim());
+  const lastSpec = [...msgs].reverse().find((m) => m.spec)?.spec;
+  // qué hay que hacer: una página (Calex Studio), cambiarla, programar (modelo de código) o conversar
+  const wantsSite = !hasImg && !b.live && !docs.length && SITE_RE.test(message) && MAKE_RE.test(message);
+  const wantsEdit = !wantsSite && !hasImg && !b.live && !!lastSpec && message.length < 500 && EDIT_RE.test(message);
+  const wantsCode = !wantsSite && !wantsEdit && !hasImg && !b.live && !docs.length && PM.coder && CODE_RE.test(message) && (MAKE_RE.test(message) || /```/.test(message));
+  const route = wantsSite ? "site" : wantsEdit ? "edit" : wantsCode ? "code" : "chat";
+  // esfuerzo: Rápido usa el modelo más liviano, Profundo asegura un modelo grande
+  const light = [...PM.text].sort((x, y) => x.w - y.w)[0], big = [...PM.text].sort((x, y) => y.w - x.w)[0];
+  const picked = level < 34 && !hasImg ? light : level >= 67 && userPick.w < big.w ? big : userPick;
+  const chosen = hasImg ? PM.vis : route === "code" ? PM.coder : picked, model = chosen.id;
+  const weight = route === "site" ? 12 : route === "edit" ? 6 : route === "code" ? (PM.coder.w || 3) + (level >= 67 ? 2 : 0) : chosen.w || 1;
+  await q(env, "INSERT INTO usage(user_id,day,n) VALUES(?,?,?) ON CONFLICT(user_id,day) DO UPDATE SET n=n+?", user.id, day, weight, weight).run();
+  const used = (await q(env, "SELECT n FROM usage WHERE user_id=? AND day=?", user.id, day).first())?.n || 1;
   msgs.push({ role: "user", content: message, ...(docs.length && { docs: docs.map((d) => ({ name: d.name, text: d.text.slice(0, 9000) })) }) });
-  const model = images.length ? PM.vis.id : picked.id;
   const cids = (await q(env, "SELECT id FROM connections WHERE user_id=?", user.id).all()).results.map((r) => r.id);
-  const sys = `Eres Calex, un asistente personal. Responde SIEMPRE en el idioma del usuario (normalmente español), breve y directo, sin relleno. Estilo: registro formal y profesional, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes hacerlo tú y entrega de inmediato los pasos numerados y cortos para que los haga él, sin preguntarle si los quiere. ${persona(profile)}${b.mode === "translator" ? "" : FAMILY}${MODES[b.mode]?.[2] ? " " + MODES[b.mode][2] : ""}${b.mode === "coder" && /scroll|historia visual|universo|animad|p[aá]gina|web\b|landing|sitio/i.test(message) ? "\n\nPLANTILLA PROBADA (funciona): adáptala al tema pedido cambiando título, textos, colores y número de secciones, y respeta su estructura; entrégala completa en UN solo bloque ```html:\n```html\n" + SCROLLY + "\n```" : ""}${b.mode === "coder" && /\bgb\b|giga|mega|enorme|gigante|pesad|muy grande|hiperreal|\b[48]k\b/i.test(message) ? " PÁGINA GRANDE: el usuario quiere algo enorme y espectacular. Escribe como mínimo 8 secciones, un fondo con WebGL (fragment shader con ruido fractal fbm), texturas procedurales de 2048 px en canvas, parallax, partículas y animaciones al hacer scroll. Usa todo el espacio de respuesta que necesites (más de 6000 tokens) y no preguntes si quieres que continúe: escribe la página completa." : ""}${CN.promptFor(cids, { music: b.music === true })}${b.live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`.trim();
-  const hist = msgs.filter((m) => m.content).slice(-20).map((m) => ({ role: m.role, content: m.docs?.length ? m.docs.map((d) => `[Documento adjunto: ${d.name}]\n${d.text}`).join("\n\n") + "\n\n" + m.content : m.content }));
+  const sys = `${ALLINONE(level, b.live)} ${persona(profile)}${FAMILY}${CN.promptFor(cids, { music: b.music === true })}`.trim();
+  const hist = msgs.filter((m) => m.content).slice(-20).map((m) => ({ role: m.role, content: m.spec ? `[Se generó la página «${m.spec.title}» con Calex Studio]` : m.docs?.length ? m.docs.map((d) => `[Documento adjunto: ${d.name}]\n${d.text}`).join("\n\n") + "\n\n" + m.content : m.content }));
   if (images.length) hist[hist.length - 1].content = [{ type: "text", text: message }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))];
   const stream = new ReadableStream({ async start(ctrl) {
-    const send = (o) => ctrl.enqueue(sse(o)); let text = "";
-    send({ type: "chat", id }); send({ type: "model", model: "☁ " + model.split("/").pop() });
-    try {
-      if (used > limit) throw Object.assign(new Error("limit"), { limit: true });
-      // el límite de respuesta se adapta a lo pedido: en modo Programador llega al máximo que cabe en el contexto del modelo (24 000 tokens menos lo que ya se envía)
-      const bigAsk = /\bgb\b|giga|mega|enorme|gigante|pesad|sin l[ií]mite|muy grande|hiperreal|\b[48]k\b/i.test(message), promptTok = Math.ceil(JSON.stringify([sys, ...hist]).length / 3);
-      const outCap = b.live ? 220 : b.mode === "coder" ? Math.max(1200, Math.min(bigAsk ? 16000 : 7000, 23000 - promptTok)) : 900;
-      const payload = { messages: [{ role: "system", content: sys }, ...hist], stream: true, max_tokens: outCap };
-      let out; try { out = await env.AI.run(model, payload); } catch (e1) { if (env.NOFALLBACK || /license|agree/i.test(String(e1.message)) || model === PM.def.id || images.length) throw e1; out = await env.AI.run(PM.def.id, payload); send({ type: "model", model: "☁ " + PM.def.id.split("/").pop() }); } // si el modelo elegido no existe o falla: vuelve al equilibrado
+    const send = (o) => ctrl.enqueue(sse(o)); let text = "", spec = null;
+    // transmite una respuesta del modelo; si el modelo elegido falla, vuelve al estándar
+    const run = async (mdl, messages, maxTok) => {
+      const payload = { messages, stream: true, max_tokens: maxTok }; let out;
+      try { out = await env.AI.run(mdl, payload); } catch (e1) { if (env.NOFALLBACK || /license|agree/i.test(String(e1.message)) || mdl === PM.def.id || images.length) throw e1; out = await env.AI.run(PM.def.id, payload); send({ type: "model", model: "☁ " + PM.def.id.split("/").pop() }); }
+      let got = "";
       if (out && typeof out.getReader === "function") {
         const rd = out.getReader(), dec = new TextDecoder(); let buf = "";
         for (;;) { const { done, value } = await rd.read(); if (done) break; buf += dec.decode(value, { stream: true }); let i;
           while ((i = buf.indexOf("\n")) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (!line.startsWith("data:")) continue; const d = line.slice(5).trim(); if (d === "[DONE]") continue;
-            try { const j = JSON.parse(d), t = j.response ?? j.choices?.[0]?.delta?.content; if (t) { text += t; send({ type: "token", text: t }); } } catch {} } }
-      } else { const t = out?.response || out?.result?.response || ""; if (t) { text = t; send({ type: "token", text: t }); } }
+            try { const j = JSON.parse(d), t = j.response ?? j.choices?.[0]?.delta?.content; if (t) { got += t; text += t; send({ type: "token", text: t }); } } catch {} } }
+      } else { const t = out?.response || out?.result?.response || ""; if (t) { got = t; text += t; send({ type: "token", text: t }); } }
+      return got;
+    };
+    send({ type: "chat", id }); send({ type: "model", model: route === "site" || route === "edit" ? "☁ Calex Studio" : "☁ " + model.split("/").pop() });
+    try {
+      if (used > limit) throw Object.assign(new Error("limit"), { limit: true });
+      if (route === "site" || route === "edit") {
+        send({ type: "progress", text: route === "edit" ? "Aplicando tu cambio…" : "Pensando la dirección creativa y los textos…" });
+        spec = await makeSpec(env, user, PM.def.id, message, level, route === "edit" ? lastSpec : null);
+        if (!spec) throw new Error("no pude armar el diseño; inténtalo de nuevo");
+        send({ type: "progress", text: "Armando secciones, shaders y texturas…" });
+        const html = buildSite(spec), intro = `Listo: armé «${spec.title}» con diseño propio, fondo animado y texturas procedurales (hasta 4K en pantallas capaces).\n\n`, outro = "\n\nToca «Vista previa» para verla o «Descargar» para guardarla. Pídeme cambios (colores, secciones, textos, estilo) y la ajusto.";
+        const full = intro + "```html\n" + html + "\n```" + outro; for (let i = 0; i < full.length; i += 900) { const t = full.slice(i, i + 900); text += t; send({ type: "token", text: t }); }
+      } else if (route === "code") {
+        const promptTok = Math.ceil(JSON.stringify([CODE_SYS, ...hist]).length / 3), cap = Math.max(1500, Math.min(level < 34 ? 3500 : level < 67 ? 7000 : 11000, 30000 - promptTok));
+        let part = await run(model, [{ role: "system", content: CODE_SYS }, ...hist], cap);
+        for (let k = 0; k < 2 && /```html/i.test(part) && !/<\/html>\s*(```|$)/i.test(part.slice(-400)) && part.length > 2500; k++) { // si se cortó a la mitad, continúa
+          send({ type: "progress", text: "Continuando el código…" }); part = await run(model, [{ role: "system", content: CODE_SYS }, ...hist, { role: "assistant", content: text.slice(-9000) }, { role: "user", content: "Continúa exactamente donde quedaste, sin repetir nada y sin volver a abrir el bloque de código; cierra el archivo y el bloque ```." }], cap); }
+      } else {
+        const outCap = b.live ? 220 : level < 34 ? 450 : level < 67 ? 1000 : 1900;
+        await run(model, [{ role: "system", content: sys }, ...hist], outCap);
+      }
       if (!text) throw new Error("respuesta vacía");
     } catch (e) {
-      send({ type: "error", text: e.limit ? `Llegaste al límite diario gratuito. Los modelos grandes gastan más cupo: prueba uno más ligero o vuelve mañana.` : /license|agree/i.test(e.message) ? "El modelo de imágenes necesita aceptar su licencia una vez en el panel de Cloudflare (AI → Workers AI)." : `La IA no respondió (${String(e.message).slice(0, 120)}). Puede que se haya agotado el cupo gratuito de hoy.` }); }
-    if (text) { msgs.push({ role: "assistant", content: text }); await q(env, "INSERT INTO chats(id,user_id,title,pinned,updated,messages) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET messages=excluded.messages, updated=excluded.updated",
-      id, user.id, title, chat?.pinned || 0, Date.now(), JSON.stringify(msgs.slice(-40))).run(); }
+      send({ type: "error", text: e.limit ? `Llegaste al límite diario gratuito. Las páginas y los modelos grandes gastan más cupo: prueba con esfuerzo Rápido o vuelve mañana.` : /license|agree/i.test(e.message) ? "El modelo de imágenes necesita aceptar su licencia una vez en el panel de Cloudflare (AI → Workers AI)." : `La IA no respondió (${String(e.message).slice(0, 120)}). Puede que se haya agotado el cupo gratuito de hoy.` }); }
+    if (text) { msgs.push({ role: "assistant", content: text, ...(spec && { spec }) }); await q(env, "INSERT INTO chats(id,user_id,title,pinned,updated,messages) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET messages=excluded.messages, updated=excluded.updated",
+      id, user.id, title, chat?.pinned || 0, Date.now(), JSON.stringify(msgs.slice(-24))).run(); }
     send({ type: "done" }); ctrl.close(); } });
   return new Response(stream, { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", ...SEC } });
 }
