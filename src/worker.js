@@ -261,8 +261,9 @@ async function chatRoute(req, env, user, ctx) {
   const profile = user.profile ? JSON.parse(user.profile) : null;
   let chat = b.chatId ? await q(env, "SELECT * FROM chats WHERE id=? AND user_id=?", String(b.chatId), user.id).first() : null;
   const id = chat?.id || crypto.randomUUID(), msgs = chat ? JSON.parse(chat.messages) : [], title = chat?.title || message.slice(0, 44);
-  const images = (Array.isArray(b.images) ? b.images : []).slice(0, 3).map(String).filter((s) => s.length < 1.6e6 && /^data:image\//.test(s));
-  const docs = (Array.isArray(b.docs) ? b.docs : []).slice(0, 3).map((d) => ({ name: String(d?.name || "documento").replace(/[\r\n]/g, " ").slice(0, 80), text: String(d?.text || "").slice(0, 14000) })).filter((d) => d.text.trim());
+  const images = (Array.isArray(b.images) ? b.images : []).slice(0, 8).map(String).filter((s) => s.length < 1.6e6 && /^data:image\//.test(s));
+  const docs = (Array.isArray(b.docs) ? b.docs : []).slice(0, 12).map((d) => ({ name: String(d?.name || "documento").replace(/[\r\n]/g, " ").slice(0, 80), text: String(d?.text || "").slice(0, 14000) })).filter((d) => d.text.trim());
+  { const perDoc = Math.max(2500, Math.floor(42000 / Math.max(1, docs.length))); docs.forEach((d) => { d.text = d.text.slice(0, perDoc); }); } // con muchos documentos, cada uno se lee más resumido para que quepan en el contexto
   const lastSpec = [...msgs].reverse().find((m) => m.spec)?.spec;
   // qué hay que hacer: una página (Calex Studio), cambiarla, programar (modelo de código) o conversar
   const wantsSite = !hasImg && !b.live && !docs.length && SITE_RE.test(message) && MAKE_RE.test(message);

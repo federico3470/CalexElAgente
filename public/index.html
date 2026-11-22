@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mws3nvjv">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mws3x252">
 <script>
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -807,7 +807,8 @@ const needPerm=(k,title,txt)=>new Promise(ok=>{try{if(localStorage.getItem('dot-
   $('pmn').onclick=()=>{o.classList.remove('on');ok(false)};$('pmy').onclick=()=>{o.classList.remove('on');try{localStorage.setItem('dot-perm-'+k,'1')}catch{}ok(true)}});
 let IMGS=[],DOCS=[];
 const renderPrev=()=>{const p=$('prev');p.innerHTML='';DOCS.forEach((d,i)=>{const c=document.createElement('div');c.className='pi doc';c.innerHTML='<span></span><i title="Quitar" role="button">✕</i>';c.firstChild.textContent=d.name+(d.pages?' · '+d.pages+' pág.':'');c.querySelector('i').onclick=()=>{DOCS.splice(i,1);renderPrev()};p.append(c)});IMGS.forEach((s,i)=>{const d=document.createElement('div');d.className='pi';d.innerHTML=`<img src="${s}" alt="Imagen adjunta ${i+1}"><i title="Quitar" role="button">✕</i>`;d.querySelector('i').onclick=()=>{IMGS.splice(i,1);renderPrev()};p.append(d)})};
-async function addImage(f){if(!f||!/^image\//.test(f.type)||IMGS.length>=4)return;const bm=await createImageBitmap(f),k=Math.min(1,1024/Math.max(bm.width,bm.height)),cv=document.createElement('canvas');
+const MAXI=8,MAXD=10; /* adjuntos por mensaje (con muchos documentos, cada uno se lee más resumido) */
+async function addImage(f){if(!f||!/^image\//.test(f.type)||IMGS.length>=MAXI)return;const bm=await createImageBitmap(f),k=Math.min(1,1024/Math.max(bm.width,bm.height)),cv=document.createElement('canvas');
   cv.width=Math.round(bm.width*k);cv.height=Math.round(bm.height*k);cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);IMGS.push(cv.toDataURL('image/jpeg',.82));renderPrev()}
 const warm=k=>fetch('/warm',{method:'POST',body:JSON.stringify({kind:k})}).catch(()=>{});
 $('att').onclick=async()=>{warm('vision');if(await needPerm('files','Acceso a tus fotos y archivos','Calex solo verá las imágenes que tú elijas. Se procesan en este equipo y no se suben a ningún servidor.'))$('fi').click()};
@@ -820,7 +821,7 @@ async function readPdf(file){const lib=await loadPdf(),doc=await lib.getDocument
   if(text.replace(/\[Página \d+\]|\s/g,'').length<40){for(let i=1;i<=Math.min(doc.numPages,3)&&IMGS.length<4;i++){const pg=await doc.getPage(i),vp=pg.getViewport({scale:1.3}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;IMGS.push(cv.toDataURL('image/jpeg',.8))}
     renderPrev();note('t','El PDF parece escaneado y no tiene texto: envío sus primeras páginas como imágenes.');return null}
   return{name:file.name,text:text.trim().slice(0,14000),pages:doc.numPages}}
-async function addFile(f){if(!f)return;if(/^image\//.test(f.type))return addImage(f);if(DOCS.length>=3){note('t','Máximo 3 documentos por mensaje.');return}
+async function addFile(f){if(!f)return;if(/^image\//.test(f.type))return addImage(f);if(DOCS.length>=MAXD){note('t','Máximo '+MAXD+' documentos por mensaje.');return}
   const nt=note('pg','Leyendo «'+f.name+'»…');
   try{let d=null;if(f.type==='application/pdf'||/\.pdf$/i.test(f.name))d=await readPdf(f);
     else if(/\.(txt|md|csv|json|html?|xml|log|js|py|css|ts)$/i.test(f.name)||/^text\//.test(f.type))d={name:f.name,text:(await f.text()).slice(0,14000)};
