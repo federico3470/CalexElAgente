@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwseyoot">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwsgn9hj">
 <script>/*SINEMOJI*/
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -15,6 +15,8 @@
  window.SpeechRecognition=window.webkitSpeechRecognition=R})();
 const T=(id,n,bg,side,panel,line,txt,mut,acc,accd,onacc,bgimg)=>({id,n,bg,side,panel,line,txt,mut,acc,accd,onacc,bgimg});
 const THEMES=[
+ T('i-oscuro','iOS oscuro','#000000','#0b0b0d','#1c1c1e','#38383a','#ffffff','#98989f','#0a84ff','#0a84ff','#ffffff',''),
+ T('i-claro','iOS claro','#f2f2f7','#f2f2f7','#ffffff','#d1d1d6','#000000','#6c6c70','#007aff','#007aff','#ffffff',''),
  T('a-tinta','Tinta','#0d0e11','#0d0e11','#14151a','#272930','#ece6d6','#8f8b80','#c4a869','#9c8247','#15110a',''),
  T('a-papel','Papel marfil','#f4efe3','#f4efe3','#fbf8f0','#d8cfba','#1d1b17','#7a7263','#7a2c33','#5e2228','#fffaf0',''),
  T('f-marino','Azul marino','#0b1220','#0e182b','#121e34','#25344f','#e8edf6','#8a9bb8','#7ea2d8','#3f6aa8','#ffffff','linear-gradient(160deg,#0b1220 0%,#101c33 100%)'),
@@ -43,7 +45,7 @@ function applyTheme(id,save){const t=THEMES.find(x=>x.id===id)||THEMES[0],s=docu
  for(const [k,v] of [['bg',t.bg],['side',t.side],['panel',t.panel],['line',t.line],['txt',t.txt],['mut',t.mut],['acc',t.acc],['accd',t.accd],['onacc',t.onacc],['bgimg',t.bgimg||t.bg]])s.setProperty('--'+k,v);
  const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t.bg;
  if(save){try{localStorage.setItem('dot-theme',t.id)}catch{}}const hx=t.bg.replace('#',''),lum=(parseInt(hx.slice(0,2),16)*.299+parseInt(hx.slice(2,4),16)*.587+parseInt(hx.slice(4,6),16)*.114)/255;document.documentElement.dataset.mode=lum>.6?'light':'dark';window.curTheme=t.id}
-const THEME0=()=>(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'a-papel':'a-tinta';
+const THEME0=()=>(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'i-claro':'i-oscuro';
 try{applyTheme(localStorage.getItem('dot-theme')||THEME0())}catch{applyTheme(THEME0())}
 </script>
 <style>
@@ -1559,7 +1561,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape')$('ov').classList.remove('on'
 
 init();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
-</script><!--/SINEMOJI--><script src="/atelier.js" defer></script><script src="/estilos-data.js" defer></script><script src="/estilos.js" defer></script><script>addEventListener("load",()=>{const sel=document.getElementById("stsel");if(!sel||!window.CalexStyles)return;const L=CalexStyles.list(),fams=[...new Set(L.map(x=>x.family))];fams.forEach(f=>{const g=document.createElement("optgroup");g.label=f;L.filter(x=>x.family===f).forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.name;g.append(o)});sel.append(g)});let cur="";try{cur=localStorage.getItem("calex-style")||""}catch(e){}sel.value=cur;sel.onchange=()=>CalexStyles.apply(sel.value,true)})</script><script src="/fx.js" defer></script><script src="/funciones.js" defer></script><script>
+</script><!--/SINEMOJI--><script src="/ios.js" defer></script><script src="/atelier.js" defer></script><script src="/estilos-data.js" defer></script><script src="/estilos.js" defer></script><script>addEventListener("load",()=>{const sel=document.getElementById("stsel");if(!sel||!window.CalexStyles)return;const L=CalexStyles.list(),fams=[...new Set(L.map(x=>x.family))];fams.forEach(f=>{const g=document.createElement("optgroup");g.label=f;L.filter(x=>x.family===f).forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.name;g.append(o)});sel.append(g)});let cur="";try{cur=localStorage.getItem("calex-style")||""}catch(e){}sel.value=cur;sel.onchange=()=>CalexStyles.apply(sel.value,true)})</script><script src="/fx.js" defer></script><script src="/funciones.js" defer></script><script>
 /* Edición web (Cloudflare): oculta lo que solo tiene sentido en el PC */
 (()=>{const stop=n=>!n||n.tagName==='H4'||(n.querySelector&&n.querySelector('#ss'));
  const hide=t=>document.querySelectorAll('#set h4').forEach(h=>{if(h.textContent.trim().startsWith(t)){let n=h;do{n.style.display='none';n=n.nextElementSibling}while(!stop(n))}});

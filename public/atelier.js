@@ -102,33 +102,40 @@
   ].join('\n');
   var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'], DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   function folio() { var d = new Date(); return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()] + ' de ' + d.getFullYear(); }
-  function on() { try { return localStorage.getItem('calex-ui') !== 'classic'; } catch (e) { return true; } }
-  function enable(v) { var h = document.documentElement; if (v) h.setAttribute('data-ui', 'atelier'); else h.removeAttribute('data-ui'); try { localStorage.setItem('calex-ui', v ? 'atelier' : 'classic'); } catch (e) { } if (v) wire(); }
+  function mode() { try { var v = localStorage.getItem('calex-ui2'); return v === 'atelier' || v === 'classic' ? v : 'ios'; } catch (e) { return 'ios'; } }
+  function themeFor(m) { var light = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches; return m === 'ios' ? (light ? 'i-claro' : 'i-oscuro') : (light ? 'a-papel' : 'a-tinta'); }
+  function setMode(m, userChoice) {
+    var h = document.documentElement; if (m === 'classic') h.removeAttribute('data-ui'); else h.setAttribute('data-ui', m);
+    try { localStorage.setItem('calex-ui2', m); if (m !== 'classic' && (userChoice || !localStorage.getItem('calex-ui2-t'))) { localStorage.setItem('calex-ui2-t', '1'); if (window.applyTheme) applyTheme(themeFor(m), true); } } catch (e) { }
+    wire();
+  }
   var wired = false;
+  function ui() { return document.documentElement.getAttribute('data-ui'); }
   function wire() {
-    var b = document.querySelector('header .brand'); if (b) { b.setAttribute('data-folio', folio()); }
-    var q = document.getElementById('q'); if (q && document.documentElement.getAttribute('data-ui') === 'atelier') q.placeholder = 'Escriba aquí…';
+    var b = document.querySelector('header .brand'); if (b) b.setAttribute('data-folio', folio());
+    var q = document.getElementById('q'); if (q) { if (!q.dataset.ph0) q.dataset.ph0 = q.placeholder; q.placeholder = ui() === 'atelier' ? 'Escriba aquí…' : ui() === 'ios' ? 'Mensaje' : q.dataset.ph0; }
     var side = document.getElementById('side'); if (!side) return;
     var sc = document.getElementById('atscrim'); if (!sc) { sc = document.createElement('div'); sc.id = 'atscrim'; document.body.appendChild(sc); sc.addEventListener('click', function () { side.classList.add('hide'); }); }
-    var sync = function () { sc.classList.toggle('on', !side.classList.contains('hide') && document.documentElement.getAttribute('data-ui') === 'atelier'); };
-    if (!wired) { wired = true; new MutationObserver(sync).observe(side, { attributes: true, attributeFilter: ['class'] }); document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !side.classList.contains('hide') && document.documentElement.getAttribute('data-ui') === 'atelier') side.classList.add('hide'); }); }
-    if (document.documentElement.getAttribute('data-ui') === 'atelier' && !side.dataset.atInit) { side.dataset.atInit = '1'; side.classList.add('hide'); }
-    sync();
-    // al elegir una charla o crear una nueva, el cajón se cierra
-    side.addEventListener('click', function (e) { if (document.documentElement.getAttribute('data-ui') !== 'atelier') return; if (e.target.closest('#bn') || e.target.closest('.h span') || e.target.closest('#bs') || e.target.closest('#bcn') || e.target.closest('#bfn')) setTimeout(function () { side.classList.add('hide'); }, 120); });
-    // opción en Ajustes
-    var row = document.getElementById('strow'); if (row && !document.getElementById('uisel')) {
-      var r = document.createElement('div'); r.className = 'r'; r.innerHTML = '<label>Presentación<small>Atelier: papel y tinta, estilo editorial. Clásica: la presentación anterior.</small></label><select id="uisel"><option value="atelier">Atelier</option><option value="classic">Clásica</option></select>';
-      row.parentNode.insertBefore(r, row); var s = r.querySelector('select'); s.value = on() ? 'atelier' : 'classic'; s.onchange = function () { enable(s.value === 'atelier'); };
+    var drawer = function () { return ui() === 'atelier' || (ui() === 'ios' && innerWidth < 900); };
+    var sync = function () { sc.classList.toggle('on', !side.classList.contains('hide') && drawer()); };
+    if (!wired) {
+      wired = true; new MutationObserver(sync).observe(side, { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', sync);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !side.classList.contains('hide') && drawer()) side.classList.add('hide'); });
+      side.addEventListener('click', function (e) { if (!drawer()) return; if (e.target.closest('#bn') || e.target.closest('.h span') || e.target.closest('#bs') || e.target.closest('#bcn') || e.target.closest('#bfn')) setTimeout(function () { side.classList.add('hide'); }, 120); });
     }
+    if (ui() === 'atelier' && !side.dataset.atInit) { side.dataset.atInit = '1'; side.classList.add('hide'); }
+    sync();
+    var row = document.getElementById('strow'), old = document.getElementById('uisel');
+    if (row && !old) {
+      var r = document.createElement('div'); r.className = 'r'; r.innerHTML = '<label>Presentación<small>iOS: esquinas redondeadas y movimiento de resorte. Atelier: papel y tinta, estilo editorial. Clásica: la presentación original.</small></label><select id="uisel"><option value="ios">iOS</option><option value="atelier">Atelier</option><option value="classic">Clásica</option></select>';
+      row.parentNode.insertBefore(r, row); var s = r.querySelector('select'); s.value = mode(); s.onchange = function () { setMode(s.value, true); };
+    } else if (old) old.value = mode();
   }
   function boot() {
     var st = document.createElement('style'); st.id = 'calex-atelier'; st.textContent = CSS; document.head.appendChild(st);
     if (document.body && document.body.classList.contains('tv')) return;
-    var first = false; try { first = !localStorage.getItem('calex-ui'); } catch (e) { }
-    if (on()) { document.documentElement.setAttribute('data-ui', 'atelier'); if (first) { try { var light = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches; applyTheme(light ? 'a-papel' : 'a-tinta', true); localStorage.setItem('calex-ui', 'atelier'); } catch (e) { } } }
-    wire();
+    setMode(mode(), false);
   }
-  window.CalexAtelier = { enable: enable, folio: folio };
+  window.CalexAtelier = { setMode: setMode, mode: mode, folio: folio };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
