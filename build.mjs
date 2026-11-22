@@ -46,7 +46,7 @@ h = h.replace(/\bDot\b/g, "Calex").replace(/\bDOT\b/g, "CALEX").replace(/__BUILD
 fs.mkdirSync(path.join(HERE, "public"), { recursive: true });
 fs.writeFileSync(path.join(HERE, "public", "index.html"), h);
 fs.copyFileSync(path.resolve(LOCAL, "..", "connectors.js"), path.join(HERE, "src", "connectors.js")); // conectores: el mismo código que usa Dot
-for (const f of ["sw.js", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png"]) fs.copyFileSync(path.join(LOCAL, f), path.join(HERE, "public", f));
+for (const f of ["sw.js", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png", "fx.js", "funciones.js", "estilos.js", "estilos-data.js"]) if (fs.existsSync(path.join(LOCAL, f))) fs.copyFileSync(path.join(LOCAL, f), path.join(HERE, "public", f));
 fs.writeFileSync(path.join(HERE, "public", "manifest.json"), fs.readFileSync(path.join(LOCAL, "manifest.json"), "utf8").replace(/\bDot\b/g, "Calex")); // la app instalada se llama Calex
 const L = (n) => fs.readFileSync(path.join(HERE, "legal", n + ".html"), "utf8");
 fs.writeFileSync(path.join(HERE, "src", "legal.js"), "// Generado por build.mjs desde legal/*.html. No editar a mano.\nexport const LEGAL = " + JSON.stringify({ terminos: L("terminos"), privacidad: L("privacidad") }) + ";\n");

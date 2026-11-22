@@ -27,6 +27,7 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS hits(k TEXT, bucket INTEGER, n INTEGER, PRIMARY KEY(k, bucket))",
   "CREATE TABLE IF NOT EXISTS connections(user_id TEXT, id TEXT, data TEXT, updated INTEGER, PRIMARY KEY(user_id, id))", // conectores vinculados (tokens cifrados)
   "CREATE TABLE IF NOT EXISTS visits(day TEXT, country TEXT, n INTEGER, PRIMARY KEY(day, country))", // recuento de visitas por día y país: sin IP, sin ciudad y sin relación con ninguna cuenta
+  "CREATE TABLE IF NOT EXISTS strikes(user_id TEXT PRIMARY KEY, n INTEGER, blocked INTEGER DEFAULT 0, reason TEXT, last INTEGER, blocked_at INTEGER)", // moderación: avisos y sesiones bloqueadas hasta que el responsable las reactive
 ];
 let ready = false;
 const init = async (env) => { if (ready) return; await env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s))); ready = true; };
@@ -51,7 +52,7 @@ async function connCtx(env, user, req) {
 // ---------- perfil, modos, tonos ----------
 const TONES = { friendly: ["Amigable", "Tono cercano, cálido y natural."], formal: ["Formal", "Tono formal y profesional, trato respetuoso, sin bromas."],
   funny: ["Divertido", "Tono divertido: humor ligero y alguna broma corta, sin pasarte ni alargar la respuesta."], direct: ["Directo", "Tono muy directo y escueto: solo lo esencial."] };
-const MODES = { general: ["✨", "Todo en uno", ""] }; // un solo modo: Calex detecta si hay que charlar, traducir, explicar, redactar, cocinar, motivar o programar
+const MODES = { general: ["", "Todo en uno", ""] }; // un solo modo: Calex detecta si hay que charlar, traducir, explicar, redactar, cocinar, motivar o programar
 const AVK = ["mateo", "lucas", "tomas", "raul", "sofia", "valen", "camila", "nora"];
 const hex = (v, d) => (/^#[0-9a-f]{6}$/i.test(v) ? v : d);
 const ageGuide = (a) => a < 13 ? "Usa palabras muy simples y un tono amable, explica paso a paso y mantén todo apto para niños." : a < 18 ? "Usa un lenguaje cercano y claro para un adolescente y mantén el contenido apto para menores." : a >= 65 ? "Sé paciente y claro, evita la jerga técnica." : "Trátalo como a un adulto.";
@@ -216,7 +217,7 @@ async function makeSpec(env, user, modelIds, ask, level, current) {
 const aiJSON = (out) => { const r = out?.response ?? out?.result?.response; return r && typeof r === "object" ? r : extractJSONObj(String(r ?? "")); };
 function extractJSONObj(t) { t = String(t).replace(/```(?:json)?/gi, ""); const a = t.indexOf("{"), b = t.lastIndexOf("}"); if (a < 0 || b < a) return null; const raw = t.slice(a, b + 1); try { return JSON.parse(raw); } catch {} try { return JSON.parse(raw.replace(/,\s*([}\]])/g, "$1")); } catch { return null; } }
 const CODE_SYS = `Eres un ingeniero de software senior y diseñador front-end de nivel agencia. Entrega código COMPLETO y listo para usar, nunca esqueletos. Si piden algo visual o interactivo (juego, animación, herramienta, simulador), entrega UN SOLO archivo HTML autónomo dentro de UN ÚNICO bloque \`\`\`html con CSS en <style> y JavaScript en <script>, que funcione al abrirlo sin descargar nada y sin imágenes externas. Calidad de producto real: diseño moderno y cuidado (tipografía, espaciado, paleta coherente, modo oscuro elegante), responsive, animaciones suaves, accesible, y sin errores de consola. Para fondos, texturas y efectos usa WebGL con shaders (ruido fractal fbm, dominio deformado) o canvas, generados proceduralmente: texturas de alta resolución (hasta 4096 px cuando el dispositivo lo permita; reduce en celulares), partículas, parallax y animaciones al hacer scroll con IntersectionObserver. No uses lorem ipsum. Para código que no es visual, usa el lenguaje pedido con bloques \`\`\`lenguaje, comentarios útiles y manejo de errores. Después del código, máximo tres líneas de explicación. Responde en español.`;
-const ALLINONE = (level, live) => `Eres Calex, el asistente todo en uno de la familia: charlas, explicas como un profe paciente, traduces, resumes, redactas, ayudas a cocinar, motivas como un coach, resuelves tareas y programas. Detecta solo lo que te piden y hazlo bien, sin pedir que cambien de modo. Responde SIEMPRE en el idioma del usuario (normalmente español). Estilo: registro formal y profesional pero cercano, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes y entrega de inmediato pasos numerados y cortos. Según lo pedido: traducir = devuelve solo la traducción (si no dice idioma: español↔inglés); explicar o enseñar = paso a paso con ejemplos sencillos y comprobando que se entiende; resumir = puntos claros y breves; redactar = buen estilo y listo para usar; cocina = recetas con pasos cortos según lo que tenga; ánimo y metas = empatía y metas pequeñas y concretas; programar = código completo en bloques con el lenguaje, explicando solo lo esencial. Las páginas web completas las arma Calex Studio automáticamente cuando las piden.${level < 34 ? " Modo rápido: responde en una a tres frases, directo al grano." : level >= 67 ? " Modo profundo: piensa con calma antes de responder, verifica cálculos y datos, considera casos límite y da una respuesta completa y bien estructurada (con títulos o pasos cuando ayude)." : ""}${live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`;
+const ALLINONE = (level, live) => `Eres Calex, el asistente todo en uno de la familia: charlas, explicas como un profe paciente, traduces, resumes, redactas, ayudas a cocinar, motivas como un coach, resuelves tareas y programas. Detecta solo lo que te piden y hazlo bien, sin pedir que cambien de modo. Responde SIEMPRE en el idioma del usuario (normalmente español). Estilo: registro formal y profesional pero cercano, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; trato neutro y respetuoso (de usted o en infinitivo), sin voseo; no sermonees ni moralices sin motivo: responde con naturalidad a las preguntas inocentes, hipotéticas, de ficción, historia, noticias, salud o seguridad, y solo cuando alguien busque causar daño a otras personas niégate con una frase breve y formal, recordando que Calex no debe usarse para eso; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes y entrega de inmediato pasos numerados y cortos. Según lo pedido: traducir = devuelve solo la traducción (si no dice idioma: español a inglés); explicar o enseñar = paso a paso con ejemplos sencillos y comprobando que se entiende; resumir = puntos claros y breves; redactar = buen estilo y listo para usar; cocina = recetas con pasos cortos según lo que tenga; ánimo y metas = empatía y metas pequeñas y concretas; programar = código completo en bloques con el lenguaje, explicando solo lo esencial. Las páginas web completas las arma Calex Studio automáticamente cuando las piden.${level < 34 ? " Modo rápido: responde en una a tres frases, directo al grano." : level >= 67 ? " Modo profundo: piensa con calma antes de responder, verifica cálculos y datos, considera casos límite y da una respuesta completa y bien estructurada (con títulos o pasos cuando ayude)." : ""}${live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`;
 
 // Los modelos con prefijo «or:» (ej. or:z-ai/glm-5.3) se piden a OpenRouter. Cada proveedor puede tener su PROPIA clave con su tope de gasto en OpenRouter.
 const isOR = (m) => typeof m === "string" && m.startsWith("or:");
@@ -252,9 +253,133 @@ async function critiquePage(env, PM, ask, look) {
   return aiJSON(await env.AI.run(PM.vis.id, payload));
 }
 
+// ---------- moderación: detecta INTENCIÓN OPERATIVA de causar daño real (cómo planear o ejecutar), no preguntas informativas, ficción ni historia ----------
+const G = (n) => String.raw`[^.!?\n]{0,${n}}?`;
+// entre «cómo / quiero…» y el verbo no puede haber frases que hablen de terceros («quieren estafar», «saber si me van a robar», «los ladrones…»)
+const MG = String.raw`(?:(?!dejar de\b|deje de\b|dejo de\b|evitar\b|evite\b|para no\b|sin\b|no\s+(?:matar|golpear|lastimar|herir|agredir|pegar|maltratar|acosar|robar|estafar|envenenar|drogar|secuestrar|hacer(?:le)?\s+da[nñ]o)|quieren\b|quiere\b|intentan\b|intenta\b|van a\b|saber si|si me\b|si alguien|que no me\b|para que no\b|por qu[eé]|ladron\w*|delincuent\w*|criminal\w*|estafador\w*|hacker\w*|terrorist\w*|los que\b|quienes\b|quien\b|alguien\b|gente que|personas que)[^.!?\n]){0,45}?`;
+const L_HOW = String.raw`c[oó]mo|formas? de|maneras? de|manera de|m[eé]todos? (?:para|de)|paso a paso|pasos? para|instrucciones|tutorial|gu[ií]a|dime|d[ií]me|dec[ií]me|dame|d[aá]me|ens[eé][nñ]\w*|expl[ií]c\w*|ay[uú]d\w*|consejos? para|ideas? para|tips? para|plan(?:es)? para|estrategias? para|recetas? (?:para|de)|se puede|puedo|podr[ií]a|puedes|podr[eé]|qu[eé] necesito para`;
+const L_WANT = String.raw`quiero|queremos|necesito|necesitamos|me gustar[ií]a|tengo que|hay que|busco`;
+const L_INT = String.raw`voy a|vamos a|pienso|planeo|planeamos|estoy planeando|estoy pensando en`;
+const LEAD = `(?:${L_HOW}|${L_WANT}|${L_INT})`, LEAD_NW = `(?:${L_HOW}|${L_INT})`;
+const PN = String.raw`(?:ex|pareja|espos[ao]|marid[oa]|novi[oa]|vecin[oa]s?|compa[nñ]er[oa]s?|jef[ae]|profesor\w*|maestr[oa]|ni[nñ][oa]s?|chic[oa]s?|mujer|hombre|persona|hermano|hermana|madre|padre|suegr[oa]|amig[oa]|hij[oa]s?|abuel[oa]s?|beb[eé]|gente|polic[ií]a|testigo|socio|cu[nñ]ad[oa]|t[ií][oa]|mam[aá]|pap[aá]|alguien|empresari\w*|ejecutiv\w*|pol[ií]tic\w*|turistas?|extranjer\w*|perr[oa]s?|gat[oa]s?|mascotas?)`;
+const DET = String.raw`(?:(?:mi|su|tu|un|una|el|la|mis|sus|otra|otro)\s+)?`;
+const TO = String.raw`(?:a\s+${DET}|al\s+)${PN}`, OWNER = String.raw`(?:ajen\w*|de\s+${DET}${PN}|sin\s+(?:su\s+)?(?:permiso|autorizaci[oó]n|que\s+(?:se\s+entere|lo\s+sepa|se\s+d[eé]\s+cuenta|se\s+note|lo\s+note|sepa)))`;
+// lead + (verbo fuerte con hasta 22 caracteres hasta el objeto | verbo débil como «hacer» pegado al objeto) + objeto
+const RR = (lead, strong, weak, obj) => W(`${lead}${MG}(?:(?:${strong})${G(22)}|(?:${weak})${G(8)})(?:${obj})`);
+const RW = (lead, weak, obj) => W(`${lead}${MG}(?:${weak})${G(8)}(?:${obj})`);
+const R1 = (lead, v, obj, g = 22) => W(`${lead}${MG}(?:${v})${obj ? G(g) + "(?:" + obj + ")" : ""}`);
+const NOUN_DELITO = String.raw`asalto|atraco|robo|secuestro|atentado|masacre|tiroteo|homicidio|asesinato|crimen|fraude|estafa|extorsi[oó]n|chantaje|ataque terrorista|atentado terrorista|ataque armado`;
+const TARGET = String.raw`cuentas?|instagram|facebook|whatsapp|gmail|hotmail|correos?|e-?mails?|wi-?fi|contrase[nñ]as?|celular(?:es)?|tel[eé]fonos?|computador\w*|pc|servidores?|p[aá]ginas? web|sitios? web|c[aá]maras?|redes? sociales|tiktok|snapchat|telegram|paypal|home banking|billeteras?`;
+const EXPL = String.raw`bombas?(?!\s+de\s)|explosivos?|granadas? (?:de mano|explosivas?|caseras?)|molotov|dinamita|napalm|c-?4|tnt|ant[ií]ntrax|ricina|sar[ií]n|gas (?:mostaza|sar[ií]n|venenoso)|(?:cintur[oó]n|chaleco) explosivo|detonador(?:es)?|artefactos? explosivos?|armas? (?:qu[ií]micas?|biol[oó]gicas?|nucleares?)`;
+const ARMS = String.raw`armas?|pistolas?(?!\s+de\s+(?:agua|juguete|pintura|silicona|pegamento|burbujas))|rev[oó]lver(?:es)?|rifles?|escopetas?|fusil(?:es)?|ametralladoras?|silenciador(?:es)?|subfusiles?`;
+const DRUG = String.raw`metanfetaminas?|coca[ií]na|fentanilo|hero[ií]na|lsd|[eé]xtasis|mdma|pasta base(?!\s+de\s)|paco|ketamina|anfetaminas?|drogas?|narc[oó]ticos|opioides`;
+const MINOR = String.raw`ni[nñ][oa]s?|ni[nñ]it[oa]s?|menor(?:es)?(?: de edad)?|adolescentes?|chiquit[oa]s?|beb[eé]s?|colegial\w*`;
+
+const MIS = [
+  { cat: "menores", always: true, re: [
+    W(`${LEAD}${MG}(?:abusar|violar|seducir|manosear|groomear|tener sexo con|tener relaciones sexuales con|acostarme con)${G(10)}(?:de\\s+|a\\s+|con\\s+)?(?:${DET})(?:${MINOR})`),
+    W(`(?:conseguir|descargar|ver|encontrar|comprar|vender|buscar|enlaces? (?:a|de)|links? (?:a|de))${G(25)}(?:pornograf[ií]a infantil|porno infantil|porno de menores|pornograf[ií]a de menores|csam|material de abuso sexual infantil)`)] },
+  { cat: "autolesion", re: [
+    W(`(?:c[oó]mo|formas? de|maneras? de|m[eé]todos? (?:para|de)|quiero|voy a|necesito|pienso|ay[uú]dame a|mejor (?:forma|manera) de)${G(30)}(?:suicidarme|quitarme la vida|matarme(?!\\s+(?:de|trabajando|estudiando|entrenando|corriendo|haciendo))|acabar con mi vida|terminar con mi vida|cortarme (?:las venas|los brazos|las mu[nñ]ecas)|autolesionarme|ahorcarme|morirme sin dolor)`),
+    W(`cu[aá]ntas?\\s+(?:pastillas?|p[ií]ldoras?|comprimidos?)${G(30)}(?:morir|matarme|morirme|suicid\\w+)`)] },
+  { cat: "explosivos", strict: true, re: [
+    RR(LEAD, "fabricar|construir|preparar|elaborar|sintetizar|extraer|ensamblar|imprimir", "hacer|armar|crear|montar", EXPL),
+    R1(LEAD, "plantar|colocar|poner", String.raw`bombas?(?!\s+de\s)|explosivos?|molotov`, 12)] },
+  { cat: "armas", re: [
+    RR(LEAD, "fabricar|construir|elaborar|ensamblar|imprimir", "hacer|armar|crear|montar", ARMS),
+    W(`${LEAD}${MG}(?:conseguir|comprar|adquirir|obtener|vender|traficar)${G(22)}(?:${ARMS}|explosivos?)${G(22)}(?:sin\\s+(?:papeles|licencia|registro|permiso|antecedentes)|ilegal\\w*|clandestin\\w*|mercado negro|contrabando)`)] },
+  { cat: "veneno", strict: true, re: [
+    R1(LEAD, "envenenar|intoxicar", TO, 6),
+    R1(LEAD, "drogar|narcotizar", String.raw`(?:a\s+${DET}|al\s+)(?!(?:perr|gat)[oa]s?\b|mascotas?\b)${PN}`, 6),
+    R1(LEAD, "venenos?", String.raw`indetectables?|que no (?:deja|se (?:detecte|note))|para (?:matar|envenenar|alguien|una persona|mi (?:ex|pareja|suegr[oa]|jef[ae]|vecin[oa]|espos[ao]|marid[oa]|novi[oa]))`, 22)] },
+  { cat: "violencia", strict: true, re: [
+    R1(LEAD_NW, "matar|asesinar|estrangular|apu[nñ]alar|ahorcar|degollar|dispararle|disparar|golpear|lastimar|herir|atropellar|torturar|agredir|mutilar|descuartizar", TO, 6),
+    R1(LEAD, "ocultar|esconder|enterrar|deshacerme de|disolver|hacer desaparecer|descuartizar", String.raw`cad[aá]ver(?:es)?|un muerto|cuerpo sin vida|restos humanos`, 14),
+    RW(LEAD, "hacer|lograr|conseguir", String.raw`que\s+parezca\s+(?:un\s+)?(?:accidente|suicidio|muerte natural)`)] },
+  { cat: "secuestro", strict: true, re: [R1(LEAD, "secuestrar|raptar|privar de (?:su )?libertad", TO, 6)] },
+  { cat: "acoso", re: [
+    R1(LEAD, "acosar|acechar|stalkear|hostigar|intimidar|humillar|difamar|doxxear|doxear|chantajear|extorsionar", TO, 6),
+    W(`${LEAD}${MG}(?:espiar|rastrear|seguir|vigilar|localizar)\\s+${TO}${G(40)}(?:sin que|a escondidas|en secreto|sin su (?:permiso|conocimiento))`),
+    RW(LEAD, "hacer|lograr|conseguir", String.raw`que\s+(?:alguien|${DET}${PN})\s+(?:se\s+suicide|se\s+mate|se\s+haga\s+da[nñ]o)`)] },
+  { cat: "robo", re: [
+    W(`${LEAD}${MG}(?:asaltar|atracar|robar|saquear|desvalijar|hurtar|dar (?:el )?golpe a)${G(20)}(?:bancos?|cajeros?|joyer[ií]as?|casas?|tiendas?|negocios?|locales?|supermercados?|farmacias?|kioscos?|blindados?|cami[oó]n(?:es)?|caja fuerte|museos?|empresas?|autos?|coches?|carros?|motos?|celulares?|carteras?|billeteras?|personas?|gente|turistas?|ancian\\w+|vecin\\w+|comercios?|casinos?|dinero|tarjetas?|iglesias?|escuelas?|colegios?|hospitales?)`),
+    W(`(?:plan(?:es)?|planear|planificar|organizar|coordinar|ejecutar|cometer|llevar a cabo|dise[nñ]ar|armar|realizar|preparar)(?:(?!evitar|prevenir|contra|ante\\b|frente a|protocolo|seguridad|respuesta|emergencia|simulacro|sobrevivir)[^.!?\\n]){0,22}?(?:${NOUN_DELITO})`)] },
+  { cat: "fraude", re: [
+    R1(LEAD, "estafar|timar|defraudar|extorsionar|chantajear", ""),
+    W(`${LEAD}${MG}(?:clonar)${G(22)}(?:tarjetas?(?!\\s+(?:sim|sd|micro|de\\s+memoria|gr[aá]fica))|chips?)`),
+    W(`${LEAD}${MG}(?:falsificar)${G(22)}(?:documentos?|firmas?|billetes|dinero|recetas?|cheques?|certificados?|t[ií]tulos?|pasaportes?|dni|facturas?|identidad|sellos?)`),
+    W(`${LEAD}${MG}(?:suplantar)${G(14)}(?:identidad|a\\s+${DET}${PN})`),
+    W(`${LEAD}${MG}(?:lavar|blanquear)${G(10)}(?:dinero|plata|capitales|activos)`),
+    W(`${LEAD}${MG}robar${G(12)}(?:contrase[nñ]as|datos bancarios|datos personales|tarjetas|identidad)`),
+    RW(LEAD, "hacer|montar|armar|lanzar|crear|dise[nñ]ar|enviar|organizar|realizar", String.raw`estafas?|phishing|pishing|skimming|esquema ponzi|pir[aá]mide|p[aá]ginas? falsas?|correos? falsos?|fraude`)] },
+  { cat: "hackeo", re: [
+    W(`${LEAD}${MG}(?:hackear|hakear|hackearle|crackear|vulnerar|jaquear)${G(25)}(?:${TARGET})`),
+    W(`${LEAD}${MG}(?:espiar|rastrear|interceptar|clonar|robar|entrar a|entrar en|acceder a|meterme en|meterme a)${G(25)}(?:${TARGET})${G(40)}(?:${OWNER})`),
+    W(`(?:instal\\w+|poner|colocar|meter|esconder)${G(30)}(?:keylogger|spyware|stalkerware|esp[ií]a|troyano|rastreador)${G(40)}(?:${OWNER})`),
+    RW(LEAD, "hacer|crear|programar|desarrollar|armar|dise[nñ]ar", String.raw`ransomware|keylogger|troyano|botnet|malware|virus inform[aá]tico`)] },
+  { cat: "ingles", re: [
+    /\b(?:how (?:to|do i|can i|could i)|ways to|help me|teach me|i want to|i need to)\b[^.!?\n]{0,25}?\b(?:make|build|create|construct|assemble)\b[^.!?\n]{0,15}?\b(?:a |an |some )?(?:bombs?|explosives?|pipe bombs?|molotov|nerve agent|ransomware|keylogger|untraceable gun|ghost gun)\b/i,
+    /\b(?:how (?:to|do i|can i)|ways to|help me|i want to|i('m| am) going to)\b[^.!?\n]{0,25}?\b(?:kill|murder|poison|kidnap|stalk|torture)\b[^.!?\n]{0,6}?\b(?:my|a|an|the|him|her|them|someone|somebody)\b/i,
+    /\b(?:how (?:to|do i|can i)|ways to)\b[^.!?\n]{0,20}?\b(?:hack|break into)\b[^.!?\n]{0,15}?\b(?:my (?:ex|girlfriend|boyfriend|wife|husband|neighbou?r)|someone|somebody)\b/i,
+    /\b(?:how (?:to|do i|can i)|ways to)\b[^.!?\n]{0,20}?\b(?:rob|burgle|hold up)\b[^.!?\n]{0,6}?\b(?:a |an |the )?(?:banks?|stores?|houses?|people)\b/i] },
+  { cat: "drogas", strict: true, re: [
+    RR(LEAD, "fabricar|producir|sintetizar|cocinar|elaborar|preparar|extraer|refinar|destilar|manufacturar|cultivar", "hacer|armar|montar", DRUG + "|laboratorio de drogas|narcolaboratorio"),
+    R1(LEAD, "vender|traficar|distribuir|comercializar|contrabandear", DRUG + "|marihuana|cannabis", 16)] },
+];
+const CTX = W("novela|cuento|relato|gui[oó]n|pel[ií]cula|serie|libro|personaje|ficci[oó]n|documental|videojuego|juego|jefe final|jefes finales|boss|elden ring|dark souls|zelda|mario|pok[eé]mon|among us|call of duty|skyrim|nivel|misi[oó]n|partida|gta|minecraft|fortnite|roblox|cosplay|disfraz|juguete|airsoft|nerf|madera|espadas?|cart[oó]n|r[eé]plica|utiler[ií]a|noticias?|historia|hist[oó]ric\\w*|investigaci[oó]n|tesis|ensayo|curso|clase|prevenir|prevenci[oó]n|proteg\\w*|defend\\w*|detectar|denunci\\w*|recuperar|ciberseguridad|ctf|pentest|laboratorio|autorizad\\w*|mi propi[oa]|partido|f[uú]tbol|ajedrez|boxeo|deport\\w*|simulacro|protocolo|campa[nñ]a|combatir|lucha|adicci\\w*|rehabilit\\w*|hipot[eé]tic\\w*|supongamos|imagina\\w*");
+const HYP = W("qu[eé] (?:pasa|pasar[ií]a|ocurre|ocurrir[ií]a|sucede|suceder[ií]a|pasar[aá]) si");
+// evasiones simples: «m4tar», «b0mba», «b o m b a»
+const LEET = { 0: "o", 1: "i", 3: "e", 4: "a", 5: "s", 7: "t", "@": "a", "$": "s" };
+const norm = (t) => t.replace(/(?<=\p{L})[013457@$](?=\p{L})/gu, (c) => LEET[c]).replace(/(?<![\p{L}\d])(?:\p{L}[ .\-_*]){3,}\p{L}(?![\p{L}\d])/gu, (m) => m.replace(/[ .\-_*]/g, ""));
+const RANK = { none: 0, warn: 1, severe: 2 };
+const LEGIT_DRUG = W(String.raw`medicinal\w*|reprocann|legalmente|legal|con receta|farmac\w*|cient[ií]fic\w*`);
+// devuelve {level:'none'|'warn'|'severe', cat, soft?}. «soft»: aviso por contexto (ficción, juego…) que no suma strikes. Función pura: no toca la base de datos.
+function misuseOne(t) {
+  if (t.length < 8) return { level: "none", cat: "" };
+  for (const m of MIS) { if (!m.re.some((r) => r.test(t))) continue;
+    if (m.cat === "autolesion") return { level: "warn", cat: m.cat }; // se acompaña, no se castiga
+    if (m.always) return { level: "severe", cat: m.cat };
+    if (m.cat === "drogas" && LEGIT_DRUG.test(t)) return { level: "warn", cat: m.cat, soft: true };
+    if (CTX.test(t)) return m.strict ? { level: "warn", cat: m.cat, soft: true } : { level: "none", cat: "" };
+    if (HYP.test(t)) return { level: "warn", cat: m.cat };
+    return { level: "severe", cat: m.cat }; }
+  return { level: "none", cat: "" };
+}
+function misuseCheck(text) {
+  const all = norm(String(text || "").normalize("NFC").replace(/\s+/g, " ")); let best = { level: "none", cat: "" };
+  // se revisa TODO el mensaje por tramos solapados (rellenar con texto al inicio no debe ocultar el pedido)
+  for (let i = 0; i < all.length && i < 24000; i += 4500) { const r = misuseOne(all.slice(i, i + 6000)); if (RANK[r.level] > RANK[best.level]) best = r; if (best.level === "severe") break; }
+  return best;
+}
+export { misuseCheck };
+const MSG_BLOCKED = "Su sesión está bloqueada por uso indebido. Solo el administrador puede reactivarla.";
+const MSG_NEWBLOCK = "Calex no debe utilizarse para planear ni cometer actos que causen daño a otras personas. Por este motivo, su sesión ha sido bloqueada. Solo el administrador puede reactivarla.";
+const NOTE_WARN = " AVISO DE SEGURIDAD: el último mensaje del usuario se acerca a un uso que podría causar daño. Responda con formalidad y brevedad: no entregue instrucciones operativas que permitan causar daño, ofrezca la parte legítima o informativa si la hay, y recuerde en una sola frase que Calex no debe usarse para causar daño. No moralice más de lo necesario.";
+const NOTE_SELF = " AVISO: el usuario podría estar atravesando un momento muy difícil. Responda con calidez y sobriedad, sin entregar ningún método ni detalle que facilite hacerse daño. Exprese que su vida importa, anímelo a hablar con una persona de confianza y a contactar de inmediato un servicio de ayuda (en Argentina, la línea 135, o el 107 en una emergencia). No lo regañe ni lo derive de forma fría.";
+const oneShot = (events) => new Response(new ReadableStream({ start(c) { for (const e of events) c.enqueue(sse(e)); c.close(); } }), { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", ...SEC } });
+const blockUser = (env, uid, reason) => q(env, "INSERT INTO strikes(user_id,n,blocked,reason,last,blocked_at) VALUES(?,1,1,?,?,?) ON CONFLICT(user_id) DO UPDATE SET n=n+1, blocked=1, reason=excluded.reason, last=excluded.last, blocked_at=excluded.blocked_at", uid, reason, Date.now(), Date.now()).run();
+async function addStrike(env, uid, reason) { await q(env, "INSERT INTO strikes(user_id,n,blocked,reason,last) VALUES(?,1,0,?,?) ON CONFLICT(user_id) DO UPDATE SET n=CASE WHEN strikes.last < ? THEN 1 ELSE strikes.n+1 END, reason=excluded.reason, last=excluded.last", uid, reason, Date.now(), Date.now() - 7 * 864e5).run(); return (await q(env, "SELECT n FROM strikes WHERE user_id=?", uid).first())?.n || 1; }
+// clave del responsable (la misma de /owner/paises), comparada en tiempo constante
+function ownerOk(url, env) { const k = String(url.searchParams.get("key") || ""), want = String(env.STATS_KEY || "");
+  let same = want.length >= 8 && k.length === want.length; if (same) { let d = 0; for (let i = 0; i < k.length; i++) d |= k.charCodeAt(i) ^ want.charCodeAt(i); same = d === 0; } return same; }
+
 async function chatRoute(req, env, user, ctx) {
   const b = await req.json().catch(() => ({})), message = String(b.message || "").trim().slice(0, 24000);
   if (!message) return json({ error: "Mensaje vacío" }, 400);
+  // 1) sesión bloqueada por uso indebido: solo el responsable puede reactivarla
+  if ((await q(env, "SELECT blocked FROM strikes WHERE user_id=?", user.id).first())?.blocked) return oneShot([{ type: "error", text: MSG_BLOCKED }, { type: "done" }]);
+  // 2) anti-abuso silencioso: 40 mensajes por minuto y por usuario
+  if (!(await hit(env, "chat:" + user.id, 40, 60))) return oneShot([{ type: "error", text: "Está enviando mensajes con demasiada rapidez. Por favor, aguarde unos segundos e inténtelo nuevamente." }, { type: "done" }]);
+  // 3) moderación: intención operativa de causar daño
+  const mis = misuseCheck(message); let modNote = "";
+  if (mis.level === "severe") { await blockUser(env, user.id, mis.cat + ": " + message.slice(0, 140).replace(/\s+/g, " ")); return oneShot([{ type: "error", text: MSG_NEWBLOCK }, { type: "done" }]); }
+  if (mis.level === "warn") {
+    if (mis.cat === "autolesion") modNote = NOTE_SELF; // se acompaña, no se suma ningún aviso
+    else if (mis.soft) modNote = NOTE_WARN; // contexto de ficción, juego o uso legítimo: se responde con cautela, sin sumar avisos
+    else { const n = await addStrike(env, user.id, mis.cat + ": " + message.slice(0, 140).replace(/\s+/g, " "));
+      if (n >= 3) { await blockUser(env, user.id, "reincidencia (" + mis.cat + "): " + message.slice(0, 140).replace(/\s+/g, " ")); return oneShot([{ type: "error", text: MSG_NEWBLOCK }, { type: "done" }]); }
+      modNote = NOTE_WARN; } }
+  const calm = !!modNote; // con un aviso activo se responde solo en modo charla (sin Studio ni modelo de código)
   const day = new Date().toISOString().slice(0, 10), limit = +env.DAILY_LIMIT > 0 ? +env.DAILY_LIMIT : Infinity, level = lvlOf(b); // sin DAILY_LIMIT (o en 0) el uso es ilimitado
   const PM = pickModels(env), userPick = PM.text.find((m) => m.id === b.model) || PM.def;
   const hasImg = Array.isArray(b.images) && b.images.some((x) => typeof x === "string" && /^data:image\//.test(x));
@@ -266,9 +391,9 @@ async function chatRoute(req, env, user, ctx) {
   { const perDoc = Math.max(2500, Math.floor(42000 / Math.max(1, docs.length))); docs.forEach((d) => { d.text = d.text.slice(0, perDoc); }); } // con muchos documentos, cada uno se lee más resumido para que quepan en el contexto
   const lastSpec = [...msgs].reverse().find((m) => m.spec)?.spec;
   // qué hay que hacer: una página (Calex Studio), cambiarla, programar (modelo de código) o conversar
-  const wantsSite = !hasImg && !b.live && !docs.length && SITE_RE.test(message) && MAKE_RE.test(message);
-  const wantsEdit = !wantsSite && !hasImg && !b.live && !!lastSpec && message.length < 500 && EDIT_RE.test(message);
-  const wantsCode = !wantsSite && !wantsEdit && !hasImg && !b.live && !docs.length && PM.coder && CODE_RE.test(message) && (MAKE_RE.test(message) || /```/.test(message));
+  const wantsSite = !calm && !hasImg && !b.live && !docs.length && SITE_RE.test(message) && MAKE_RE.test(message);
+  const wantsEdit = !calm && !wantsSite && !hasImg && !b.live && !!lastSpec && message.length < 500 && EDIT_RE.test(message);
+  const wantsCode = !calm && !wantsSite && !wantsEdit && !hasImg && !b.live && !docs.length && PM.coder && CODE_RE.test(message) && (MAKE_RE.test(message) || /```/.test(message));
   const route = wantsSite ? "site" : wantsEdit ? "edit" : wantsCode ? "code" : "chat";
   // esfuerzo: Rápido usa el modelo más liviano, Profundo asegura un modelo grande
   const light = [...PM.text].sort((x, y) => x.w - y.w)[0], big = [...PM.text].sort((x, y) => y.w - x.w)[0];
@@ -280,7 +405,7 @@ async function chatRoute(req, env, user, ctx) {
   const used = (await q(env, "SELECT n FROM usage WHERE user_id=? AND day=?", user.id, day).first())?.n || 1;
   msgs.push({ role: "user", content: message, ...(docs.length && { docs: docs.map((d) => ({ name: d.name, text: d.text.slice(0, 9000) })) }) });
   const cids = (await q(env, "SELECT id FROM connections WHERE user_id=?", user.id).all()).results.map((r) => r.id);
-  const sys = `${ALLINONE(level, b.live)} ${persona(profile)}${FAMILY}${CN.promptFor(cids, { music: b.music === true })}`.trim();
+  const sys = `${ALLINONE(level, b.live)} ${persona(profile)}${FAMILY}${CN.promptFor(cids, { music: b.music === true })}${modNote}`.trim();
   const hist = msgs.filter((m) => m.content).slice(-20).map((m) => ({ role: m.role, content: m.spec ? `[Se generó la página «${m.spec.title}» con Calex Studio]` : m.docs?.length ? m.docs.map((d) => `[Documento adjunto: ${d.name}]\n${d.text}`).join("\n\n") + "\n\n" + m.content : m.content }));
   if (images.length) hist[hist.length - 1].content = [{ type: "text", text: message }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))];
   const stream = new ReadableStream({ async start(ctrl) {
@@ -288,7 +413,7 @@ async function chatRoute(req, env, user, ctx) {
     // transmite una respuesta del modelo; si el modelo elegido falla, vuelve al estándar
     const run = async (mdl, messages, maxTok) => {
       const payload = { messages, stream: true, max_tokens: maxTok }; let out;
-      try { out = await aiRun(env, mdl, payload); } catch (e1) { if (env.NOFALLBACK || /license|agree/i.test(String(e1.message)) || mdl === PM.def.id || images.length) throw e1; const fb = route === "code" && PM.coderFree && mdl !== PM.coderFree.id ? PM.coderFree.id : PM.def.id; out = await env.AI.run(fb, payload); send({ type: "model", model: "☁ " + fb.split("/").pop() }); }
+      try { out = await aiRun(env, mdl, payload); } catch (e1) { if (env.NOFALLBACK || /license|agree/i.test(String(e1.message)) || mdl === PM.def.id || images.length) throw e1; const fb = route === "code" && PM.coderFree && mdl !== PM.coderFree.id ? PM.coderFree.id : PM.def.id; out = await env.AI.run(fb, payload); send({ type: "model", model: "" + fb.split("/").pop() }); }
       let got = "";
       if (out && typeof out.getReader === "function") {
         const rd = out.getReader(), dec = new TextDecoder(); let buf = "";
@@ -298,7 +423,7 @@ async function chatRoute(req, env, user, ctx) {
       } else { const t = out?.response || out?.result?.response || ""; if (t) { got = t; text += t; send({ type: "token", text: t }); } }
       return got;
     };
-    send({ type: "chat", id }); send({ type: "model", model: route === "site" || route === "edit" ? "☁ Calex Studio" : "☁ " + model.replace(/^or:/, "").split("/").pop() });
+    send({ type: "chat", id }); send({ type: "model", model: route === "site" || route === "edit" ? "Calex Studio" : "" + model.replace(/^or:/, "").split("/").pop() });
     try {
       if (used > limit) throw Object.assign(new Error("limit"), { limit: true });
       if (route === "site" || route === "edit") {
@@ -365,7 +490,7 @@ async function api(req, env, url, user) {
   if (P === "/account/export" && M === "GET") { const chats = (await q(env, "SELECT id,title,updated,messages FROM chats WHERE user_id=?", user.id).all()).results.map((c) => ({ id: c.id, title: c.title, updated: c.updated, messages: JSON.parse(c.messages) }));
     return new Response(JSON.stringify({ exportadoEl: new Date().toISOString(), cuenta: publicUser(user), perfil: user.profile ? JSON.parse(user.profile) : null, memoria: JSON.parse(user.facts || "[]"), chats }, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": 'attachment; filename="mis-datos-dot.json"' } }); }
   if (P === "/account/delete" && M === "POST") { const b = await req.json().catch(() => ({})); if (b.confirm !== "BORRAR") return json({ error: "Escribe BORRAR para confirmar" }, 400);
-    await env.DB.batch(["DELETE FROM chats WHERE user_id=?", "DELETE FROM sessions WHERE user_id=?", "DELETE FROM usage WHERE user_id=?", "DELETE FROM users WHERE id=?"].map((s) => q(env, s, user.id)));
+    await env.DB.batch(["DELETE FROM chats WHERE user_id=?", "DELETE FROM sessions WHERE user_id=?", "DELETE FROM usage WHERE user_id=?", "DELETE FROM strikes WHERE user_id=? AND blocked=0", "DELETE FROM users WHERE id=?"].map((s) => q(env, s, user.id)));
     return json("ok", 200, { "Set-Cookie": "dot_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0" }); }
   return json({}, 404);
 }
@@ -402,11 +527,21 @@ export default {
       if (url.pathname === "/.well-known/apple-developer-domain-association.txt") return env.APPLE_DOMAIN_ASSOCIATION ? new Response(String(env.APPLE_DOMAIN_ASSOCIATION), { headers: { "Content-Type": "text/plain; charset=utf-8", ...SEC } }) : json({}, 404); // verificación de dominio de Apple (se guarda como secreto)
       // estadística privada del responsable: solo el PAÍS aproximado de cada visita, agregado por día (sin IP, sin ciudad, sin cuenta). Nada de esto aparece en la interfaz.
       if (url.pathname === "/owner/paises") {
-        const k = String(url.searchParams.get("key") || ""), want = String(env.STATS_KEY || "");
-        let same = want.length >= 8 && k.length === want.length; if (same) { let d = 0; for (let i = 0; i < k.length; i++) d |= k.charCodeAt(i) ^ want.charCodeAt(i); same = d === 0; }
-        if (!same) return json({}, 404); // sin clave correcta ni siquiera se sabe que existe
+        if (!ownerOk(url, env)) return json({}, 404); // sin clave correcta ni siquiera se sabe que existe
         const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10), rows = (await q(env, "SELECT country, SUM(n) n FROM visits WHERE day>=? GROUP BY country ORDER BY n DESC", since).all()).results;
         return json({ desde: since, total: rows.reduce((a, r) => a + r.n, 0), paises: rows.map((r) => ({ pais: r.country, visitas: r.n })) }, 200, { "Cache-Control": "no-store" });
+      }
+      // moderación: lista de sesiones bloqueadas y reactivación (misma clave que /owner/paises)
+      if (url.pathname === "/owner/bloqueos") {
+        if (!ownerOk(url, env)) return json({}, 404);
+        const rows = (await q(env, "SELECT s.user_id id, s.n n, s.reason reason, s.blocked_at at, u.name name, u.email email FROM strikes s LEFT JOIN users u ON u.id=s.user_id WHERE s.blocked=1 ORDER BY s.blocked_at DESC LIMIT 200").all()).results;
+        return json({ total: rows.length, bloqueados: rows.map((r) => ({ id: r.id, nombre: r.name || "", correo: r.email || "", motivo: r.reason || "", avisos: r.n || 0, fecha: r.at ? new Date(r.at).toISOString() : "" })) }, 200, { "Cache-Control": "no-store" });
+      }
+      if (url.pathname === "/owner/desbloquear" && (req.method === "GET" || req.method === "POST")) {
+        if (!ownerOk(url, env)) return json({}, 404);
+        const id = String(url.searchParams.get("id") || "").slice(0, 100); if (!id) return json({ error: "Falta el id" }, 400);
+        const r = await q(env, "UPDATE strikes SET blocked=0, n=0, reason=NULL, blocked_at=NULL WHERE user_id=?", id).run();
+        return json({ ok: true, id, desbloqueado: (r?.meta?.changes ?? 0) > 0 }, 200, { "Cache-Control": "no-store" });
       }
       if (req.method === "GET" && url.pathname === "/auth/status") { try { await q(env, "INSERT INTO visits(day,country,n) VALUES(?,?,1) ON CONFLICT(day,country) DO UPDATE SET n=n+1", new Date().toISOString().slice(0, 10), String(req.cf?.country || "??").slice(0, 2)).run(); } catch {} }
       const user = await getUser(req, env);

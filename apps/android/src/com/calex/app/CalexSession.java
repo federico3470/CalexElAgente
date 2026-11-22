@@ -11,7 +11,7 @@ public class CalexSession extends VoiceInteractionSession {
 
   @Override public void onShow(Bundle args, int flags) {
     super.onShow(args, flags);
-    Intent i = new Intent(getContext(), AssistActivity.class).setAction("com.calex.app.ASSIST").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    Intent i = new Intent(getContext(), "panel".equals(getContext().getSharedPreferences("calex", 0).getString("assist", "siri")) ? AssistActivity.class : AssistSiriActivity.class).setAction("com.calex.app.ASSIST").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
     try { startAssistantActivity(i); } catch (Exception e) { try { getContext().startActivity(i); } catch (Exception e2) { } }
   }
 }

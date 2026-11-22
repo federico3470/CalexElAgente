@@ -41,5 +41,13 @@ Las fotos las lee Mistral Small, que no pide licencia (probado: describió bien 
 ## Probar la interfaz en tu PC antes de subir (sin cuenta)
 `node test\dev-server.mjs` → http://localhost:8787 (la IA responde de mentira).
 
+## Moderación y bloqueo de sesiones
+Calex responde con naturalidad a las preguntas inocentes, hipotéticas, de ficción, historia o seguridad. Si alguien lo usa para planear o cometer un daño real (asaltos, armas o explosivos, envenenar, secuestrar, acosar, abuso de menores, estafas, hackear cuentas ajenas, producir drogas para vender), la sesión **se bloquea de inmediato** hasta que el responsable la reactive. Los casos dudosos reciben un aviso breve y formal (3 avisos bloquean). Si alguien expresa deseos de hacerse daño, Calex lo acompaña y no se le castiga. Además hay un límite generoso de 40 mensajes por minuto por usuario.
+
+Las dos direcciones usan la misma clave que `/owner/paises` (el secreto `STATS_KEY`, de 8 caracteres o más). Sin la clave correcta responden 404.
+- Ver los bloqueados (id, nombre o correo si hay, motivo, fecha): `https://TU-URL.workers.dev/owner/bloqueos?key=TU_CLAVE`
+- Reactivar una sesión (también por POST): `https://TU-URL.workers.dev/owner/desbloquear?key=TU_CLAVE&id=ID_DEL_USUARIO`. Pone los avisos en 0.
+- El motivo guarda la categoría y los primeros 140 caracteres del mensaje, para que usted decida con criterio.
+
 ## Actualizar después
 Si cambias la interfaz de `D:\dot-agent\public`, ejecuta `node build.mjs` y vuelve a `npx wrangler deploy`.

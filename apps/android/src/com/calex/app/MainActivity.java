@@ -44,6 +44,10 @@ public class MainActivity extends Activity {
   ValueCallback<Uri[]> chooser;
   PermissionRequest pendingPerm;
   SpeechRecognizer sr;
+  boolean listenerSet = false;
+  android.speech.tts.TextToSpeech tts;
+  boolean ttsReady = false;
+  int ttsPending = 0;
   String pendingLang = "es-ES";
 
   @Override
@@ -54,14 +58,14 @@ public class MainActivity extends Activity {
     w.setNavigationBarColor(Color.parseColor("#15140f"));
     w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
     web = new WebView(this);
-    web.setBackgroundColor(sheet() ? Color.TRANSPARENT : Color.parseColor("#15140f"));
+    web.setBackgroundColor(sheet() || overlay() ? Color.TRANSPARENT : Color.parseColor("#15140f"));
     setContentView(web);
-    if (sheet()) setupSheet(w);
+    if (sheet()) setupSheet(w); else if (overlay()) setupOverlay(w);
     WebSettings s = web.getSettings();
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
     s.setMediaPlaybackRequiresUserGesture(false);
-    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.5");
+    s.setUserAgentString(s.getUserAgentString() + " CalexApp/1.6");
     web.addJavascriptInterface(new Bridge(), "CalexNative");
     web.setWebViewClient(new WebViewClient() {
       @Override public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {
@@ -102,6 +106,15 @@ public class MainActivity extends Activity {
 
   /** AssistActivity devuelve true: se muestra como un panel flotante abajo, no como una pantalla completa. */
   protected boolean sheet() { return false; }
+  /** Asistente estilo Siri: pantalla completa transparente; la página dibuja el brillo de los bordes y la cápsula. */
+  protected boolean overlay() { return false; }
+
+  void setupOverlay(Window w) {
+    w.setStatusBarColor(Color.TRANSPARENT); w.setNavigationBarColor(Color.TRANSPARENT);
+    w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+    WindowManager.LayoutParams lp = w.getAttributes(); lp.dimAmount = 0.12f; w.setAttributes(lp);
+    w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+  }
 
   void setupSheet(Window w) {
     DisplayMetrics dm = getResources().getDisplayMetrics(); float d = dm.density;
@@ -122,7 +135,7 @@ public class MainActivity extends Activity {
   /** calex://login?code=… → el Worker canjea el código por una sesión dentro del WebView. */
   boolean handleIntent(Intent i) {
     String act = i == null ? null : i.getAction();
-    if (act != null && (act.equals("com.calex.app.ASSIST") || act.equals(Intent.ACTION_ASSIST) || act.equals(Intent.ACTION_VOICE_COMMAND) || act.equals("android.intent.action.VOICE_ASSIST"))) { web.loadUrl(HOST + "/?assist=1"); return true; }
+    if (act != null && (act.equals("com.calex.app.ASSIST") || act.equals(Intent.ACTION_ASSIST) || act.equals(Intent.ACTION_VOICE_COMMAND) || act.equals("android.intent.action.VOICE_ASSIST"))) { web.loadUrl(HOST + "/?assist=1&style=" + (overlay() ? "siri" : "panel")); return true; }
     Uri d = i == null ? null : i.getData();
     if (d != null && "calex".equals(d.getScheme()) && "login".equals(d.getHost()) && d.getQueryParameter("code") != null) {
       web.loadUrl(HOST + "/auth/app?code=" + Uri.encode(d.getQueryParameter("code")));
@@ -158,16 +171,45 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void close() { runOnUiThread(new Runnable() { public void run() { finish(); } }); }
     /** Abre la app completa (si falta iniciar sesión o se toca ⤢) y cierra el panel. */
     @JavascriptInterface public void openApp() { runOnUiThread(new Runnable() { public void run() { try { Intent i = new Intent(MainActivity.this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP); startActivity(i); } catch (Exception e) { } if (sheet()) finish(); } }); }
+    /** Voz de Calex con el sintetizador de Android: avisa a la página cuando termina de hablar. */
+    @JavascriptInterface public void say(final String text) { runOnUiThread(new Runnable() { public void run() { speakNative(text); } }); }
+    @JavascriptInterface public void sayStop() { runOnUiThread(new Runnable() { public void run() { if (tts != null) { tts.stop(); } ttsPending = 0; } }); }
+    /** Estilo del asistente digital: "siri" (brillo en los bordes) o "panel" (hoja de cristal abajo). */
+    @JavascriptInterface public void setAssistStyle(String st) { getSharedPreferences("calex", 0).edit().putString("assist", "panel".equals(st) ? "panel" : "siri").apply(); }
+    @JavascriptInterface public String getAssistStyle() { return getSharedPreferences("calex", 0).getString("assist", "siri"); }
     @JavascriptInterface public void cancel() { runOnUiThread(new Runnable() { public void run() { if (sr != null) sr.cancel(); } }); }
     @JavascriptInterface public void stop() { runOnUiThread(new Runnable() { public void run() { if (sr != null) sr.stopListening(); } }); }
   }
 
+  void speakNative(final String text) {
+    if (tts == null) {
+      tts = new android.speech.tts.TextToSpeech(this, new android.speech.tts.TextToSpeech.OnInitListener() {
+        public void onInit(int st) {
+          ttsReady = st == android.speech.tts.TextToSpeech.SUCCESS;
+          if (ttsReady) { try { tts.setLanguage(new java.util.Locale("es", "AR")); } catch (Exception e) { } tts.setSpeechRate(1.02f); }
+          if (ttsReady) speakNative(text); else js("window.__ttsEnd&&window.__ttsEnd()");
+        }
+      });
+      tts.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
+        void done() { runOnUiThread(new Runnable() { public void run() { if (ttsPending > 0) ttsPending--; if (ttsPending == 0) js("window.__ttsEnd&&window.__ttsEnd()"); } }); }
+        public void onStart(String id) { }
+        public void onDone(String id) { done(); }
+        public void onError(String id) { done(); }
+      });
+      return;
+    }
+    if (!ttsReady) return;
+    ttsPending++;
+    tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "u" + System.nanoTime());
+  }
+
   void listen() {
-    if (!SpeechRecognizer.isRecognitionAvailable(this)) { js("window.__nsEnd('service-not-allowed')"); return; }
-    if (sr == null) {
-      sr = SpeechRecognizer.createSpeechRecognizer(this);
+    if (sr == null) sr = Rec.create(this); // reconocedor real del teléfono (nunca el de Calex)
+    if (sr == null) { js("window.__nsEnd('service-not-allowed')"); return; }
+    if (!listenerSet) {
+      listenerSet = true;
       sr.setRecognitionListener(new RecognitionListener() {
-        public void onReadyForSpeech(Bundle p) {}
+        public void onReadyForSpeech(Bundle p) { js("window.__nsReady&&window.__nsReady()"); }
         public void onBeginningOfSpeech() {}
         public void onRmsChanged(float v) { js("window.__rms&&window.__rms(" + v + ")"); }
         public void onBufferReceived(byte[] b) {}
@@ -181,7 +223,7 @@ public class MainActivity extends Activity {
           else if (e == SpeechRecognizer.ERROR_NETWORK || e == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || e == SpeechRecognizer.ERROR_SERVER) c = "network";
           else if (e == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) c = "not-allowed";
           else if (e == SpeechRecognizer.ERROR_AUDIO) c = "audio-capture";
-          else if (e == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) { c = "no-speech"; try { sr.destroy(); } catch (Exception x) { } sr = null; } // se vuelve a crear en el próximo intento
+          else if (e == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) { c = "no-speech"; try { sr.destroy(); } catch (Exception x) { } sr = null; listenerSet = false; } // se vuelve a crear en el próximo intento
           js("window.__nsEnd('" + c + "')");
         }
         public void onResults(Bundle r) {
@@ -233,5 +275,5 @@ public class MainActivity extends Activity {
       }
     });
   }
-  @Override protected void onDestroy() { if (sr != null) sr.destroy(); super.onDestroy(); }
+  @Override protected void onDestroy() { if (tts != null) { try { tts.shutdown(); } catch (Exception e) { } } if (sr != null) sr.destroy(); super.onDestroy(); }
 }
