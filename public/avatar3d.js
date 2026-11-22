@@ -182,17 +182,26 @@ void main(){
   var rgb = function (h) { var n = parseInt(String(h).slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
   var lin = function (h) { return rgb(h).map(function (v) { return Math.pow(v, 2.2); }); }; // el sombreado trabaja en espacio lineal
   function init() {
+    A.state = "compiling";
+    var fail = function (e) { A.ok = false; A.state = "failed"; A.err = String((e && e.message) || e); try { window.dispatchEvent(new Event("a3d-failed")); } catch (x) {} };
     try {
       cv = document.createElement("canvas"); cv.width = cv.height = 8;
-      gl = cv.getContext("webgl2", { preserveDrawingBuffer: true, antialias: false, powerPreference: "low-power" }); if (!gl) return;
-      var sh = function (t, s) { var o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
-      pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
-      if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
-      gl.useProgram(pr); var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-      var loc = gl.getAttribLocation(pr, "a"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      ["R", "yaw", "old", "fem", "jaw", "nos", "brw", "sweat", "skin", "hairc", "shirt", "eyec", "style", "beard", "acc", "mood"].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
-      A.ok = true;
-    } catch (e) { A.ok = false; A.err = String(e.message || e); }
+      gl = cv.getContext("webgl2", { preserveDrawingBuffer: true, antialias: false, powerPreference: "low-power" }); if (!gl) return fail("sin WebGL2");
+      var ext = gl.getExtension("KHR_parallel_shader_compile"), t0 = Date.now();
+      var mk = function (t, src) { var o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o); return o; };
+      var vs = mk(gl.VERTEX_SHADER, VS), fs = mk(gl.FRAGMENT_SHADER, FS);
+      pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+      var done = function () { try {
+          if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return fail(gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(pr));
+          gl.useProgram(pr); var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+          var loc = gl.getAttribLocation(pr, "a"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+          ["R", "yaw", "old", "fem", "jaw", "nos", "brw", "sweat", "skin", "hairc", "shirt", "eyec", "style", "beard", "acc", "mood"].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
+          A.ok = true; A.state = "ready"; window.dispatchEvent(new Event("a3d-ready"));
+        } catch (e) { fail(e); } };
+      // con la extensión de compilación en paralelo la página no se traba mientras el celular prepara el dibujo; sin ella se espera un instante a que se vea la pantalla
+      var wait = function () { if (ext && !gl.getProgramParameter(pr, ext.COMPLETION_STATUS_KHR)) { if (Date.now() - t0 > 90000) return fail("tardó demasiado"); setTimeout(wait, 80); } else done(); };
+      setTimeout(wait, 60);
+    } catch (e) { fail(e); }
   }
   /** Dibuja una persona en un canvas (o en el interno) y devuelve el canvas. a: {kind,skin,color,acc,gender}; mood: normal|effort|funny; yaw en radianes. */
   A.draw = function (a, mood, px, yaw) {
@@ -211,6 +220,7 @@ void main(){
     return u;
   };
   /** Prepara el dibujo 3D (compila el sombreador). Es pesado en algunos celulares, así que solo se llama cuando la persona activa la opción. */
-  A.init = function () { if (!A.tried) { A.tried = true; init(); } return A.ok; };
+  A.state = "idle";
+  A.init = function () { if (!A.tried) { A.tried = true; init(); } return A.ok; }; // devuelve false mientras se prepara; avisa con el evento a3d-ready
   window.A3D = A;
 })();
