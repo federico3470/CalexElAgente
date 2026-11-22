@@ -40,8 +40,10 @@ LEGAL_COUNTRY = ""            # país o jurisdicción
 # PUBLIC_URL = "https://nixel.tudominio.com"   # solo si usas un dominio propio
 # Las claves de inicio de sesión NO van aquí: se guardan como secretos (ver LEEME.md).
 
-# --- Modelos de pago (se activan al pasar a Workers Paid; sin plan de pago Calex vuelve solo a los gratuitos) ---
-# STUDIO_MODEL = "@cf/zai-org/glm-5.3-flash"         # diseña las páginas (Calex Studio)
-# CODER_MODEL  = "@cf/zai-org/glm-5.3"               # juegos, apps y código
-# CHAT_MODEL   = "@cf/zai-org/glm-4.7-flash"         # charla del día a día (rápido y barato)
-# (DeepSeek V4 Pro fue dado de baja por Cloudflare el 20/11/2026: lo reemplaza @cf/deepseek-ai/deepseek-v4.1-flash-1017)
+# --- Modelos avanzados por OpenRouter (saldo prepago, sin cuota mensual) ---
+# Solo se usan si existen las claves (secretos OPENROUTER_KEY_ZAI y OPENROUTER_KEY_DEEPSEEK, cada una con su tope de gasto en OpenRouter).
+# Si falla una clave o se acaba el saldo, Calex sigue solo con los modelos gratuitos de Cloudflare.
+STUDIO_MODEL  = "or:z-ai/glm-5.3"                          # diseña las páginas (Calex Studio)
+CODER_MODEL   = "or:z-ai/glm-5.3"                          # juegos, apps y código
+OR_CHAT_MODEL = "or:deepseek/deepseek-v4.1-flash-1017"     # charla con esfuerzo Estándar o Profundo
+EYES_MODEL    = "or:deepseek/deepseek-v4.1-flash-1017"     # el que mira las capturas de las páginas (ve imágenes)

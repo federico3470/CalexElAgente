@@ -28,7 +28,13 @@ const env = { DB, AI, ASSETS, DAILY_LIMIT: "5", LEGAL_OWNER: "Fede <Test>", LEGA
 
 // ---- proveedores de inicio de sesión simulados (interceptan fetch) ----
 const realFetch = globalThis.fetch, chal = new Map(); const jwt = (p) => ["e30", btoa(JSON.stringify(p)).replace(/=+$/, ""), "s"].join(".");
-globalThis.fetch = async (u, o = {}) => { const s = String(u); if (!s.startsWith(MOCK)) return realFetch(u, o); const url = new URL(s), [, p, ep] = url.pathname.split("/");
+globalThis.__or = [];
+globalThis.fetch = async (u, o = {}) => { const s = String(u);
+  if (s.startsWith("https://openrouter.ai/")) { const b = JSON.parse(o.body); globalThis.__or.push({ auth: o.headers?.Authorization, model: b.model, stream: b.stream, max: b.max_tokens });
+    if (globalThis.__orFail) return new Response(JSON.stringify({ error: { message: "Insufficient credits" } }), { status: globalThis.__orFail });
+    if (b.stream) return new Response("data: " + JSON.stringify({ choices: [{ delta: { content: "Respuesta " } }] }) + "\n\n: OPENROUTER PROCESSING\n\ndata: " + JSON.stringify({ choices: [{ delta: { content: "avanzada" } }] }) + "\n\ndata: [DONE]\n\n");
+    return new Response(JSON.stringify({ choices: [{ message: { content: globalThis.__specAI || "{}" } }] })); }
+  if (!s.startsWith(MOCK)) return realFetch(u, o); const url = new URL(s), [, p, ep] = url.pathname.split("/");
   const body = new URLSearchParams(String(o.body || ""));
   if (p === "apple" && ep === "token") { // el secreto de cliente debe ser un JWT ES256 firmado con la clave, con los datos de Apple
     const [h64, p64, s64] = String(body.get("client_secret")).split("."), dj = (x) => JSON.parse(atob(x.replace(/-/g, "+").replace(/_/g, "/"))), hh = dj(h64 || ""), pp = dj(p64 || "");
@@ -227,6 +233,22 @@ try {
     await chat(g2, "Explicame qué hace un for en javascript", { level: 50 }); t("explicar código no activa el modelo de código ni Studio", !/qwen2\.5-coder/.test(lastAI.model));
     const m2 = await (await call("/models", {}, g2)).json(); t("el modelo de código no aparece en el selector", !m2.models.some((x) => /coder/.test(x)));
   }
+  // ---- OpenRouter: una clave por proveedor, respaldo automático y el esfuerzo Rápido no gasta saldo ----
+  { const g3 = await guest(); await post("/profile", { name: "Lu", tone: "friendly", avatar: { kind: "mateo" }, consent: { terms: "2026-11", over13: true } }, g3);
+    const SP = JSON.stringify({ title: "Nodo", theme: { preset: "ocean", font: "sans", shader: "aurora" }, hero: { headline: "Tus finanzas, claras", sub: "x", cta: "Empezar" }, sections: [{ type: "features", title: "Todo en un lugar", items: [{ icon: "💳", title: "Gastos", text: "Sin planillas" }] }, { type: "contact", title: "Hablemos", lines: ["hola@nodo.example"] }] });
+    env.OPENROUTER_KEY_ZAI = "key-zai-3usd"; env.OPENROUTER_KEY_DEEPSEEK = "key-ds-2usd"; env.STUDIO_MODEL = "or:z-ai/glm-5.3"; env.OR_CHAT_MODEL = "or:deepseek/deepseek-v4.1-flash-1017";
+    globalThis.__specAI = SP; globalThis.__or = []; let r1 = await chat(g3, "Hacé una página web para mi app de finanzas Nodo", { level: 50 });
+    t("el diseño de la página se pide a GLM-5.3 por OpenRouter con la clave de Z.ai (tope propio)", globalThis.__or[0]?.auth === "Bearer key-zai-3usd" && globalThis.__or[0].model === "z-ai/glm-5.3" && r1.text.includes("Tus finanzas, claras"), JSON.stringify(globalThis.__or));
+    globalThis.__or = []; r1 = await chat(g3, "explicame qué es el interés compuesto", { level: 50 });
+    t("la charla avanzada va a DeepSeek 4.1 con la clave de DeepSeek (otro tope)", globalThis.__or[0]?.auth === "Bearer key-ds-2usd" && globalThis.__or[0].model === "deepseek/deepseek-v4.1-flash-1017" && globalThis.__or[0].stream && /Respuesta avanzada/.test(r1.text) && /deepseek-v4\.1-flash/.test(r1.model), JSON.stringify(globalThis.__or) + r1.model);
+    globalThis.__or = []; r1 = await chat(g3, "hola", { level: 10 });
+    t("con esfuerzo Rápido no se gasta saldo de OpenRouter", globalThis.__or.length === 0 && /Hola desde la IA/.test(r1.text));
+    globalThis.__orFail = 402; globalThis.__or = []; globalThis.__specAI = SP; const r2 = await chat(g3, "Hacé una página web para mi app de finanzas Nodo", { level: 50 }), r3 = await chat(g3, "contame algo del ahorro", { level: 50 });
+    t("si se acaba el saldo, la página se arma igual con los modelos gratuitos", /<!doctype html>/i.test(r2.text) && !r2.err && globalThis.__or.length >= 1, r2.err);
+    t("si se acaba el saldo, la charla también sigue con el modelo gratuito", /Hola desde la IA/.test(r3.text) && !r3.err, r3.text + r3.err);
+    delete globalThis.__orFail; delete env.OPENROUTER_KEY_ZAI; delete env.OPENROUTER_KEY_DEEPSEEK; globalThis.__or = []; const r4 = await chat(g3, "contame otra cosa", { level: 50 });
+    t("sin claves configuradas, Calex funciona solo con Cloudflare y no llama a OpenRouter", globalThis.__or.length === 0 && /Hola desde la IA/.test(r4.text));
+    delete env.STUDIO_MODEL; delete env.OR_CHAT_MODEL; }
 } catch (e) { t("excepción", false, e.stack); }
 console.log(`\n${pass} correctas, ${bad} fallidas.`); process.exit(bad ? 1 : 0);
 

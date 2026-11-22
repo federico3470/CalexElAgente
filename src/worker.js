@@ -189,7 +189,7 @@ const DEFAULT_MODELS = [
   { id: "@cf/qwen/qwen2.5-coder-32b-instruct", label: "Código · Qwen Coder · 32B", w: 3, coder: true }, // hecho para programar (el plan gratis no permite GLM-5.3; con plan de pago: variable CODER_MODEL)
 ];
 const catalog = (env) => { try { const m = env.MODELS ? JSON.parse(env.MODELS) : null; if (Array.isArray(m) && m.length) return m.filter((x) => x && /^@cf\/[\w-]+\/[\w.-]+$/.test(String(x.id)) && !String(x.id).includes("..")).slice(0, 12).map((x) => ({ id: x.id, label: String(x.label || x.id.split("/").pop()).slice(0, 60), w: Math.max(1, Math.min(10, +x.w || 1)), def: !!x.def, vision: !!x.vision })); } catch {} return DEFAULT_MODELS; };
-const pickModels = (env) => { const cat = catalog(env), coderFree = cat.find((m) => m.coder), coder = env.CODER_MODEL ? { id: env.CODER_MODEL, w: 3 } : coderFree, text = cat.filter((m) => !m.vision && !m.coder), def = env.CHAT_MODEL ? { id: env.CHAT_MODEL, w: 1 } : text.find((m) => m.def) || text[0], vis = cat.find((m) => m.vision) || { id: env.VISION_MODEL || "@cf/mistralai/mistral-small-3.1-24b-instruct", w: 2 }; return { cat, text, def, vis, coder, coderFree }; };
+const pickModels = (env) => { const cat = catalog(env), coderFree = cat.find((m) => m.coder), coder = env.CODER_MODEL && (!isOR(env.CODER_MODEL) || orReady(env, env.CODER_MODEL)) ? { id: env.CODER_MODEL, w: 3 } : coderFree, text = cat.filter((m) => !m.vision && !m.coder), def = env.CHAT_MODEL ? { id: env.CHAT_MODEL, w: 1 } : text.find((m) => m.def) || text[0], vis = cat.find((m) => m.vision) || { id: env.VISION_MODEL || "@cf/mistralai/mistral-small-3.1-24b-instruct", w: 2 }; return { cat, text, def, vis, coder, coderFree }; };
 const sse = (o) => enc.encode(`data: ${JSON.stringify(o)}\n\n`);
 // ---------- intención: ¿pide una página, un cambio a la última página, o código? ----------
 // \b de JavaScript no entiende las tildes («hacé»), por eso los límites de palabra se arman con lookarounds de letras Unicode
@@ -205,7 +205,7 @@ async function makeSpec(env, user, modelIds, ask, level, current) {
   const ask2 = current ? "Spec actual de la página:\n" + JSON.stringify(current) + "\n\nCambio pedido por el usuario: " + ask + "\n\nDevuelve el spec COMPLETO actualizado con ese cambio (conserva todo lo demás)." : "Pedido del usuario: " + ask;
   const TEMPS = [0.8, 0.5, 0.2]; // si el JSON sale mal, se reintenta con menos «creatividad»
   for (const modelId of [...new Set([].concat(modelIds).filter(Boolean))]) for (let k = 0; k < TEMPS.length; k++) {
-    try { const out = await env.AI.run(modelId, { messages: [{ role: "system", content: SPEC_SYS(n) }, { role: "user", content: ask2 + (k ? "\n\nIMPORTANTE: responde únicamente con el JSON, bien formado, sin comas sobrantes ni comentarios." : "") }], max_tokens: 3800, temperature: TEMPS[k] });
+    try { const out = await aiRun(env, modelId, { messages: [{ role: "system", content: SPEC_SYS(n) }, { role: "user", content: ask2 + (k ? "\n\nIMPORTANTE: responde únicamente con el JSON, bien formado, sin comas sobrantes ni comentarios." : "") }], max_tokens: 3800, temperature: TEMPS[k] });
       const t = JSON.stringify(out?.response ?? out?.result?.response ?? ""), j = aiJSON(out);
       if (j && Array.isArray(j.sections) && j.sections.length >= 2) return normalizeSpec(j, ask, level);
       console.error("spec inválido de", modelId, "intento", k + 1, "largo", t.length, "inicio:", t.slice(0, 120).split("\n").join(" "), "fin:", t.slice(-100).split("\n").join(" "));
@@ -218,6 +218,19 @@ function extractJSONObj(t) { t = String(t).replace(/```(?:json)?/gi, ""); const 
 const CODE_SYS = `Eres un ingeniero de software senior y diseñador front-end de nivel agencia. Entrega código COMPLETO y listo para usar, nunca esqueletos. Si piden algo visual o interactivo (juego, animación, herramienta, simulador), entrega UN SOLO archivo HTML autónomo dentro de UN ÚNICO bloque \`\`\`html con CSS en <style> y JavaScript en <script>, que funcione al abrirlo sin descargar nada y sin imágenes externas. Calidad de producto real: diseño moderno y cuidado (tipografía, espaciado, paleta coherente, modo oscuro elegante), responsive, animaciones suaves, accesible, y sin errores de consola. Para fondos, texturas y efectos usa WebGL con shaders (ruido fractal fbm, dominio deformado) o canvas, generados proceduralmente: texturas de alta resolución (hasta 4096 px cuando el dispositivo lo permita; reduce en celulares), partículas, parallax y animaciones al hacer scroll con IntersectionObserver. No uses lorem ipsum. Para código que no es visual, usa el lenguaje pedido con bloques \`\`\`lenguaje, comentarios útiles y manejo de errores. Después del código, máximo tres líneas de explicación. Responde en español.`;
 const ALLINONE = (level, live) => `Eres Calex, el asistente todo en uno de la familia: charlas, explicas como un profe paciente, traduces, resumes, redactas, ayudas a cocinar, motivas como un coach, resuelves tareas y programas. Detecta solo lo que te piden y hazlo bien, sin pedir que cambien de modo. Responde SIEMPRE en el idioma del usuario (normalmente español). Estilo: registro formal y profesional pero cercano, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes y entrega de inmediato pasos numerados y cortos. Según lo pedido: traducir = devuelve solo la traducción (si no dice idioma: español↔inglés); explicar o enseñar = paso a paso con ejemplos sencillos y comprobando que se entiende; resumir = puntos claros y breves; redactar = buen estilo y listo para usar; cocina = recetas con pasos cortos según lo que tenga; ánimo y metas = empatía y metas pequeñas y concretas; programar = código completo en bloques con el lenguaje, explicando solo lo esencial. Las páginas web completas las arma Calex Studio automáticamente cuando las piden.${level < 34 ? " Modo rápido: responde en una a tres frases, directo al grano." : level >= 67 ? " Modo profundo: piensa con calma antes de responder, verifica cálculos y datos, considera casos límite y da una respuesta completa y bien estructurada (con títulos o pasos cuando ayude)." : ""}${live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`;
 
+// Los modelos con prefijo «or:» (ej. or:z-ai/glm-5.3) se piden a OpenRouter. Cada proveedor puede tener su PROPIA clave con su tope de gasto en OpenRouter.
+const isOR = (m) => typeof m === "string" && m.startsWith("or:");
+const orKey = (env, m) => { const id = m.slice(3); return (/^z-ai\//.test(id) && env.OPENROUTER_KEY_ZAI) || (/^deepseek\//.test(id) && env.OPENROUTER_KEY_DEEPSEEK) || env.OPENROUTER_KEY || ""; };
+const orReady = (env, m) => isOR(m) && !!orKey(env, m);
+async function orRun(env, model, payload) {
+  const key = orKey(env, model); if (!key) throw new Error("OpenRouter sin clave");
+  const body = { model: model.slice(3), messages: payload.messages, max_tokens: payload.max_tokens, stream: !!payload.stream, ...(payload.temperature != null && { temperature: payload.temperature }) };
+  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json", "HTTP-Referer": "https://calex.federicoreta773.workers.dev", "X-Title": "Calex" }, body: JSON.stringify(body) });
+  if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error("OpenRouter " + r.status + ": " + t.slice(0, 160)); }
+  if (payload.stream) return r.body;
+  const j = await r.json(), c = j.choices?.[0]?.message?.content; return { response: typeof c === "string" ? c : Array.isArray(c) ? c.map((x) => x.text || "").join("") : "" };
+}
+const aiRun = (env, model, payload) => (isOR(model) ? orRun(env, model, payload) : env.AI.run(model, payload));
 const PRESETS_OK = ["ember", "ocean", "forest", "royal", "gold", "sand", "sky", "mono"];
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rj) => setTimeout(() => rj(new Error("tiempo agotado")), ms))]);
 async function lookAtPage(env, html) {
@@ -234,8 +247,9 @@ async function lookAtPage(env, html) {
 const CRIT_SYS = "Eres director de arte senior. Recibes 3 capturas de una misma página web (parte de arriba, del medio y de abajo). Evalúa SOLO lo visual: contraste y legibilidad del texto, cosas cortadas o desbordadas, espacios vacíos raros, jerarquía, armonía de colores y si la paleta y la tipografía encajan con el rubro. Responde ÚNICAMENTE con un JSON: {\"score\":1-10,\"problems\":[{\"where\":\"arriba|medio|abajo\",\"issue\":\"...\",\"severity\":1-3}],\"fixes\":{\"preset\":\"ember|ocean|forest|royal|gold|sand|sky|mono o vacío\",\"shader\":\"warp|aurora|nebula o vacío\",\"font\":\"serif|sans|grotesk|mono|rounded o vacío\"},\"summary\":\"una frase en español con lo mejor de la página y, si corresponde, lo que mejorarías; NO digas que ajustaste o corregiste nada\"}.";
 async function critiquePage(env, PM, ask, look) {
   const nota = !look.info.webgl || look.info.tex < look.info.texTotal ? " Nota: el navegador de captura no tiene tarjeta gráfica, así que el fondo animado y las texturas pueden verse vacíos u oscuros en estas capturas; ignora eso y no lo cuentes como problema." : "";
-  const out = await env.AI.run(PM.vis.id, { messages: [{ role: "system", content: CRIT_SYS }, { role: "user", content: [{ type: "text", text: "Pedido original del cliente: " + ask.slice(0, 300) + "." + nota + " Devuelve solo el JSON." }, ...look.shots.map((u) => ({ type: "image_url", image_url: { url: u } }))] }], max_tokens: 700 });
-  return aiJSON(out);
+  const payload = { messages: [{ role: "system", content: CRIT_SYS }, { role: "user", content: [{ type: "text", text: "Pedido original del cliente: " + ask.slice(0, 300) + "." + nota + " Devuelve solo el JSON." }, ...look.shots.map((u) => ({ type: "image_url", image_url: { url: u } }))] }], max_tokens: 700 };
+  if (orReady(env, env.EYES_MODEL)) { try { const j = aiJSON(await aiRun(env, env.EYES_MODEL, payload)); if (j) return j; } catch (e) { console.error("ojos premium:", String(e.message).slice(0, 120)); } }
+  return aiJSON(await env.AI.run(PM.vis.id, payload));
 }
 
 async function chatRoute(req, env, user, ctx) {
@@ -258,7 +272,8 @@ async function chatRoute(req, env, user, ctx) {
   // esfuerzo: Rápido usa el modelo más liviano, Profundo asegura un modelo grande
   const light = [...PM.text].sort((x, y) => x.w - y.w)[0], big = [...PM.text].sort((x, y) => y.w - x.w)[0];
   const picked = level < 34 && !hasImg ? light : level >= 67 && userPick.w < big.w ? big : userPick;
-  const chosen = hasImg ? PM.vis : route === "code" ? PM.coder : picked, model = chosen.id;
+  const premChat = route === "chat" && !hasImg && level >= 34 && orReady(env, env.OR_CHAT_MODEL) ? env.OR_CHAT_MODEL : "";
+  const chosen = hasImg ? PM.vis : route === "code" ? PM.coder : picked, model = premChat || chosen.id;
   const weight = route === "site" ? 12 : route === "edit" ? 6 : route === "code" ? (PM.coder.w || 3) + (level >= 67 ? 2 : 0) : chosen.w || 1;
   await q(env, "INSERT INTO usage(user_id,day,n) VALUES(?,?,?) ON CONFLICT(user_id,day) DO UPDATE SET n=n+?", user.id, day, weight, weight).run();
   const used = (await q(env, "SELECT n FROM usage WHERE user_id=? AND day=?", user.id, day).first())?.n || 1;
@@ -272,7 +287,7 @@ async function chatRoute(req, env, user, ctx) {
     // transmite una respuesta del modelo; si el modelo elegido falla, vuelve al estándar
     const run = async (mdl, messages, maxTok) => {
       const payload = { messages, stream: true, max_tokens: maxTok }; let out;
-      try { out = await env.AI.run(mdl, payload); } catch (e1) { if (env.NOFALLBACK || /license|agree/i.test(String(e1.message)) || mdl === PM.def.id || images.length) throw e1; const fb = route === "code" && PM.coderFree && mdl !== PM.coderFree.id ? PM.coderFree.id : PM.def.id; out = await env.AI.run(fb, payload); send({ type: "model", model: "☁ " + fb.split("/").pop() }); }
+      try { out = await aiRun(env, mdl, payload); } catch (e1) { if (env.NOFALLBACK || /license|agree/i.test(String(e1.message)) || mdl === PM.def.id || images.length) throw e1; const fb = route === "code" && PM.coderFree && mdl !== PM.coderFree.id ? PM.coderFree.id : PM.def.id; out = await env.AI.run(fb, payload); send({ type: "model", model: "☁ " + fb.split("/").pop() }); }
       let got = "";
       if (out && typeof out.getReader === "function") {
         const rd = out.getReader(), dec = new TextDecoder(); let buf = "";
@@ -282,12 +297,12 @@ async function chatRoute(req, env, user, ctx) {
       } else { const t = out?.response || out?.result?.response || ""; if (t) { got = t; text += t; send({ type: "token", text: t }); } }
       return got;
     };
-    send({ type: "chat", id }); send({ type: "model", model: route === "site" || route === "edit" ? "☁ Calex Studio" : "☁ " + model.split("/").pop() });
+    send({ type: "chat", id }); send({ type: "model", model: route === "site" || route === "edit" ? "☁ Calex Studio" : "☁ " + model.replace(/^or:/, "").split("/").pop() });
     try {
       if (used > limit) throw Object.assign(new Error("limit"), { limit: true });
       if (route === "site" || route === "edit") {
         send({ type: "progress", text: route === "edit" ? "Aplicando tu cambio…" : "Pensando la dirección creativa y los textos…" });
-        spec = await makeSpec(env, user, [env.STUDIO_MODEL, PM.def.id], message, level, route === "edit" ? lastSpec : null);
+        spec = await makeSpec(env, user, [env.STUDIO_MODEL && (!isOR(env.STUDIO_MODEL) || orReady(env, env.STUDIO_MODEL)) ? env.STUDIO_MODEL : "", PM.def.id], message, level, route === "edit" ? lastSpec : null);
         if (!spec) throw new Error("no pude armar el diseño; inténtalo de nuevo");
         send({ type: "progress", text: "Armando secciones, shaders y texturas…" });
         let html = buildSite(spec), review = "";
