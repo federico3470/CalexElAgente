@@ -28,6 +28,9 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS connections(user_id TEXT, id TEXT, data TEXT, updated INTEGER, PRIMARY KEY(user_id, id))", // conectores vinculados (tokens cifrados)
   "CREATE TABLE IF NOT EXISTS visits(day TEXT, country TEXT, n INTEGER, PRIMARY KEY(day, country))", // recuento de visitas por día y país: sin IP, sin ciudad y sin relación con ninguna cuenta
   "CREATE TABLE IF NOT EXISTS strikes(user_id TEXT PRIMARY KEY, n INTEGER, blocked INTEGER DEFAULT 0, reason TEXT, last INTEGER, blocked_at INTEGER)", // moderación: avisos y sesiones bloqueadas hasta que el responsable las reactive
+  "CREATE TABLE IF NOT EXISTS passkeys(id TEXT PRIMARY KEY, user_id TEXT NOT NULL, pub TEXT NOT NULL, alg INTEGER NOT NULL, counter INTEGER NOT NULL DEFAULT 0, name TEXT, created INTEGER)", // llaves de acceso (Face ID, Touch ID): solo la clave PÚBLICA
+  "CREATE INDEX IF NOT EXISTS pk_u ON passkeys(user_id)",
+  "CREATE TABLE IF NOT EXISTS pk_challenges(k TEXT PRIMARY KEY, challenge TEXT NOT NULL, user_id TEXT, kind TEXT NOT NULL, exp INTEGER NOT NULL)",
 ];
 let ready = false;
 const init = async (env) => { if (ready) return; await env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s))); ready = true; };
@@ -94,8 +97,136 @@ const baseUrl = (req, env) => (env.PUBLIC_URL || new URL(req.url).origin).replac
 const jwtPayload = (t) => { try { return JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
 const redirect = (loc, headers = {}) => new Response(null, { status: 302, headers: { Location: loc, ...headers } });
 
+// ---------- llaves de acceso (passkeys / WebAuthn): Face ID, Touch ID, Windows Hello… sin dependencias, solo WebCrypto ----------
+const PK_ALGS = [-7, -257], PK_MAX = 10, PK_TTL = 5 * 60000;
+const fromB64u = (s, max = 4096) => { s = String(s ?? ""); if (!s || s.length > max || !/^[A-Za-z0-9_-]+$/.test(s) || s.length % 4 === 1) return null;
+  try { const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(bin, (c) => c.charCodeAt(0)); } catch { return null; } };
+const timingEq = (a, b) => { a = a instanceof Uint8Array ? a : enc.encode(String(a)); b = b instanceof Uint8Array ? b : enc.encode(String(b)); let d = a.length ^ b.length; const n = Math.max(a.length, b.length); for (let i = 0; i < n; i++) d |= (a[i % (a.length || 1)] ?? 0) ^ (b[i % (b.length || 1)] ?? 0); return d === 0; };
+// CBOR mínimo y estricto: enteros, bytes, texto, listas y mapas de longitud definida (sin etiquetas, flotantes ni indefinidos)
+function cborAt(u, o = 0, depth = 0) {
+  if (depth > 8 || o >= u.length) throw new Error("cbor");
+  const ib = u[o++], mt = ib >> 5, ai = ib & 31; let n;
+  if (ai < 24) n = ai; else if (ai === 24) { if (o + 1 > u.length) throw new Error("cbor"); n = u[o++]; if (n < 24) throw new Error("cbor"); }
+  else if (ai === 25) { if (o + 2 > u.length) throw new Error("cbor"); n = (u[o] << 8) | u[o + 1]; o += 2; if (n < 256) throw new Error("cbor"); }
+  else if (ai === 26) { if (o + 4 > u.length) throw new Error("cbor"); n = ((u[o] << 24) >>> 0) + (u[o + 1] << 16) + (u[o + 2] << 8) + u[o + 3]; o += 4; if (n < 65536) throw new Error("cbor"); }
+  else throw new Error("cbor");
+  if (mt === 0) return [n, o]; if (mt === 1) return [-1 - n, o];
+  if (mt === 2 || mt === 3) { if (o + n > u.length) throw new Error("cbor"); const s = u.slice(o, o + n); return [mt === 2 ? s : new TextDecoder("utf-8", { fatal: true }).decode(s), o + n]; }
+  if (n > 256) throw new Error("cbor");
+  if (mt === 4) { const a = []; for (let i = 0; i < n; i++) { const [v, p] = cborAt(u, o, depth + 1); a.push(v); o = p; } return [a, o]; }
+  if (mt === 5) { const m = new Map(); for (let i = 0; i < n; i++) { const [k, p] = cborAt(u, o, depth + 1); if (typeof k !== "string" && typeof k !== "number") throw new Error("cbor"); const [v, p2] = cborAt(u, p, depth + 1); if (m.has(k)) throw new Error("cbor"); m.set(k, v); o = p2; } return [m, o]; }
+  throw new Error("cbor");
+}
+const cborDecode = (u) => { const [v, o] = cborAt(u); if (o !== u.length) throw new Error("cbor"); return v; };
+const concatU8 = (...a) => { const r = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of a) { r.set(x, o); o += x.length; } return r; };
+const rpHash = async (host) => new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(host)));
+// firma ECDSA en DER → r||s de 64 bytes
+function derToRaw(d) {
+  if (d.length < 8 || d.length > 80 || d[0] !== 0x30 || d[1] !== d.length - 2 || d[2] !== 0x02) throw new Error("der");
+  let o = 3; const rl = d[o++]; if (rl < 1 || rl > 33 || o + rl + 2 > d.length) throw new Error("der"); const r = d.slice(o, o + rl); o += rl;
+  if (d[o++] !== 0x02) throw new Error("der"); const sl = d[o++]; if (sl < 1 || sl > 33 || o + sl !== d.length) throw new Error("der"); const s = d.slice(o, o + sl);
+  const fit = (x) => { while (x.length > 32 && x[0] === 0) x = x.slice(1); if (x.length > 32) throw new Error("der"); const out = new Uint8Array(32); out.set(x, 32 - x.length); return out; };
+  return concatU8(fit(r), fit(s));
+}
+const pkImport = (alg, spki, usage) => alg === -7 ? crypto.subtle.importKey("spki", spki, { name: "ECDSA", namedCurve: "P-256" }, false, [usage]) : crypto.subtle.importKey("spki", spki, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, [usage]);
+// clientDataJSON común: tipo, challenge (tiempo constante), origen exacto y sin crossOrigin
+function pkClient(raw, type, chal, origin) {
+  const cd = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw));
+  if (!cd || cd.type !== type || typeof cd.challenge !== "string" || !timingEq(cd.challenge, chal) || cd.origin !== origin || cd.crossOrigin === true) throw new Error("cd");
+}
+async function takeChallenge(env, k, kind, userId) { // un solo uso y atómico: solo quien logra borrar la fila puede usarla (sin carreras)
+  const row = await q(env, "SELECT * FROM pk_challenges WHERE k=? AND kind=?", k, kind).first(); if (!row) return null;
+  const del = await q(env, "DELETE FROM pk_challenges WHERE k=? AND kind=?", k, kind).run(); if ((del?.meta?.changes ?? 1) < 1) return null;
+  if (row.exp < Date.now() || (userId !== undefined && row.user_id !== userId)) return null; return row.challenge;
+}
+const hasSub = (h, n) => { outer: for (let i = 0; i + n.length <= h.length; i++) { for (let j = 0; j < n.length; j++) if (h[i + j] !== n[j]) continue outer; return true; } return false; };
+// la clave COSE firmada dentro de authData debe ser EXACTAMENTE la clave SPKI que se guardará (si no, el cliente podría declarar una cosa y guardar otra)
+function coseMatchesSpki(cose, alg, spki) {
+  if (alg === -7) { const x = cose.get(-2), y = cose.get(-3); if (cose.get(1) !== 2 || cose.get(-1) !== 1 || !(x instanceof Uint8Array) || !(y instanceof Uint8Array) || x.length !== 32 || y.length !== 32 || spki.length !== 91) return false;
+    return timingEq(spki.slice(26), concatU8(Uint8Array.of(4), x, y)); }
+  const n = cose.get(-1), e = cose.get(-2); if (cose.get(1) !== 3 || !(n instanceof Uint8Array) || !(e instanceof Uint8Array) || n.length < 256 || n.length > 512 || !n[0] || e.length < 1 || e.length > 4) return false; // RSA ≥ 2048 bits
+  return hasSub(spki, n) && hasSub(spki, e);
+}
+async function passkeyRoutes(req, env, url, user) {
+  const P = url.pathname, ip = req.headers.get("cf-connecting-ip") || "x", host = url.hostname, FAIL = () => json({ error: "No se pudo verificar la llave de acceso" }, 401);
+  if (req.method === "GET" && P === "/auth/passkey/list") {
+    if (!user) return json({ error: "Inicia sesión primero" }, 401);
+    return json({ passkeys: (await q(env, "SELECT id,name,created FROM passkeys WHERE user_id=? ORDER BY created", user.id).all()).results.map((r) => ({ id: r.id, name: r.name || "", created: r.created })) }, 200, { "Cache-Control": "no-store" });
+  }
+  if (req.method !== "POST") return json({}, 404);
+  if (+req.headers.get("content-length") > 24000) return json({ error: "Solicitud demasiado grande" }, 413);
+  const rawBody = await req.text(); if (rawBody.length > 24000) return json({ error: "Solicitud demasiado grande" }, 413);
+  let b; try { b = rawBody ? JSON.parse(rawBody) : {}; } catch { return json({ error: "Solicitud no válida" }, 400); } if (!b || typeof b !== "object" || Array.isArray(b)) return json({ error: "Solicitud no válida" }, 400);
+  const purge = () => q(env, "DELETE FROM pk_challenges WHERE exp<?", Date.now()).run();
+  if (P === "/auth/passkey/register/options") {
+    if (!user) return json({ error: "Inicia sesión primero" }, 401);
+    if (!(await hit(env, "pkro:" + user.id, 30, 600))) return json({ error: "Demasiados intentos, espera un rato" }, 429);
+    await purge(); const chal = rnd(32); await q(env, "INSERT INTO pk_challenges(k,challenge,user_id,kind,exp) VALUES(?,?,?,?,?)", "r." + chal, chal, user.id, "reg", Date.now() + PK_TTL).run();
+    const have = (await q(env, "SELECT id FROM passkeys WHERE user_id=?", user.id).all()).results.map((r) => ({ type: "public-key", id: r.id }));
+    return json({ publicKey: { challenge: chal, rp: { id: host, name: "Calex" }, user: { id: b64u(enc.encode(user.id)), name: user.email || user.name || "calex", displayName: user.name || "Calex" },
+      pubKeyCredParams: PK_ALGS.map((alg) => ({ type: "public-key", alg })), authenticatorSelection: { residentKey: "required", requireResidentKey: true, userVerification: "required" }, excludeCredentials: have, timeout: 60000, attestation: "none" } }, 200, { "Cache-Control": "no-store" });
+  }
+  if (P === "/auth/passkey/register/verify") {
+    if (!user) return json({ error: "Inicia sesión primero" }, 401);
+    if (!(await hit(env, "pkrv:" + user.id, 30, 600))) return json({ error: "Demasiados intentos, espera un rato" }, 429);
+    const bad = () => json({ error: "No se pudo registrar la llave de acceso" }, 400), r = b.response;
+    try {
+      if (b.type !== "public-key" || !r || typeof r !== "object") return bad();
+      const cdj = fromB64u(r.clientDataJSON, 3000), ao = fromB64u(r.attestationObject, 12000), spki = fromB64u(r.publicKey, 1400), id = String(b.id || ""), idb = fromB64u(id, 1400), alg = Number(r.publicKeyAlgorithm);
+      if (!cdj || !ao || !spki || !idb || !PK_ALGS.includes(alg) || (b.rawId !== undefined && b.rawId !== id)) return bad();
+      let cd; try { cd = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(cdj)); } catch { return bad(); }
+      const chal = await takeChallenge(env, "r." + String(cd?.challenge || "").slice(0, 100), "reg", user.id); if (!chal) return bad(); // se consume siempre
+      pkClient(cdj, "webauthn.create", chal, url.origin);
+      const att = cborDecode(ao), ad = att instanceof Map ? att.get("authData") : null; if (!(ad instanceof Uint8Array) || ad.length < 55 || ad.length > 8192) return bad();
+      if (!timingEq(ad.slice(0, 32), await rpHash(host))) return bad();
+      const fl = ad[32]; if (!(fl & 0x01) || !(fl & 0x04) || !(fl & 0x40)) return bad(); // UP + UV + AT
+      const cl = (ad[53] << 8) | ad[54]; if (cl < 1 || cl > 1023 || 55 + cl > ad.length || !timingEq(ad.slice(55, 55 + cl), idb)) return bad();
+      const cose = cborAt(ad, 55 + cl)[0]; if (!(cose instanceof Map) || cose.get(3) !== alg || !coseMatchesSpki(cose, alg, spki)) return bad(); // la clave COSE de authData debe coincidir con el algoritmo y con la clave pública enviada
+      await pkImport(alg, spki, "verify"); // la clave pública debe ser válida
+      if (await q(env, "SELECT 1 x FROM passkeys WHERE id=?", id).first()) return bad();
+      const ins = await q(env, "INSERT INTO passkeys(id,user_id,pub,alg,counter,name,created) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM passkeys WHERE user_id=?)<?", id, user.id, b64u(spki), alg, ((ad[33] << 24) >>> 0) + (ad[34] << 16) + (ad[35] << 8) + ad[36], String(b.name || "").replace(/[ -<>]/g, "").trim().slice(0, 40) || "Llave de acceso", Date.now(), user.id, PK_MAX).run(); // el límite se aplica dentro del propio INSERT (sin carreras)
+      if ((ins?.meta?.changes ?? 1) < 1) return json({ error: "Ya tienes el máximo de 10 llaves de acceso" }, 400);
+      return json({ ok: true, id });
+    } catch { return bad(); }
+  }
+  if (P === "/auth/passkey/login/options") {
+    if (!(await hit(env, "pklo:" + ip, 30, 600))) return json({ error: "Demasiados intentos, espera un rato" }, 429);
+    await purge(); const chal = rnd(32), cid = rnd(24); await q(env, "INSERT INTO pk_challenges(k,challenge,user_id,kind,exp) VALUES(?,?,?,?,?)", cid, chal, null, "auth", Date.now() + PK_TTL).run();
+    return json({ cid, publicKey: { challenge: chal, rpId: host, timeout: 60000, userVerification: "required", allowCredentials: [] } }, 200, { "Cache-Control": "no-store" });
+  }
+  if (P === "/auth/passkey/login/verify") {
+    if (!(await hit(env, "pklv:" + ip, 30, 600))) return json({ error: "Demasiados intentos, espera un rato" }, 429);
+    const r = b.response;
+    try {
+      const chal = await takeChallenge(env, String(b.cid || "").slice(0, 100), "auth"); if (!chal) return FAIL();
+      if (b.type !== "public-key" || !r || typeof r !== "object") return FAIL();
+      const id = String(b.id || ""), cdj = fromB64u(r.clientDataJSON, 3000), ad = fromB64u(r.authenticatorData, 4000), sig = fromB64u(r.signature, 1400);
+      if (!fromB64u(id, 1400) || !cdj || !ad || !sig || ad.length < 37 || (b.rawId !== undefined && b.rawId !== id)) return FAIL();
+      const row = await q(env, "SELECT * FROM passkeys WHERE id=?", id).first(); if (!row) return FAIL();
+      pkClient(cdj, "webauthn.get", chal, url.origin);
+      if (!timingEq(ad.slice(0, 32), await rpHash(host))) return FAIL();
+      if (!(ad[32] & 0x01) || !(ad[32] & 0x04)) return FAIL(); // UP + UV
+      const cnt = ((ad[33] << 24) >>> 0) + (ad[34] << 16) + (ad[35] << 8) + ad[36];
+      if ((row.counter > 0 || cnt > 0) && cnt <= row.counter) return FAIL();
+      if (r.userHandle !== undefined && r.userHandle !== null && r.userHandle !== "") { const uh = fromB64u(r.userHandle, 200); if (!uh || !timingEq(uh, enc.encode(row.user_id))) return FAIL(); }
+      const signed = concatU8(ad, new Uint8Array(await crypto.subtle.digest("SHA-256", cdj))), key = await pkImport(row.alg, fromB64u(row.pub, 2000), "verify");
+      const ok = row.alg === -7 ? await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, derToRaw(sig), signed) : await crypto.subtle.verify({ name: "RSASSA-PKCS1-v1_5" }, key, sig, signed);
+      if (!ok) return FAIL();
+      const up = await q(env, "UPDATE passkeys SET counter=? WHERE id=? AND counter=?", cnt, id, row.counter).run(); if ((up?.meta?.changes ?? 1) < 1) return FAIL(); // carrera: otra petición ya usó este contador
+      const u = await q(env, "SELECT id FROM users WHERE id=?", row.user_id).first(); if (!u) return FAIL();
+      return json({ ok: true }, 200, { "Set-Cookie": await newSession(env, u.id) });
+    } catch { return FAIL(); }
+  }
+  if (P === "/auth/passkey/delete") {
+    if (!user) return json({ error: "Inicia sesión primero" }, 401);
+    await q(env, "DELETE FROM passkeys WHERE id=? AND user_id=?", String(b.id || "").slice(0, 1400), user.id).run(); return json({ ok: true });
+  }
+  return json({}, 404);
+}
+
 async function authRoutes(req, env, url, user) {
   const P = url.pathname;
+  if (P.startsWith("/auth/passkey/")) return await passkeyRoutes(req, env, url, user);
   if (req.method === "GET" && P === "/auth/status")
     return json({ user: publicUser(user), providers: Object.fromEntries(Object.entries(PROV).map(([k, v]) => [k, { label: v.label, configured: provReady(k, env) }])),
       redirects: Object.fromEntries(Object.keys(PROV).map((k) => [k, `${baseUrl(req, env)}/auth/callback/${k}`])) });
@@ -524,7 +655,7 @@ async function api(req, env, url, user) {
   if (P === "/account/export" && M === "GET") { const chats = (await q(env, "SELECT id,title,updated,messages FROM chats WHERE user_id=?", user.id).all()).results.map((c) => ({ id: c.id, title: c.title, updated: c.updated, messages: JSON.parse(c.messages) }));
     return new Response(JSON.stringify({ exportadoEl: new Date().toISOString(), cuenta: publicUser(user), perfil: user.profile ? JSON.parse(user.profile) : null, memoria: JSON.parse(user.facts || "[]"), chats }, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": 'attachment; filename="mis-datos-dot.json"' } }); }
   if (P === "/account/delete" && M === "POST") { const b = await req.json().catch(() => ({})); if (b.confirm !== "BORRAR") return json({ error: "Escribe BORRAR para confirmar" }, 400);
-    await env.DB.batch(["DELETE FROM chats WHERE user_id=?", "DELETE FROM sessions WHERE user_id=?", "DELETE FROM usage WHERE user_id=?", "DELETE FROM strikes WHERE user_id=? AND blocked=0", "DELETE FROM users WHERE id=?"].map((s) => q(env, s, user.id)));
+    await env.DB.batch(["DELETE FROM chats WHERE user_id=?", "DELETE FROM sessions WHERE user_id=?", "DELETE FROM usage WHERE user_id=?", "DELETE FROM passkeys WHERE user_id=?", "DELETE FROM pk_challenges WHERE user_id=?", "DELETE FROM strikes WHERE user_id=? AND blocked=0", "DELETE FROM users WHERE id=?"].map((s) => q(env, s, user.id)));
     return json("ok", 200, { "Set-Cookie": "dot_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0" }); }
   return json({}, 404);
 }

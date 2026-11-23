@@ -1,4 +1,4 @@
-# Compila Calex-2.6v-GTV.apk (Google TV / Android TV) sin Gradle. Necesita D:\Android (JDK 17 + SDK con platforms;android-34 y build-tools;34.0.0).
+# Compila Calex-2.7v-GTV.apk (Google TV / Android TV) sin Gradle. Necesita D:\Android (JDK 17 + SDK con platforms;android-34 y build-tools;34.0.0).
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 $jh = (Get-ChildItem D:\Android\jdk -Directory | Select-Object -First 1).FullName; $env:JAVA_HOME = $jh; $env:Path = "$jh\bin;" + $env:Path
@@ -17,7 +17,7 @@ $g.DrawImage($logo,28,42,96,96); $f = New-Object Drawing.Font "Segoe UI Semibold
 $bn.Save("$PSScriptRoot\res\drawable-xhdpi\banner.png",[Drawing.Imaging.ImageFormat]::Png); $bn.Dispose(); $logo.Dispose()
 
 Run "$bt\aapt2.exe" @("compile", "--dir", "res", "-o", "$b\res.zip")
-Run "$bt\aapt2.exe" @("link", "-o", "$b\base.apk", "-I", $jar, "--manifest", "AndroidManifest.xml", "--min-sdk-version", "23", "--target-sdk-version", "34", "--version-code", "20", "--version-name", "2.6v GTV", "$b\res.zip", "--java", "$b\gen")
+Run "$bt\aapt2.exe" @("link", "-o", "$b\base.apk", "-I", $jar, "--manifest", "AndroidManifest.xml", "--min-sdk-version", "23", "--target-sdk-version", "34", "--version-code", "21", "--version-name", "2.7v GTV", "$b\res.zip", "--java", "$b\gen")
 $src = @(Get-ChildItem src -Recurse -Filter *.java | ForEach-Object FullName) + @(Get-ChildItem "$b\gen" -Recurse -Filter *.java | ForEach-Object FullName)
 Run "javac" (@("-source", "8", "-target", "8", "-Xlint:-options", "-bootclasspath", $jar, "-d", "$b\classes") + $src)
 $cls = @(Get-ChildItem "$b\classes" -Recurse -Filter *.class | ForEach-Object FullName)
@@ -27,6 +27,6 @@ Run "$bt\zipalign.exe" @("-f", "-p", "4", "$b\base.apk", "$b\aligned.apk")
 $ks = "$PSScriptRoot\..\android\calex-release.jks"
 if (-not (Test-Path $ks)) { Run "keytool" @("-genkeypair", "-keystore", $ks, "-alias", "calex", "-keyalg", "RSA", "-keysize", "2048", "-validity", "10000", "-storepass", "calex-familia", "-keypass", "calex-familia", "-dname", "CN=Calex, O=Familia") }
 New-Item -ItemType Directory -Force "$PSScriptRoot\..\dist" | Out-Null
-Run "$bt\apksigner.bat" @("sign", "--ks", $ks, "--ks-pass", "pass:calex-familia", "--key-pass", "pass:calex-familia", "--out", "$PSScriptRoot\..\dist\Calex-2.6v-GTV.apk", "$b\aligned.apk")
-Run "$bt\apksigner.bat" @("verify", "--verbose", "$PSScriptRoot\..\dist\Calex-2.6v-GTV.apk")
-Get-Item "$PSScriptRoot\..\dist\Calex-2.6v-GTV.apk" | Select-Object FullName, Length
+Run "$bt\apksigner.bat" @("sign", "--ks", $ks, "--ks-pass", "pass:calex-familia", "--key-pass", "pass:calex-familia", "--out", "$PSScriptRoot\..\dist\Calex-2.7v-GTV.apk", "$b\aligned.apk")
+Run "$bt\apksigner.bat" @("verify", "--verbose", "$PSScriptRoot\..\dist\Calex-2.7v-GTV.apk")
+Get-Item "$PSScriptRoot\..\dist\Calex-2.7v-GTV.apk" | Select-Object FullName, Length

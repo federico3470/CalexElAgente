@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Calex</title>
-<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwsjc1y0">
+<link rel="manifest" href="/manifest.json"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/icon-180.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calex"><meta name="theme-color" content="#15140f"><meta name="build" content="mwtf6vsj">
 <script>/*SINEMOJI*/
 /* Temas de color precargados (solo colores). Se aplican antes de pintar para que no haya parpadeo. */
 /* App Android: el WebView no trae dictado por voz; la app lo ofrece con su reconocedor nativo (CalexNative) */
@@ -589,6 +589,7 @@ html.lowfx body.assist.siri #lvorb::before{filter:none!important}
 .srcp b{display:block;font-size:15px;line-height:1.3}.srcp small{display:block;color:var(--mut);margin-top:2px}.srcp p{margin:4px 0 0;font-size:13.5px;color:var(--mut);line-height:1.4}
 html[data-ui="atelier"] #srcbar{border-radius:2px;background:none;border:1px solid var(--hair);font-variant-caps:all-small-caps;letter-spacing:.1em}
 html[data-ui="atelier"] .srcp{border-radius:2px;border:1px solid var(--hair)}
+.pkr{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:4px 0}
 </style></head><body>
 <aside id="side">
   <div class="sh"><button class="pri" id="bn">+ Nueva charla</button></div>
@@ -630,6 +631,7 @@ html[data-ui="atelier"] .srcp{border-radius:2px;border:1px solid var(--hair)}
   <h3>Configuración</h3><small style="color:var(--mut)" id="ro"></small>
   <h4>Cuenta</h4>
   <div class="r"><label id="acl">…</label><button id="acb">Iniciar sesión</button></div>
+  <div class="r" id="pkrow" style="display:none"><label>Llaves de acceso<small>Entre con Face ID, Touch ID o el bloqueo de pantalla, sin contraseña.</small></label><div id="pkset"></div></div>
   <div id="tvsl" hidden></div>
   <h4>Apariencia</h4>
   <div id="thset"></div>
@@ -936,13 +938,13 @@ function showLogin(err){const c=$('lgc');let first=false;try{first=!localStorage
   c.innerHTML=`<svg viewBox="0 0 48 48" width="${first?76:56}" height="${first?76:56}" aria-hidden="true"><defs><linearGradient id="lgg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a919e"/><stop offset="1" stop-color="#4fc3f7"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#lgg2)"/><circle cx="24" cy="24" r="8" fill="#fff"/><circle cx="24" cy="24" r="14" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/></svg>
   ${first?`<h2>Bienvenido a Calex</h2><p>Su asistente personal: conversa, redacta, explica y analiza imágenes, también por voz.<br>Vincule su cuenta para guardar su perfil y sus conversaciones, o continúe como invitado.</p>
   <ul class="wl"><li>Respuestas claras y sobrias, en su idioma</li><li>Usted decide qué puede hacer con sus datos</li><li>Se adapta a su forma de hablar</li></ul>`:`<h2>Inicia sesión</h2><p>Tus chats, perfil y memoria se guardan en tu cuenta.</p>`}
-  <div class="oa">${OAB.map(([k,n,bg,fg,g])=>`<button type="button" class="ob ${AUTH.providers[k]?.configured?'':'off'}" data-oa="${k}"><i style="background:${bg};color:${fg}">${g}</i>${first?'Vincular con':'Continuar con'} ${n}</button>`).join('')}</div>
+  <div class="oa">${OAB.map(([k,n,bg,fg,g])=>`<button type="button" class="ob ${AUTH.providers[k]?.configured?'':'off'}" data-oa="${k}"><i style="background:${bg};color:${fg}">${g}</i>${first?'Vincular con':'Continuar con'} ${n}</button>`).join('')}${pkOK()?`<button type="button" class="ob" id="pkb"><i style="background:#2c2c2e;color:#fff"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11v3.5a6 6 0 0 1-1.2 3.6M8.5 14c0 2-.6 3.7-1.7 5M15.5 14c0 .9-.1 1.8-.3 2.6M5.5 11a6.5 6.5 0 0 1 13 0M3.5 12a8.5 8.5 0 0 1 2.2-5.7M18.3 6.3A8.5 8.5 0 0 1 20.5 12c0 2-.3 3.7-.9 5.3M9 21c.7-1.2 1.2-2.5 1.5-4"/></svg></i>Entrar con Face ID o huella</button>`:''}</div>
   <div class="lgh" id="lgh" role="status"></div>${document.body.classList.contains('tv')?PAIRHTML:''}
   <div class="or"><span>o con tu correo</span></div>
   <form id="lgf"><input type="email" id="lge" placeholder="Correo" aria-label="Correo" autocomplete="email" required><input type="password" id="lgp" placeholder="Contraseña (mínimo 8 caracteres)" aria-label="Contraseña" autocomplete="current-password" required>
   <div class="r2"><button class="pri" id="lgi">Entrar</button><button type="button" id="lgr">Crear cuenta</button></div></form>
   <div class="lge" id="lgerr" role="alert"></div><button type="button" class="lnk" id="lgg">Entrar como invitado</button>`;
-  $('lgerr').textContent=err||'';if(document.body.classList.contains('tv'))tvPair($('pcode'),$('pst'));
+  $('lgerr').textContent=err||'';if($('pkb'))$('pkb').onclick=async()=>{try{$('lgh').textContent='Confirme con Face ID, huella o el bloqueo de pantalla…';await pkLogin()}catch(e){$('lgh').textContent=pkErr(e)}};if(document.body.classList.contains('tv'))tvPair($('pcode'),$('pst'));
   c.querySelectorAll('[data-oa]').forEach(b=>b.onclick=()=>{const k=b.dataset.oa,n=OAB.find(x=>x[0]===k)[1];
     if(AUTH.providers[k]?.configured){ // pantalla de consentimiento (como al vincular una cuenta en un juego): Aceptar / Rechazar
       c.innerHTML=`<div class="big">${avatar(P?P.avatar:DEF,'normal',96)}</div><h2>Vincular con ${n}</h2><p>Calex recibirá tu <b>nombre y correo</b> de ${n} para crear o abrir tu cuenta. No recibe tu contraseña.</p>
@@ -1615,13 +1617,29 @@ const fill=(sel,opts,val)=>{sel.innerHTML='';opts.forEach(([v,l])=>{const o=docu
 async function loadModels(){const m=await(await fetch('/models')).json();const nice=x=>{const r=[[/^qwen3/i,'Qwen 3'],[/^qwen2\.5vl/i,'Qwen 2.5 VL'],[/^qwen2\.5/i,'Qwen 2.5'],[/^gemma3/i,'Gemma 3'],[/^llama3\.2/i,'Llama 3.2'],[/^llama3/i,'Llama 3']].find(([re])=>re.test(x)),sz=(/:(\d+(?:\.\d+)?b)/i.exec(x)||[])[1];return r?r[1]+(sz?' · '+sz.toUpperCase():'')+(/instruct/i.test(x)?' Instruct':''):x},
     bd=x=>{const c=(m.caps&&m.caps[x])||[];return c.includes('vision')?' · ve imágenes':''},mo=m.models.map(x=>[x,(m.labels&&m.labels[x])||nice(x)+bd(x)]),ef=Object.entries(m.efforts);
   fill($('sm'),mo,m.current);fill($('se'),ef,m.effort);fill($('cm'),mo,m.current);fill($('ce'),ef,m.effort);$('tmod').textContent=m.current;applyLevel(LEVEL)}
+/*PASSKEYS*/ /* Llaves de acceso: iniciar sesión con Face ID, Touch ID o el bloqueo de pantalla */
+const b64u={enc:b=>{const a=new Uint8Array(b);let t='';for(const x of a)t+=String.fromCharCode(x);return btoa(t).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')},dec:t=>{t=t.replace(/-/g,'+').replace(/_/g,'/');while(t.length%4)t+='=';const r=atob(t),a=new Uint8Array(r.length);for(let i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a.buffer}};
+const pkOK=()=>!!(window.PublicKeyCredential&&navigator.credentials&&window.isSecureContext&&!document.body.classList.contains('tv'));
+const pkErr=e=>e&&e.name==='NotAllowedError'?'Se canceló o el dispositivo no lo permitió.':e&&e.name==='InvalidStateError'?'Este dispositivo ya tiene una llave de acceso.':(e&&e.message)||'No se pudo completar.';
+async function pkJson(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'No se pudo completar');return j}
+async function pkRegister(){const o=(await pkJson('/auth/passkey/register/options')).publicKey;o.challenge=b64u.dec(o.challenge);o.user.id=b64u.dec(o.user.id);(o.excludeCredentials||[]).forEach(c=>c.id=b64u.dec(c.id));
+  const c=await navigator.credentials.create({publicKey:o}),r=c.response,pub=r.getPublicKey?r.getPublicKey():null,ua=navigator.userAgent;
+  await pkJson('/auth/passkey/register/verify',{id:c.id,rawId:b64u.enc(c.rawId),type:c.type,name:/iPhone|iPad/.test(ua)?'iPhone':/Android/.test(ua)?'Android':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'Mac':'Este equipo',response:{clientDataJSON:b64u.enc(r.clientDataJSON),attestationObject:b64u.enc(r.attestationObject),publicKey:pub?b64u.enc(pub):'',publicKeyAlgorithm:r.getPublicKeyAlgorithm?r.getPublicKeyAlgorithm():0,transports:r.getTransports?r.getTransports():[]}})}
+async function pkLogin(){const j=await pkJson('/auth/passkey/login/options'),o=j.publicKey;o.challenge=b64u.dec(o.challenge);
+  const c=await navigator.credentials.get({publicKey:o}),r=c.response;
+  await pkJson('/auth/passkey/login/verify',{cid:j.cid,id:c.id,rawId:b64u.enc(c.rawId),type:c.type,response:{clientDataJSON:b64u.enc(r.clientDataJSON),authenticatorData:b64u.enc(r.authenticatorData),signature:b64u.enc(r.signature),userHandle:r.userHandle?b64u.enc(r.userHandle):''}});location.reload()}
+async function pkRender(){const box=$('pkset'),row=$('pkrow');if(!box||!row)return;if(!pkOK()||!AUTH.user){row.style.display='none';return}row.style.display='';
+  let list=[];try{list=(await(await fetch('/auth/passkey/list')).json()).passkeys||[]}catch(e){}
+  box.innerHTML=list.map(k=>'<div class="pkr"><span>'+esc(k.name||'Llave')+' · '+new Date(k.created).toLocaleDateString('es')+'</span><button type="button" data-pk="'+esc(k.id)+'">Quitar</button></div>').join('')+'<button type="button" id="pkadd">Crear llave de acceso</button><small id="pkmsg" style="display:block;margin-top:6px"></small>';
+  $('pkadd').onclick=async()=>{try{$('pkmsg').textContent='Confirme con Face ID, huella o el bloqueo de pantalla…';await pkRegister();pkRender()}catch(e){$('pkmsg').textContent=pkErr(e)}};
+  box.querySelectorAll('[data-pk]').forEach(b=>b.onclick=async()=>{try{await pkJson('/auth/passkey/delete',{id:b.dataset.pk});pkRender()}catch(e){$('pkmsg').textContent=pkErr(e)}})}
 async function openSet(){await loadModels();CFG=await(await fetch('/config')).json();
   $('pf').textContent=P?(P.anonymous?'Anónimo':P.name)+' · tono '+(P.tone==='custom'?'personalizado':(ob.tones[P.tone]||P.tone).toLowerCase()):'Aún sin perfil';paintMembers();paintAcc();
   $('sl').value=CFG.safetyLevel;origLevel=CFG.safetyLevel;$('lgo').value=CFG.legal.owner;$('lgm').value=CFG.legal.email;$('lgc2').value=CFG.legal.country;
   await loadAuth().catch(()=>{});renderOAuth();renderCloud();renderGw();
   {const ts=$('tvsl');if(document.body.classList.contains('tv')&&!(AUTH.user&&AUTH.user.provider!=='guest')){ts.hidden=false;ts.innerHTML=PAIRHTML.replace('id="pcode"','id="scode"').replace('id="pst"','id="sst"');tvPair($('scode'),$('sst'))}else ts.hidden=true} // TV sin cuenta: en Ajustes aparece un código que cambia cada vez
   $('acl').textContent=AUTH.user?'Sesión iniciada: '+(AUTH.user.name||AUTH.user.email||(P&&P.name)||'')+' ('+({password:'correo',google:'Google',facebook:'Facebook',huawei:'Huawei',apple:'Apple',guest:'invitado: tus charlas solo están en este navegador; inicia sesión con Google, Facebook o Huawei para verlas en todos tus dispositivos'}[AUTH.user.provider]||AUTH.user.provider)+')':'Sin iniciar sesión: usas los datos locales de este PC';
-  $('acb').textContent=AUTH.user?'Cerrar sesión':'Iniciar sesión';
+  $('acb').textContent=AUTH.user?'Cerrar sesión':'Iniciar sesión';pkRender();
   $('thset').innerHTML=themeHTML();bindThemes($('thset'));renderMem();initAppearance();
   $('cr').value=CFG.researchSources;$('cx').value=CFG.extraPrompt||'';$('lo').checked=CFG.lan.enabled;$('lp').value=CFG.lan.pin;$('lt').checked=CFG.remoteTools;
   $('rh').value=CFG.remote.host;$('ru').value=CFG.remote.user;$('rp').value=CFG.remote.port;$('rk').value=CFG.remote.key;$('rr').textContent='';

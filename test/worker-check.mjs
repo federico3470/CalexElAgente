@@ -391,6 +391,77 @@ try {
     delete env.WEB_SEARCH; db.exec("DELETE FROM hits"); const wck = await guest(); const w = await chat(wck, "Busca las últimas noticias de hoy"); globalThis.fetch = of; env.WEB_SEARCH = "off";
     const src = w.ev.find((e) => e.type === "sources");
     t("búsqueda web: emite las páginas consultadas (sources) y las usa en el prompt", src && src.items.length === 2 && src.items.some((i) => i.host === "diario.com") && /RESULTADOS DE BÚSQUEDA WEB/.test(lastAI.input.messages[0].content), JSON.stringify(w.ev.slice(0, 4))); }
+  // ---- llaves de acceso (passkeys / WebAuthn) ----
+  { const te = new TextEncoder(), H = new URL(B).hostname, bu = (u8) => Buffer.from(u8).toString("base64url"), ub = (s) => new Uint8Array(Buffer.from(s, "base64url"));
+    const cat = (...a) => Buffer.concat(a.map((x) => Buffer.from(x))), shaB = async (x) => new Uint8Array(await crypto.subtle.digest("SHA-256", x));
+    const hd = (mt, n) => n < 24 ? [(mt << 5) | n] : n < 256 ? [(mt << 5) | 24, n] : n < 65536 ? [(mt << 5) | 25, n >> 8, n & 255] : [(mt << 5) | 26, (n >>> 24) & 255, (n >> 16) & 255, (n >> 8) & 255, n & 255];
+    const cb = (v) => v instanceof Uint8Array ? cat(hd(2, v.length), v) : typeof v === "string" ? cat(hd(3, te.encode(v).length), te.encode(v)) : typeof v === "number" ? Buffer.from(v >= 0 ? hd(0, v) : hd(1, -1 - v)) : cat(hd(5, v.size), ...[...v].flatMap(([k, x]) => [cb(k), cb(x)]));
+    const derOf = (raw) => { const f = (x) => { let i = 0; while (i < x.length - 1 && x[i] === 0) i++; x = x.slice(i); return x[0] & 0x80 ? cat([0], x) : Buffer.from(x); }, r = f(raw.slice(0, 32)), s = f(raw.slice(32)); return cat([0x30, r.length + s.length + 4, 2, r.length], r, [2, s.length], s); };
+    const mkAuth = async (alg) => { const kp = alg === -7 ? await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]) : await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["sign", "verify"]);
+      const j = await crypto.subtle.exportKey("jwk", kp.publicKey), spki = new Uint8Array(await crypto.subtle.exportKey("spki", kp.publicKey)), cid = crypto.getRandomValues(new Uint8Array(16));
+      const cose = alg === -7 ? new Map([[1, 2], [3, -7], [-1, 1], [-2, ub(j.x)], [-3, ub(j.y)]]) : new Map([[1, 3], [3, -257], [-1, ub(j.n)], [-2, ub(j.e)]]);
+      return { alg, kp, spki, cid, id: bu(cid), cose, counter: 0 }; };
+    const clientData = (type, chal, o = {}) => te.encode(JSON.stringify({ type, challenge: chal, origin: B, crossOrigin: false, ...o }));
+    const fl = (o = {}) => (o.up === false ? 0 : 1) | (o.uv === false ? 0 : 4) | (o.at ? 0x40 : 0);
+    const regBody = async (a, chal, o = {}) => { const ad = cat(await shaB(te.encode(o.rp || H)), [fl({ ...o, at: true })], [0, 0, 0, 0], new Uint8Array(16), [a.cid.length >> 8, a.cid.length & 255], a.cid, cb(a.cose));
+      return { id: a.id, rawId: a.id, type: "public-key", name: o.name || "Mi iPhone", response: { clientDataJSON: bu(o.cd || clientData("webauthn.create", chal, o.cdx)), attestationObject: bu(cb(new Map([["fmt", "none"], ["attStmt", new Map()], ["authData", ad]]))), publicKey: bu(a.spki), publicKeyAlgorithm: a.alg, transports: ["internal"] } }; };
+    const loginBody = async (a, cid, chal, uid, o = {}) => { a.counter = o.counter ?? a.counter + 1; const ad = cat(await shaB(te.encode(o.rp || H)), [fl(o)], [(a.counter >>> 24) & 255, (a.counter >> 16) & 255, (a.counter >> 8) & 255, a.counter & 255]);
+      const cdj = clientData("webauthn.get", chal, o.cdx), data = cat(ad, await shaB(cdj)); let sig = new Uint8Array(await crypto.subtle.sign(a.alg === -7 ? { name: "ECDSA", hash: "SHA-256" } : { name: "RSASSA-PKCS1-v1_5" }, a.kp.privateKey, data)); if (a.alg === -7) sig = derOf(sig);
+      if (o.tamper) { sig = Buffer.from(sig); sig[sig.length - 1] ^= 1; }
+      return { cid, id: a.id, rawId: a.id, type: "public-key", response: { clientDataJSON: bu(cdj), authenticatorData: bu(ad), signature: bu(sig), userHandle: o.uh === undefined ? bu(te.encode(uid)) : o.uh } }; };
+    const mk = async () => { db.exec("DELETE FROM hits"); const ck = await guest(); const id = (await (await call("/auth/status", {}, ck)).json()).user.id; return { ck, id }; };
+    const regOpts = async (u) => (await (await post("/auth/passkey/register/options", {}, u.ck)).json()).publicKey;
+    const register = async (u, a, o = {}) => { const ch = (await regOpts(u)).challenge; return post("/auth/passkey/register/verify", await regBody(a, ch, o), u.ck); };
+    const loginOpts = async () => await (await post("/auth/passkey/login/options", {})).json();
+    const login = async (u, a, o = {}) => { const lo = await loginOpts(); return post("/auth/passkey/login/verify", await loginBody(a, lo.cid, lo.publicKey.challenge, u.id, o)); };
+    const U1 = await mk(), U2 = await mk(), E1 = await mkAuth(-7), R1 = await mkAuth(-257);
+    // registro
+    t("passkey: registrar sin sesión → 401", (await post("/auth/passkey/register/options", {})).status === 401);
+    const po = await regOpts(U1);
+    t("passkey: opciones de registro (rp, usuario, ES256/RS256, UV requerido, llave residente)", po.rp.id === H && po.rp.name === "Calex" && po.user.id === bu(te.encode(U1.id)) && po.pubKeyCredParams.map((x) => x.alg).join() === "-7,-257" && po.authenticatorSelection.userVerification === "required" && po.authenticatorSelection.residentKey === "required" && po.attestation === "none" && ub(po.challenge).length === 32, JSON.stringify(po));
+    let rr = await post("/auth/passkey/register/verify", await regBody(E1, po.challenge), U1.ck), rj = await rr.json();
+    t("passkey: registro ES256 completo → ok", rr.status === 200 && rj.ok === true && rj.id === E1.id && !JSON.stringify(rj).includes("pub"), JSON.stringify(rj));
+    t("passkey: reutilizar el desafío de registro falla", (await post("/auth/passkey/register/verify", await regBody(R1, po.challenge), U1.ck)).status === 400);
+    t("passkey: registro con origen distinto falla", (await register(U1, R1, { cdx: { origin: "https://malo.example" } })).status === 400);
+    t("passkey: registro con rpId distinto falla", (await register(U1, R1, { rp: "otro.example" })).status === 400);
+    t("passkey: registro sin verificación de usuario (UV) falla", (await register(U1, R1, { uv: false })).status === 400);
+    t("passkey: el desafío de otro usuario no sirve para registrar", await (async () => { const ch = (await regOpts(U2)).challenge; return (await post("/auth/passkey/register/verify", await regBody(R1, ch), U1.ck)).status === 400; })());
+    t("passkey: registro con JSON mal formado → 400", (await call("/auth/passkey/register/verify", { method: "POST", body: "{no", headers: { "Content-Type": "application/json" } }, U1.ck)).status === 400);
+    rr = await register(U1, R1, { name: "Windows Hello<x>" });
+    t("passkey: registro RS256 completo → ok", rr.status === 200 && (await rr.json()).ok === true);
+    // listado y borrado
+    let ls = await (await call("/auth/passkey/list", {}, U1.ck)).json();
+    t("passkey: listado con id, nombre y fecha, sin clave pública", ls.passkeys.length === 2 && ls.passkeys.some((p) => p.id === E1.id && p.name === "Mi iPhone" && p.created > 0) && ls.passkeys.some((p) => p.name === "Windows Hellox") && !JSON.stringify(ls).includes(bu(E1.spki)));
+    // inicio de sesión
+    const lo = await loginOpts();
+    t("passkey: opciones de inicio (rpId, UV requerido, sin lista)", typeof lo.cid === "string" && lo.publicKey.rpId === H && lo.publicKey.userVerification === "required" && lo.publicKey.allowCredentials.length === 0 && ub(lo.publicKey.challenge).length === 32);
+    let lr = await post("/auth/passkey/login/verify", await loginBody(E1, lo.cid, lo.publicKey.challenge, U1.id));
+    const lck = sess(lr), lst = lck ? await (await call("/auth/status", {}, lck)).json() : {};
+    t("passkey: login ES256 → cookie de sesión y /auth/status con el usuario correcto", lr.status === 200 && (await lr.json()).ok === true && /HttpOnly/.test(lr.headers.get("set-cookie")) && /Secure/.test(lr.headers.get("set-cookie")) && lst.user?.id === U1.id, JSON.stringify(lst));
+    t("passkey: reutilizar el desafío de login falla", (await post("/auth/passkey/login/verify", await loginBody(E1, lo.cid, lo.publicKey.challenge, U1.id))).status === 401);
+    t("passkey: login RS256 correcto", (await (await login(U1, R1)).json()).ok === true);
+    t("passkey: el contador debe crecer (repetirlo falla)", (await login(U1, E1, { counter: 1 })).status === 401);
+    t("passkey: contador 0 permitido en autenticadores de plataforma", await (async () => { const z = await mkAuth(-7); await register(U1, z); return (await login(U1, z, { counter: 0 })).status === 200 && (await login(U1, z, { counter: 0 })).status === 200; })());
+    t("passkey: login con origen distinto falla", (await login(U1, E1, { cdx: { origin: "https://malo.example" } })).status === 401);
+    t("passkey: login con rpId distinto falla", (await login(U1, E1, { rp: "otro.example" })).status === 401);
+    t("passkey: login con firma alterada falla", (await login(U1, E1, { tamper: true })).status === 401);
+    t("passkey: login sin verificación de usuario (UV) falla", (await login(U1, E1, { uv: false })).status === 401);
+    t("passkey: userHandle que no corresponde falla", (await login(U1, E1, { uh: bu(te.encode(U2.id)) })).status === 401);
+    t("passkey: llave no registrada no inicia sesión", await (async () => { const x = await mkAuth(-7); const r2 = await login(U1, x); return r2.status === 401 && !r2.headers.get("set-cookie") && (await r2.json()).error === "No se pudo verificar la llave de acceso"; })());
+    t("passkey: la llave de un usuario inicia sesión como ese usuario, no como otro", await (async () => { const a2 = await mkAuth(-7); await register(U2, a2); const r2 = await login(U2, a2), s2 = await (await call("/auth/status", {}, sess(r2))).json(); return s2.user?.id === U2.id && s2.user.id !== U1.id; })());
+    t("passkey: desafío caducado falla", await (async () => { const l2 = await loginOpts(); db.exec("UPDATE pk_challenges SET exp=1"); return (await post("/auth/passkey/login/verify", await loginBody(E1, l2.cid, l2.publicKey.challenge, U1.id))).status === 401; })());
+    t("passkey: login/verify con basura → 401 sin detalles", await (async () => { const r2 = await post("/auth/passkey/login/verify", { cid: "x", id: "y", type: "public-key", response: {} }); return r2.status === 401 && (await r2.json()).error === "No se pudo verificar la llave de acceso"; })());
+    // límite de 10 llaves
+    { const U3 = await mk(); let last = null; for (let i = 0; i < 11; i++) last = await register(U3, await mkAuth(-7)); const n = (await (await call("/auth/passkey/list", {}, U3.ck)).json()).passkeys.length;
+      t("passkey: máximo de 10 llaves por usuario", n === 10 && last.status === 400, n + " " + last.status); }
+    // borrado
+    t("passkey: no se puede borrar la llave de otro usuario", await (async () => { await post("/auth/passkey/delete", { id: E1.id }, U2.ck); return (await (await call("/auth/passkey/list", {}, U1.ck)).json()).passkeys.some((p) => p.id === E1.id); })());
+    t("passkey: borrar la propia y ya no inicia sesión", await (async () => { const d = await post("/auth/passkey/delete", { id: E1.id }, U1.ck); return d.status === 200 && (await d.json()).ok === true && (await login(U1, E1)).status === 401; })());
+    t("passkey: limitar intentos de login por IP", await (async () => { db.exec("DELETE FROM hits"); let c429 = 0; for (let i = 0; i < 35; i++) if ((await post("/auth/passkey/login/options", {})).status === 429) c429++; db.exec("DELETE FROM hits"); return c429 === 5; })());
+    t("passkey: la clave COSE de authData debe coincidir con la clave pública enviada", await (async () => { const a = await mkAuth(-7), o = await mkAuth(-7); const ch = (await regOpts(U1)).challenge; const bd = await regBody(a, ch); bd.response.publicKey = bu(o.spki); return (await post("/auth/passkey/register/verify", bd, U1.ck)).status === 400 && (await call("/auth/passkey/list", {}, U1.ck).then((r) => r.json())).passkeys.every((x) => x.id !== a.id); })());
+    t("passkey: un desafío de registro no sirve en el login (y no se consume ahí)", await (async () => { await regOpts(U1); const row = db.prepare("SELECT k FROM pk_challenges WHERE kind='reg' LIMIT 1").get(); await post("/auth/passkey/login/verify", { cid: row.k, id: "abc", type: "public-key", response: {} }); return !!db.prepare("SELECT 1 x FROM pk_challenges WHERE k=?").get(row.k); })());
+    t("passkey: borrar la cuenta borra sus llaves y desafíos", await (async () => { const U4 = await mk(); await register(U4, await mkAuth(-7)); await regOpts(U4); const before = db.prepare("SELECT COUNT(*) n FROM passkeys WHERE user_id=?").get(U4.id).n; await post("/account/delete", { confirm: "BORRAR" }, U4.ck); return before === 1 && db.prepare("SELECT COUNT(*) n FROM passkeys WHERE user_id=?").get(U4.id).n === 0 && db.prepare("SELECT COUNT(*) n FROM pk_challenges WHERE user_id=?").get(U4.id).n === 0; })());
+  }
 } catch (e) { t("excepción", false, e.stack); }
 console.log(`\n${pass} correctas, ${bad} fallidas.`); process.exit(bad ? 1 : 0);
 
