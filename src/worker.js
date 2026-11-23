@@ -348,6 +348,7 @@ async function makeSpec(env, user, modelIds, ask, level, current) {
 const aiJSON = (out) => { const r = out?.response ?? out?.result?.response; return r && typeof r === "object" ? r : extractJSONObj(String(r ?? "")); };
 function extractJSONObj(t) { t = String(t).replace(/```(?:json)?/gi, ""); const a = t.indexOf("{"), b = t.lastIndexOf("}"); if (a < 0 || b < a) return null; const raw = t.slice(a, b + 1); try { return JSON.parse(raw); } catch {} try { return JSON.parse(raw.replace(/,\s*([}\]])/g, "$1")); } catch { return null; } }
 const CODE_SYS = `Eres un ingeniero de software senior y diseñador front-end de nivel agencia. Entrega código COMPLETO y listo para usar, nunca esqueletos. Si piden algo visual o interactivo (juego, animación, herramienta, simulador), entrega UN SOLO archivo HTML autónomo dentro de UN ÚNICO bloque \`\`\`html con CSS en <style> y JavaScript en <script>, que funcione al abrirlo sin descargar nada y sin imágenes externas. Calidad de producto real: diseño moderno y cuidado (tipografía, espaciado, paleta coherente, modo oscuro elegante), responsive, animaciones suaves, accesible, y sin errores de consola. Para fondos, texturas y efectos usa WebGL con shaders (ruido fractal fbm, dominio deformado) o canvas, generados proceduralmente: texturas de alta resolución (hasta 4096 px cuando el dispositivo lo permita; reduce en celulares), partículas, parallax y animaciones al hacer scroll con IntersectionObserver. No uses lorem ipsum. Para código que no es visual, usa el lenguaje pedido con bloques \`\`\`lenguaje, comentarios útiles y manejo de errores. Después del código, máximo tres líneas de explicación. Responde en español.`;
+const ARCHIVOS_SYS = ` ENTREGA DE ARCHIVOS: puedes entregar archivos descargables. Cuando te pidan un PDF, Word, Excel, PowerPoint, TXT, CSV, HTML, JSON, Markdown, SVG, calendario (.ics), XML o un ZIP con varios archivos, responde con una breve introducción y UN bloque de código cuyo encabezado sea exactamente \`\`\`archivo:TIPO:Nombre_del_archivo (TIPO = pdf, docx, xlsx, pptx, txt, csv, html, json, md, svg, ics, xml o zip; el nombre sin extensión), y cuyo contenido siga este formato: pdf y docx = Markdown (#, ##, ###, párrafos, **negrita**, *cursiva*, listas con - y 1., tablas con |, > citas, --- regla, <<<pagina>>> salto de página); xlsx = una tabla con barras | (una hoja por cada línea «## Hoja: Nombre»), la primera fila es el encabezado, y puedes usar fórmulas simples como =SUM(B2:B10); pptx = diapositivas separadas por una línea --- (la primera con # Título; el resto viñetas con -); zip = varios archivos, cada uno iniciado por una línea «=== archivo: ruta/nombre.ext ===»; los demás tipos llevan el contenido tal cual. El contenido debe ser completo y de calidad profesional, sin explicaciones dentro del bloque. La interfaz mostrará botones para descargarlo. Si piden varios formatos del mismo contenido, entrega un bloque por formato. APK, EXE y otros ejecutables NO se pueden compilar aquí: ofrece el código fuente, un ZIP con el proyecto y las instrucciones para compilarlo, o una aplicación web instalable (HTML, manifest y service worker en un ZIP).`;
 const ALLINONE = (level, live) => `Eres Calex, el asistente todo en uno de la familia: charlas, explicas como un profe paciente, traduces, resumes, redactas, ayudas a cocinar, motivas como un coach, resuelves tareas y programas. Detecta solo lo que te piden y hazlo bien, sin pedir que cambien de modo. Responde SIEMPRE en el idioma del usuario (normalmente español). Estilo: registro formal y profesional pero cercano, claro y sobrio; sin emojis, sin exclamaciones y sin muletillas de asistente; trato neutro y respetuoso (de usted o en infinitivo), sin voseo; no sermonees ni moralices sin motivo: responde con naturalidad a las preguntas inocentes, hipotéticas, de ficción, historia, noticias, salud o seguridad, y solo cuando alguien busque causar daño a otras personas niégate con una frase breve y formal, recordando que Calex no debe usarse para eso; no menciones que eres una IA salvo que te lo pregunten. No tienes acceso al dispositivo del usuario: si te pide abrir, instalar o hacer algo en su equipo, di en una frase que no puedes y entrega de inmediato pasos numerados y cortos. Según lo pedido: traducir = devuelve solo la traducción (si no dice idioma: español a inglés); explicar o enseñar = paso a paso con ejemplos sencillos y comprobando que se entiende; resumir = puntos claros y breves; redactar = buen estilo y listo para usar; cocina = recetas con pasos cortos según lo que tenga; ánimo y metas = empatía y metas pequeñas y concretas; programar = código completo en bloques con el lenguaje, explicando solo lo esencial. Las páginas web completas las arma Calex Studio automáticamente cuando las piden.${level < 34 ? " Modo rápido: responde en una a tres frases, directo al grano." : level >= 67 ? " Modo profundo: piensa con calma antes de responder, verifica cálculos y datos, considera casos límite y da una respuesta completa y bien estructurada (con títulos o pasos cuando ayude)." : ""}${live ? " Estás en una conversación por voz: responde en 1 o 2 frases cortas, sin markdown ni emojis." : ""}`;
 
 // Los modelos con prefijo «or:» (ej. or:z-ai/glm-5.3) se piden a OpenRouter. Cada proveedor puede tener su PROPIA clave con su tope de gasto en OpenRouter.
@@ -496,8 +497,14 @@ function ownerOk(url, env) { const k = String(url.searchParams.get("key") || "")
 
 
 // ---------- búsqueda en la web (DuckDuckGo, sin clave): Calex muestra en qué páginas busca ----------
+/* Calex siempre sabe qué día es y, para lo que pueda haber cambiado desde que se entrenó el modelo, consulta internet */
+function nowLine() { try { const d = new Date(), f = (o) => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", ...o }).format(d); return `HOY ES ${f({ weekday: "long", day: "numeric", month: "long", year: "numeric" })}, ${f({ hour: "2-digit", minute: "2-digit", hour12: false })} (hora de Argentina). Tu conocimiento de entrenamiento termina en una fecha anterior a hoy: no asumas que lo que sabes es lo más reciente. Para personas, cargos, precios, noticias, resultados, productos o versiones que puedan haber cambiado, usa los resultados de búsqueda web que se te entreguen; si no los hay, aclara que no puedes confirmar lo más reciente.`; } catch { return ""; } }
+const FACT_RE = /(qui[eé]n(es)? (es|son|fue|fueron|gan[oó]|est[aá]|era)|qu[eé] (pas[oó]|hay|es|son|significa|dijo|hizo|tal)|cu[aá]nd[oó] (es|fue|se|sale|juega|empieza|termina|muri[oó]|naci[oó])|d[oó]nde (queda|est[aá]|se|puedo)|cu[aá]nto (cuesta|vale|sale|mide|pesa|falta|hace)|cu[aá]l (es|fue|ser[aá]|son) (el|la|los|las|mejor|ultim|actual|nuevo)|es verdad que|existe (un|una|el|la)|actualmente|actual|reciente|nuevo|nueva|este (mes|a[nñ]o|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)|20(2[3-9]|3\d)|presidente|campe[oó]n|ganador|versi[oó]n|lanzamiento|estreno|temporada|elecciones|ley |decreto|mundial|liga|\bvs\b)/i;
+const SKIP_RE = /^\s*(escrib[ei]|redact[ae]|traduc[ei]|resum[ei]|corrig[ei]|gener[ae]|cre[ae]|programa|haz(me)?|dame un (poema|cuento|chiste)|cu[eé]ntame un|expl[ií]came|ayúdame|ay[uú]dame)\b/i;
 const WEB_RE = /(busc[aáoe]|investig|googlea|en internet|en la web|noticia|actualidad|[uú]ltim[oa]s? (noticia|dato|version|versión|partido)|precio|cotizaci|d[oó]lar|clima|pron[oó]stico|qui[eé]n (es|gan[oó]|fue)|cu[aá]ndo (es|juega|sale|empieza)|resultado|partido|estreno|este a[nñ]o|hoy en|horario de|d[oó]nde (queda|puedo comprar))/i;
 const decEnt = (t) => String(t).replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+const MES = { ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, set: 8, oct: 9, nov: 10, dic: 11 };
+function parseFecha(t) { t = String(t || "").trim(); let d = Date.parse(t); if (d) return d; const m = /(\d{1,2})\s+([a-záéíóú]{3})[a-z.]*\s+(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/i.exec(t); return m && MES[m[2].toLowerCase().slice(0, 3)] !== undefined ? Date.UTC(+m[3], MES[m[2].toLowerCase().slice(0, 3)], +m[1], +(m[4] || 0), +(m[5] || 0)) : 0; }
 const rssTag = (x, t) => { const m = new RegExp("<" + t + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + t + ">", "i").exec(x); return m ? decEnt(m[1].replace(/^<!\[CDATA\[|\]\]>$/g, "")) : ""; };
 async function rssItems(url, kind) {
   const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; CalexBot/1.0)", "Accept-Language": "es" }, signal: AbortSignal.timeout(6500) });
@@ -505,20 +512,47 @@ async function rssItems(url, kind) {
   const xml = await r.text(), out = []; let m; const re = /<item>([\s\S]*?)<\/item>/g;
   while ((m = re.exec(xml)) && out.length < 8) {
     const it = m[1], title = rssTag(it, "title"), link = rssTag(it, "link"), desc = rssTag(it, "description");
-    let host = "", su = /<source[^>]+url="([^"]+)"/i.exec(it); try { host = new URL(su ? su[1] : link).hostname.replace(/^www\./, ""); } catch { continue; }
+    let host = "", su = /<source[^>]+url="([^"]+)"/i.exec(it), bsrc = rssTag(it, "News:Source"); try { host = new URL(su ? su[1] : link).hostname.replace(/^www\./, ""); } catch { continue; } if (/(^|\.)bing\.com$/.test(host) && bsrc) host = bsrc.slice(0, 60);
     if (!/^https?:\/\//i.test(link)) continue;
-    out.push({ title: (kind === "news" ? title.replace(/\s+-\s+[^-]{2,40}$/, "") : title).slice(0, 140), url: link.slice(0, 600), host, snippet: kind === "news" ? (su ? rssTag(it, "source") + " · " : "") + (rssTag(it, "pubDate") || "").slice(0, 22) : desc.slice(0, 260) });
+    const pdt = parseFecha(rssTag(it, "pubDate"));
+    out.push({ date: pdt, title: (kind === "news" ? title.replace(/\s+-\s+[^-]{2,40}$/, "") : title).slice(0, 140), url: link.slice(0, 600), host, snippet: kind === "news" ? (su ? rssTag(it, "source") + " · " : "") + (rssTag(it, "pubDate") || "").slice(0, 22) : desc.slice(0, 260) });
   }
   return out;
 }
+// FAMOSOS: los medios y sitios más conocidos van primero (por dominio o por el nombre que informa Bing Noticias)
+const FAMOSOS = [
+  [3, /(infobae|clar[ií]n|la naci[oó]n|lanacion|bbc|cnn|reuters|ap news|apnews|associated press|el pa[ií]s|elpais|new york times|nytimes|wikipedia|ambito|[aá]mbito|cronista|tn\.com|todo noticias|perfil|p[aá]gina\/?12|pagina12|france ?24|dw\.com|deutsche welle|bloomberg|the guardian|washington post|el mundo|elmundo|\.gob\.ar|\.gov|argentina\.gob)/i],
+  [2, /(la voz|lavoz|cadena ?3|ol[eé]\b|ole\.com|tyc ?sports|tycsports|espn|marca|as\.com|el dia|eldia|los andes|losandes|rosario3|la capital|uno\.com|diario uno|el litoral|eltribuno|ellitoral|telam|t[eé]lam|noticias argentinas|minutouno|mdz|iprofesional|infocampo|canal 13|c5n|a24|el destape|eldestape|diario registrado|el once|lanueva|la gaceta|lagaceta|msn|yahoo|google|youtube)/i],
+  [1, /\.(com|com\.ar|ar|org|net|es)$/i],
+];
+const famoso = (host) => { const h = String(host || ""); for (const [t, re] of FAMOSOS) if (re.test(h)) return t; return 0; };
 async function webSearch(env, query) {
   if (String(env.WEB_SEARCH || "") === "off") return [];
-  const qq = encodeURIComponent(String(query).replace(/^(busc[aá]|investig[aá]|googlea)\s+(en internet|en la web|en google)?\s*/i, "").slice(0, 200)), news = /noticia|actualidad|[uú]ltim|hoy|partido|resultado|estreno|pol[ií]tica|d[oó]lar|cotizaci/i.test(query);
-  const jobs = news ? [rssItems("https://news.google.com/rss/search?hl=es-419&gl=AR&ceid=AR:es-419&q=" + qq, "news"), rssItems("https://www.bing.com/search?format=rss&setlang=es&cc=AR&q=" + qq, "web")] : [rssItems("https://www.bing.com/search?format=rss&setlang=es&cc=AR&q=" + qq, "web")];
-  const res = (await Promise.all(jobs.map((j) => j.catch(() => [])))).flat(), out = [], seen = new Set();
-  // se alternan noticias y páginas para mostrar variedad de sitios
-  for (const it of res) { const k = it.host; if (seen.has(k) && out.length >= 3) continue; seen.add(k); out.push(it); if (out.length >= 5) break; }
+  const clean = String(query).replace(/^(busc[aá]|investig[aá]|googlea)\s+(en internet|en la web|en google)?\s*/i, "").slice(0, 200), year = new Date().getFullYear(), hasYear = /20\d\d/.test(clean);
+  const news = /noticia|actualidad|[uú]ltim|hoy|ahora|partido|resultado|estreno|pol[ií]tica|d[oó]lar|cotizaci|esta semana|este mes|recient/i.test(query), enc = encodeURIComponent;
+  const gn = (w) => rssItems("https://news.google.com/rss/search?hl=es-419&gl=AR&ceid=AR:es-419&q=" + enc(clean + " when:" + w), "news");
+  const bing = (q, f) => rssItems("https://www.bing.com/search?format=rss&setlang=es&cc=AR" + (f ? "&filters=" + enc('ex1:"' + f + '"') : "") + "&q=" + enc(q), "web");
+  // siempre se piden primero las fuentes más recientes (último día, última semana, último mes) y después las generales
+  const bn = (srt) => rssItems("https://www.bing.com/news/search?format=rss&setlang=es&cc=AR" + (srt ? "&qft=" + enc('sortbydate="1"') : "") + "&q=" + enc(clean), "news");
+  const jobs = news ? [gn("1d"), gn("7d"), bn(false), bn(true), bing(clean, "ez1"), bing(clean + (hasYear ? "" : " " + year), "ez2")] : [bing(clean + (hasYear ? "" : " " + year), "ez3"), bing(clean), wikiItems(enc(clean))];
+  const res = (await Promise.all(jobs.map((j) => j.catch(() => [])))).flat(), now = Date.now(), seen = new Set(), uniq = [];
+  for (const it of res) { const k = it.url.replace(/[?#].*$/, ""); if (seen.has(k)) continue; seen.add(k); if (it.date > now + 864e5) it.date = 0; uniq.push(it); }
+  // más recientes primero; lo que no trae fecha (por ejemplo Wikipedia) va después de lo fechado de esta semana
+  // para noticias, solo lo de los últimos 7 días si hay suficiente; después, primero lo más famoso y, a igual fama, lo más reciente
+  const week = now - 7 * 864e5, pool = news && uniq.filter((x) => x.date >= week).length >= 3 ? uniq.filter((x) => x.date >= week) : uniq;
+  const fresh = (x) => (x.date >= now - 36 * 36e5 ? 6 : x.date >= now - 3 * 864e5 ? 4 : x.date >= week ? 2 : x.date > 0 ? 0 : 1), score = (x) => famoso(x.host) * 10 + fresh(x);
+  const sorted = [...pool].sort((x, y) => score(y) - score(x) || y.date - x.date);
+  uniq.length = 0; uniq.push(...sorted);
+  const out = [], hosts = new Set();
+  for (const it of uniq) { if (hosts.has(it.host) && out.length >= 3) continue; hosts.add(it.host); out.push(it); if (out.length >= 6) break; }
+  // lee el contenido de las dos primeras páginas (no de Google Noticias, que redirige) para responder con más detalle
+  await Promise.all(out.filter((o) => !/news\.google\.com/.test(o.url) && o.host !== "es.wikipedia.org").slice(0, 2).map(async (o) => { try { const r = await fetch(o.url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; CalexBot/1.0)", "Accept-Language": "es" }, signal: AbortSignal.timeout(3500), redirect: "follow" }); if (!r.ok || !/text\/html/i.test(r.headers.get("content-type") || "")) return; const h = (await r.text()).slice(0, 200000), txt = decEnt(h.replace(/<(script|style|noscript|svg|nav|footer|header)[\s\S]*?<\/\1>/gi, " ")).slice(0, 1100); if (txt.length > 200) o.text = txt; } catch {} }));
   return out;
+}
+async function wikiItems(qq) {
+  const r = await fetch("https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrlimit=2&gsrsearch=" + qq + "&prop=extracts&exintro=1&explaintext=1&exlimit=2&exchars=700", { headers: { "User-Agent": "CalexBot/1.0" }, signal: AbortSignal.timeout(4000) });
+  if (!r.ok) return []; const j = await r.json().catch(() => null), pages = j && j.query && j.query.pages ? Object.values(j.query.pages).sort((a, b) => (a.index || 0) - (b.index || 0)) : [];
+  return pages.filter((p) => p.extract).slice(0, 1).map((p) => ({ title: String(p.title).slice(0, 140), url: "https://es.wikipedia.org/wiki/" + encodeURIComponent(String(p.title).replace(/ /g, "_")), host: "es.wikipedia.org", snippet: String(p.extract).replace(/\s+/g, " ").slice(0, 400) }));
 }
 
 async function chatRoute(req, env, user, ctx) {
@@ -563,7 +597,7 @@ async function chatRoute(req, env, user, ctx) {
   const used = (await q(env, "SELECT n FROM usage WHERE user_id=? AND day=?", user.id, day).first())?.n || 1;
   msgs.push({ role: "user", content: message, ...(docs.length && { docs: docs.map((d) => ({ name: d.name, text: d.text.slice(0, 9000) })) }) });
   const cids = (await q(env, "SELECT id FROM connections WHERE user_id=?", user.id).all()).results.map((r) => r.id);
-  const sys = `${ALLINONE(level, b.live)} ${persona(profile)}${FAMILY}${CN.promptFor(cids, { music: b.music === true })}${modNote}`.trim();
+  const sys = `${ALLINONE(level, b.live)}${b.live ? "" : ARCHIVOS_SYS} ${nowLine()} ${persona(profile)}${FAMILY}${CN.promptFor(cids, { music: b.music === true })}${modNote}`.trim();
   const hist = msgs.filter((m) => m.content).slice(-20).map((m) => ({ role: m.role, content: m.spec ? `[Se generó la página «${m.spec.title}» con Calex Studio]` : m.docs?.length ? m.docs.map((d) => `[Documento adjunto: ${d.name}]\n${d.text}`).join("\n\n") + "\n\n" + m.content : m.content }));
   if (images.length) hist[hist.length - 1].content = [{ type: "text", text: message }, ...images.map((u) => ({ type: "image_url", image_url: { url: u } }))];
   const stream = new ReadableStream({ async start(ctrl) {
@@ -607,10 +641,10 @@ async function chatRoute(req, env, user, ctx) {
       } else {
         const outCap = b.live ? 220 : level < 34 ? 450 : level < 67 ? 1000 : 1900;
         let webCtx = "";
-        if (route === "chat" && !images.length && !docs.length && WEB_RE.test(message)) {
+        if (route === "chat" && !images.length && !docs.length && message.length <= 500 && (WEB_RE.test(message) || (FACT_RE.test(message) && !SKIP_RE.test(message)))) {
           send({ type: "search", state: "start" });
           const found = await webSearch(env, message);
-          if (found.length) { sources = found; send({ type: "sources", items: found }); webCtx = "\n\nRESULTADOS DE BÚSQUEDA WEB (acabas de consultar internet; úsalos para dar información actual y nunca digas que no puedes buscar):\n" + found.map((f, i) => "[" + (i + 1) + "] " + f.title + " (" + f.host + "): " + f.snippet).join("\n") + "\nResponde con esos datos, menciona entre corchetes el número de la fuente ([1], [2]) y no inventes lo que no aparezca en los resultados."; }
+          if (found.length) { sources = found; send({ type: "sources", items: found }); webCtx = "\n\nRESULTADOS DE BÚSQUEDA WEB (acabas de consultar internet; úsalos para dar información actual y nunca digas que no puedes buscar):\n" + found.map((f, i) => "[" + (i + 1) + "] " + (f.date ? "(" + new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "numeric", month: "long", year: "numeric" }).format(new Date(f.date)) + ") " : "(sin fecha) ") + f.title + " (" + f.host + "): " + f.snippet + (f.text ? "\nContenido de la página: " + f.text : "")).join("\n") + "\nLas fuentes están ordenadas de las más conocidas y prestigiosas a las menos conocidas, priorizando las más recientes, y cada una indica su fecha: da prioridad a las primeras y a las de hoy y de los últimos días sobre las antiguas, menciona la fecha de la fuente cuando importe y avisa si lo más reciente que encontraste tiene más de unos días o semanas. Responde con esos datos, menciona entre corchetes el número de la fuente ([1], [2]) y no inventes lo que no aparezca en los resultados."; }
           else send({ type: "search", state: "none" });
         }
         await run(model, [{ role: "system", content: sys + webCtx }, ...hist], outCap);

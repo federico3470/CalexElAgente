@@ -271,7 +271,10 @@
     '.cxf-count{flex:none;padding:0 16px 6px;font-size:12.5px;color:var(--mut,#999)}',
     '.cxf-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:2px 12px max(20px,env(safe-area-inset-bottom));display:grid;gap:8px;align-content:start;contain:content}',
     '.cxf-card{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;box-sizing:border-box;appearance:none;cursor:pointer;font:inherit;color:inherit;padding:12px;background:var(--bg,#111);border:1px solid var(--line,#333);border-radius:14px;content-visibility:auto;contain-intrinsic-size:auto 74px;transition:border-color .2s,transform .2s}',
-    '.cxf-card:active{transform:scale(.985)}',
+    '.cxf-card:active{transform:scale(.97);transition-duration:.12s}',
+    '.cxf-list{grid-auto-rows:max-content}.cxf-card{border-radius:18px!important;align-self:start!important;overflow:visible!important;height:auto!important;min-height:64px;content-visibility:visible!important;contain:none!important;contain-intrinsic-size:auto!important;animation:cxfin .6s var(--spr,cubic-bezier(.32,.72,0,1)) both;animation-delay:calc(var(--i,0) * 32ms);transition:transform .5s var(--spr,cubic-bezier(.34,1.56,.64,1)),border-color .3s,background .3s}',
+    '.cxf-chip{transition:transform .45s var(--spr,cubic-bezier(.34,1.56,.64,1)),background .3s,color .3s,border-color .3s}.cxf-chip:active{transform:scale(.94)}',
+    '@keyframes cxfin{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}',
     '.cxf-ico{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:10px;color:var(--acc,#4f8bff);border:1px solid var(--line,#333)}',
     '.cxf-ct{display:block;font-weight:600;font-size:15px}',
     '.cxf-cd{display:block;margin-top:2px;font-size:13px;color:var(--mut,#999)}',
@@ -353,7 +356,7 @@
     }
     for (i = 0; i < out.length; i++) {
       f = out[i];
-      html += '<button type="button" class="cxf-card" data-id="' + f.id + '"><span class="cxf-ico">' + icon(f.cat) +
+      html += '<button type="button" class="cxf-card" style="--i:' + Math.min(i, 14) + '" data-id="' + f.id + '"><span class="cxf-ico">' + icon(f.cat) +
         '</span><span><span class="cxf-ct">' + f.title + '</span><span class="cxf-cd">' + f.desc +
         '</span><span class="cxf-cc">' + CATS[f.cat] + '</span></span></button>';
     }

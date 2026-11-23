@@ -7,8 +7,8 @@ using System.Reflection;
 using System.Windows.Forms;
 [assembly: AssemblyTitle("Calex")]
 [assembly: AssemblyProduct("Calex")]
-[assembly: AssemblyVersion("2.8.0.0")]
-[assembly: AssemblyFileVersion("2.8.0.0")]
+[assembly: AssemblyVersion("2.9.0.0")]
+[assembly: AssemblyFileVersion("2.9.0.0")]
 
 static class Calex
 {
