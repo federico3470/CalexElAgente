@@ -102,11 +102,26 @@
   ].join('\n');
   var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'], DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   function folio() { var d = new Date(); return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()] + ' de ' + d.getFullYear(); }
-  function mode() { try { var v = localStorage.getItem('calex-ui2'); return v === 'atelier' || v === 'classic' || v === 'material' ? v : 'ios'; } catch (e) { return 'ios'; } }
-  function themeFor(m) { var light = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches; return m === 'ios' ? (light ? 'i-claro' : 'i-oscuro') : (light ? 'a-papel' : 'a-tinta'); }
+  /* Presentación según la plataforma (se puede cambiar en Ajustes): iPhone y iPad = iOS · Android y modo coche = Material You Expressive · PC = Atelier · TV = Clásica */
+  function platformDefault() {
+    var ua = navigator.userAgent || '', q = location.search || '', tv = false;
+    try { tv = /CalexTV/.test(ua) || /[?&]tv=1/.test(q) || (document.body && document.body.classList.contains('tv')) || (!/[?&]tv=0/.test(q) && localStorage.getItem('calex-tv') === '1'); } catch (e) { }
+    if (tv) return 'classic';
+    if (/[?&]auto=1/.test(q) || /Android/.test(ua)) return 'material';
+    if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
+    return 'atelier';
+  }
+  function mode() { try { var v = localStorage.getItem('calex-ui3'); if (v === 'atelier' || v === 'classic' || v === 'material' || v === 'ios') return v; } catch (e) { } return platformDefault(); }
+  function themeFor(m) { var light = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches; return m === 'ios' ? (light ? 'i-claro' : 'i-oscuro') : m === 'classic' ? (light ? 'papel' : 'calma') : (light ? 'a-papel' : 'a-tinta'); }
   function setMode(m, userChoice) {
     var h = document.documentElement; if (m === 'classic') h.removeAttribute('data-ui'); else h.setAttribute('data-ui', m);
-    try { localStorage.setItem('calex-ui2', m); if (m !== 'classic' && (userChoice || !localStorage.getItem('calex-ui2-t'))) { localStorage.setItem('calex-ui2-t', '1'); if (m === 'material' && window.CalexMaterial) CalexMaterial.apply(); else if (typeof applyTheme === 'function') applyTheme(themeFor(m), true); } } catch (e) { }
+    try {
+      if (userChoice) localStorage.setItem('calex-ui3', m);
+      var first = userChoice || localStorage.getItem('calex-ui3-t') !== m; // el tema de color de cada presentación se aplica la primera vez que se usa
+      if (first) localStorage.setItem('calex-ui3-t', m);
+      if (m === 'material' && window.CalexMaterial) { if (first || localStorage.getItem('dot-theme') === 'm-dyn') CalexMaterial.apply(); } // el color de Material se genera cada vez
+      else if (first && typeof applyTheme === 'function') applyTheme(themeFor(m), true);
+    } catch (e) { }
     wire();
   }
   var wired = false;
@@ -127,7 +142,7 @@
     sync();
     var row = document.getElementById('strow'), old = document.getElementById('uisel');
     if (row && !old) {
-      var r = document.createElement('div'); r.className = 'r'; r.innerHTML = '<label>Presentación<small>iOS: esquinas redondeadas y movimiento de resorte. Material You Expressive: color tonal que usted elige y las formas de Material 3 Expresivo. Atelier: papel y tinta, estilo editorial. Clásica: la presentación original.</small></label><select id="uisel"><option value="ios">iOS</option><option value="material">Material You Expressive</option><option value="atelier">Atelier</option><option value="classic">Clásica</option></select>';
+      var r = document.createElement('div'); r.className = 'r'; r.innerHTML = '<label>Presentación<small>Cada dispositivo usa la suya por defecto (iPhone: iOS, Android: Material You, PC: Atelier, TV: Clásica) y puede cambiarla aquí. iOS: esquinas redondeadas y movimiento de resorte. Material You Expressive: color tonal que usted elige y las formas de Material 3 Expresivo. Atelier: papel y tinta, estilo editorial. Clásica: la presentación original.</small></label><select id="uisel"><option value="ios">iOS</option><option value="material">Material You Expressive</option><option value="atelier">Atelier</option><option value="classic">Clásica</option></select>';
       row.parentNode.insertBefore(r, row); var s = r.querySelector('select'); s.value = mode(); s.onchange = function () { setMode(s.value, true); var mr = document.getElementById('matrow'); if (mr) mr.style.display = s.value === 'material' ? '' : 'none'; };
     } else if (old) old.value = mode();
     var ms = document.getElementById('matseed'), uis = document.getElementById('uisel');
@@ -141,6 +156,6 @@
     var st = document.createElement('style'); st.id = 'calex-atelier'; st.textContent = CSS; document.head.appendChild(st);
         setMode(mode(), false);
   }
-  window.CalexAtelier = { setMode: setMode, mode: mode, folio: folio };
+  window.CalexAtelier = { setMode: setMode, mode: mode, folio: folio, platformDefault: platformDefault };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
