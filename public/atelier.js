@@ -116,14 +116,14 @@
     var q = document.getElementById('q'); if (q) { if (!q.dataset.ph0) q.dataset.ph0 = q.placeholder; q.placeholder = ui() === 'atelier' ? 'Escriba aquí…' : ui() === 'ios' ? 'Mensaje' : ui() === 'material' ? 'Escribe un mensaje' : q.dataset.ph0; }
     var side = document.getElementById('side'); if (!side) return;
     var sc = document.getElementById('atscrim'); if (!sc) { sc = document.createElement('div'); sc.id = 'atscrim'; document.body.appendChild(sc); sc.addEventListener('click', function () { side.classList.add('hide'); }); }
-    var drawer = function () { return ui() === 'atelier' || ((ui() === 'ios' || ui() === 'material') && innerWidth < 900); };
+    var drawer = function () { if (document.body.classList.contains('tv')) return false; return ui() === 'atelier' || ((ui() === 'ios' || ui() === 'material') && innerWidth < 900); };
     var sync = function () { sc.classList.toggle('on', !side.classList.contains('hide') && drawer()); };
     if (!wired) {
       wired = true; new MutationObserver(sync).observe(side, { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', sync);
       document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !side.classList.contains('hide') && drawer()) side.classList.add('hide'); });
       side.addEventListener('click', function (e) { if (!drawer()) return; if (e.target.closest('#bn') || e.target.closest('.h span') || e.target.closest('#bs') || e.target.closest('#bcn') || e.target.closest('#bfn')) setTimeout(function () { side.classList.add('hide'); }, 120); });
     }
-    if (ui() === 'atelier' && !side.dataset.atInit) { side.dataset.atInit = '1'; side.classList.add('hide'); }
+    if (ui() === 'atelier' && !side.dataset.atInit && !document.body.classList.contains('tv')) { side.dataset.atInit = '1'; side.classList.add('hide'); }
     sync();
     var row = document.getElementById('strow'), old = document.getElementById('uisel');
     if (row && !old) {
@@ -139,8 +139,7 @@
   }
   function boot() {
     var st = document.createElement('style'); st.id = 'calex-atelier'; st.textContent = CSS; document.head.appendChild(st);
-    if (document.body && document.body.classList.contains('tv')) return;
-    setMode(mode(), false);
+        setMode(mode(), false);
   }
   window.CalexAtelier = { setMode: setMode, mode: mode, folio: folio };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.calex.tv" android:versionCode="19" android:versionName="2.5v GTV">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.calex.tv" android:versionCode="20" android:versionName="2.6v GTV">
   <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -9,6 +9,7 @@
   <uses-feature android:name="android.hardware.microphone" android:required="false" />
   <queries>
     <intent><action android:name="android.speech.RecognitionService" /></intent>
+    <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
   </queries>
   <application android:label="Calex TV" android:icon="@mipmap/ic_launcher" android:banner="@drawable/banner" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false" android:usesCleartextTraffic="false">
